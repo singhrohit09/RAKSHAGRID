@@ -103,5 +103,5 @@ This log records every verified milestone committed and pushed to [https://githu
   - `npm run lint` (`tsc --noEmit && tsc -p tsconfig.server.json --noEmit`) &rarr; 0 errors.
   - `npm test` (`vitest run`) &rarr; 39 of 39 tests passed (18 backend integration tests + 21 domain tests).
   - `npm run build` (`tsc -b && vite build`) &rarr; Production bundle verified in 5.60s.
-- **Commit Hash**: (Pending commit)
-- **Push Status**: Pending push to `main`
+- **Commit Hash**: `6955ff0`
+- **Push Status**: Verified (`89b548e..6955ff0 main -> main`)
