@@ -1,0 +1,62 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg-charcoal: #0d1117;
+    --panel-elevated: #161b22;
+    --border-color: #30363d;
+    --text-primary: #f0f3f6;
+    --text-muted: #9da7b3;
+    --emergency-red: #dc2626;
+    --hazard-amber: #d97706;
+    --safe-green: #059669;
+  }
+
+  body {
+    background-color: #0d1117;
+    color: #f0f3f6;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    overflow-x: hidden;
+  }
+}
+
+/* Custom Tactical Scrollbars */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #161b22;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #30363d;
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* Leaflet Custom Operations Popup */
+.raksha-leaflet-popup .leaflet-popup-content-wrapper {
+  background-color: #161b22 !important;
+  color: #f0f3f6 !important;
+  border: 1px solid #30363d !important;
+  border-radius: 6px !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.7) !important;
+  padding: 2px !important;
+}
+
+.raksha-leaflet-popup .leaflet-popup-tip {
+  background-color: #161b22 !important;
+  border-top: 1px solid #30363d !important;
+}
+
+.raksha-leaflet-popup .leaflet-popup-content {
+  margin: 10px !important;
+  line-height: 1.4 !important;
+}
