@@ -11,6 +11,13 @@ dist-ssr/
 vite.config.d.ts
 vite.config.js
 
+# Databases
+server/data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
 # Environment variables
 .env
 .env.production

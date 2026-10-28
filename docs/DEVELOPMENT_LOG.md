@@ -57,4 +57,28 @@ This log records every verified milestone committed and pushed to [https://githu
   - `npm test` &rarr; 21 of 21 tests passed.
   - `npm run build` &rarr; Production bundle verified.
 - **Commit Hash**: `44dfb07`
-- **Push Status**: In progress / Verified
+- **Push Status**: Verified (`44dfb07` & `f188959 main -> main`)
+
+---
+
+### Milestone 4: Backend API Foundation, Relational Database, Real Authentication & RBAC
+- **Date**: 2026-10-29
+- **Feature / Fix**:
+  - Architected dual-engine relational database layer (`server/db/connection.ts`) supporting PostgreSQL (`pg.Pool`) and zero-configuration embedded SQLite (`better-sqlite3`).
+  - Implemented normalized database schema (`server/db/schema.sql`) across 11 relational tables (`users`, `teams`, `shelters`, `resources`, `inventory_movements`, `incidents`, `incident_timeline`, `tasks`, `alerts`, `audit_events`, `system_settings`, `notifications`).
+  - Added baseline seeding engine (`server/scripts/seed.ts`) populating authenticated default personas with bcrypt salt hashing.
+  - Implemented real authentication with JWT sessions (`server/auth/jwt.ts`), HttpOnly session cookies, bearer token fallback, and registration/login/me endpoints.
+  - Built server-side Role-Based Access Control (`server/middleware/rbac.ts`) enforcing permission matrix across all 5 operational personas (`admin`, `commander`, `responder`, `logistics`, `analyst`).
+  - Implemented business rule validation at API boundary:
+    - Inventory allocation preventing negative stock and recording movements in `inventory_movements`.
+    - Shelter occupancy overflow protection with explicit administrative override.
+    - Incident coordinate boundary checks (-90 to 90 lat, -180 to 180 lng).
+    - Tamper-resistant server audit trail recording actors, entities, and sanitized payloads (`server/middleware/audit.ts`).
+  - Implemented modular Express API endpoints (`/api/auth`, `/api/incidents`, `/api/teams`, `/api/shelters`, `/api/resources`, `/api/tasks`, `/api/alerts`, `/api/audit`, `/api/settings`, `/api/notifications`, `/api/health`).
+  - Added comprehensive backend integration test suite (`server/tests/api.test.ts`) covering authentication, RBAC, inventory logic, shelter capacity, coordinates, and audit trail export.
+- **Relevant Checks**:
+  - `npm run lint` (`tsc --noEmit && tsc -p tsconfig.server.json --noEmit`) &rarr; 0 errors.
+  - `npm test` (`vitest run`) &rarr; 39 of 39 tests passed (18 backend integration tests + 21 domain tests).
+  - `npm run build` (`tsc -b && vite build`) &rarr; Production bundle verified.
+- **Commit Hash**: (Pending commit)
+- **Push Status**: Pending push to `main`
