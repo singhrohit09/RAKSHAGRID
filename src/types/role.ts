@@ -33,3 +33,4 @@ export interface Persona {
   description: string;
   permissions: Permission[];
 }
+

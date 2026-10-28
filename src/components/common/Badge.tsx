@@ -93,3 +93,4 @@ export const PriorityBadge: React.FC<{ priority: IncidentPriority }> = ({ priori
       return <Badge variant="neutral">P4 - LOW</Badge>;
   }
 };
+

@@ -76,3 +76,4 @@ export function exportToJSON(filename: string, data: unknown): void {
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 }
+

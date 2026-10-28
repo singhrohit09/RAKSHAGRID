@@ -62,3 +62,4 @@ export function validateIncidentForm(data: {
     errors
   };
 }
+

@@ -26,3 +26,4 @@ export interface Shelter {
   notes: string;
   updatedAt: string;
 }
+

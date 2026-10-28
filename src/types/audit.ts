@@ -19,3 +19,4 @@ export interface AuditLogEvent {
   description: string;
   metadata?: Record<string, unknown>;
 }
+

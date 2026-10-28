@@ -156,3 +156,4 @@ Phase 1 establishes clean architectural seams to ensure zero UI rewrites when up
 - `RakshaContext` methods are designed to swap local state dispatch with REST/WebSocket calls to FastAPI or Node.js in Phase 2.
 - Persona tokens will transition from client-side state to signed JWTs / OAuth2 tokens without changing permission check calls (`hasPermission(activePersonaId, permission)`).
 - The Leaflet vector tile layer is configured to connect to PostGIS vector tiles (`MVT`) in Phase 3.
+

@@ -95,3 +95,4 @@ export const INITIAL_TEAMS: ResponseTeam[] = [
     updatedAt: new Date(Date.now() - 3600000 * 6).toISOString()
   }
 ];
+

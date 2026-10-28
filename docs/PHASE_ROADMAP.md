@@ -73,3 +73,4 @@ RakshaGrid is architected as an industrial-grade disaster intelligence and coord
 - **Multi-Agency Federation**: Inter-agency data sharing enabling National, State, and District emergency authorities to coordinate on shared incidents without compromising data sovereignty.
 - **Citizen SOS Reporting Channel**: Public emergency reporting intake with reverse image verification and duplicate incident clustering.
 - **Disaster Recovery Failover**: Multi-region cloud replication and battery-backed portable server appliance deployments.
+

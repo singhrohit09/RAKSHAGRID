@@ -30,3 +30,4 @@ export interface EmergencyAlert {
   approvedBy?: string;
   approvedAt?: string;
 }
+

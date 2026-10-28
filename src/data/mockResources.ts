@@ -98,3 +98,4 @@ export const INITIAL_RESOURCES: ResourceItem[] = [
     updatedAt: new Date(Date.now() - 3600000 * 7).toISOString()
   }
 ];
+

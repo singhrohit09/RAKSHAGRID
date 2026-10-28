@@ -16,3 +16,4 @@ export interface IncidentTask {
   createdAt: string;
   updatedAt: string;
 }
+

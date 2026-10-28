@@ -207,3 +207,4 @@ export const INITIAL_INCIDENTS: Incident[] = [
     ]
   }
 ];
+

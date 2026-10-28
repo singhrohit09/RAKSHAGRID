@@ -122,3 +122,4 @@ export const INITIAL_SHELTERS: Shelter[] = [
     updatedAt: new Date(Date.now() - 3600000 * 5).toISOString()
   }
 ];
+

@@ -60,3 +60,4 @@ export function formatCoordinates(lat: number, lng: number): string {
 export function formatCategory(cat: string): string {
   return cat.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 }
+

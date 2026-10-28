@@ -62,3 +62,4 @@ export const INITIAL_AUDIT_LOGS: AuditLogEvent[] = [
     description: 'Allocated 1,800 units of 20L Packaged Water to Shelter SHL-NORTH-01.'
   }
 ];
+

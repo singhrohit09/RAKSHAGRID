@@ -24,3 +24,4 @@ export interface AppSettings {
     capGateway: 'simulated' | 'offline';
   };
 }
+

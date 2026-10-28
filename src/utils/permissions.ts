@@ -116,3 +116,4 @@ export function getPermissionRestrictionMessage(personaId: PersonaId, permission
   if (!persona) return 'Access restricted: unknown persona.';
   return `Action restricted: '${persona.roleLabel}' does not possess '${permission.replace(/_/g, ' ')}' authorization. Switch to Administrator or Commander in Demo Mode.`;
 }
+

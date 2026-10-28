@@ -84,3 +84,4 @@ export const INITIAL_ALERTS: EmergencyAlert[] = [
     updatedAt: new Date(Date.now() - 3600000 * 2).toISOString()
   }
 ];
+
