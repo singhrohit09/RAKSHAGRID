@@ -3,16 +3,18 @@
 > **"Disaster Intelligence. Coordinated Response. Safer Communities."**
 
 [![GitHub Repository](https://img.shields.io/badge/GitHub-singhrohit09%2FRAKSHAGRID-red.svg)](https://github.com/singhrohit09/RAKSHAGRID)
-[![Phase](https://img.shields.io/badge/Phase-1%20Foundation%20Complete-emerald.svg)]()
+[![Phase](https://img.shields.io/badge/Phase-2%20Backend%20%26%20Database%20Complete-emerald.svg)]()
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict%205.6-blue.svg)]()
 [![React](https://img.shields.io/badge/React-18.3-cyan.svg)]()
-[![Tests](https://img.shields.io/badge/Vitest-21%20Passed-brightgreen.svg)]()
+[![Express](https://img.shields.io/badge/Express-5.3-yellow.svg)]()
+[![Database](https://img.shields.io/badge/Database-SQLite%20(WAL)%20%7C%20PostgreSQL-orange.svg)]()
+[![Tests](https://img.shields.io/badge/Vitest-39%20Passed-brightgreen.svg)]()
 
 ---
 
 ## 1. Problem Statement
 
-Natural disasters and extreme emergencies — including riverine flooding, flash inundations, severe cyclones, landslides, industrial chemical fires, and structural collapses — place catastrophic stress on civil response infrastructures.
+Natural disasters and extreme emergencies — including riverine flooding, flash inundations, severe cyclones, earthquakes, landslides, industrial chemical fires, and structural collapses — place catastrophic stress on civil response infrastructures.
 
 Emergency Operations Centers (EOCs), district administrations, and disaster response forces (NDRF/SDRF) frequently face:
 - **Fragmented Situational Awareness**: Information scattered across ad-hoc phone calls, field radios, paper logs, and disparate spreadsheets.
@@ -34,153 +36,69 @@ Emergency Operations Centers (EOCs), district administrations, and disaster resp
 
 ---
 
-## 3. Phase 1 Features Implemented
+## 3. Phase 2 Features Implemented
 
-Phase 1 delivers the complete operational application foundation with local persistence:
+Phase 2 elevates the platform from an offline prototype to a **production-ready, full-stack application**:
 
-- **Tactical Dark-Mode Operations Interface**: Deep charcoal (`#0d1117`), elevated panels (`#161b22`), and clear emergency indicators (`#dc2626`, `#d97706`, `#059669`).
-- **Role-Aware Persona Simulation**: Switch seamlessly between 5 operational roles:
-  - *Administrator* (Full system authority)
-  - *Incident Commander* (Tactical incident, team, and alert control)
-  - *Field Responder* (Field status reporting and task execution)
-  - *Logistics Officer* (Shelter headcounts and inventory allocation)
-  - *Read-Only Analyst* (Observer situational awareness without write mutations)
-- **12 Functional Modules & Routes**:
-  1. `/dashboard` — KPI metrics, severity and status distribution charts, active hazard overview.
-  2. `/incidents` — Incident registry supporting full CRUD, numeric coordinate validation, status transitions, and timeline logging.
-  3. `/map` — Interactive Leaflet GIS map with OpenStreetMap tiles, layer visibility toggles, coordinate HUD, inspector panel, and estimated hazard radius overlays.
-  4. `/teams` — Roster of specialized disaster units (Search & Rescue, Medical, Hazmat, Logistics, Evacuation) with staffing counts and status tracking.
-  5. `/shelters` — Evacuation shelter registry with capacity utilization bars, overflow override safeguards, and verified facility checklists.
-  6. `/resources` — Relief inventory ledger with allocation and release mechanics preventing negative inventory.
-  7. `/tasks` — Response Kanban task board (Backlog, Ready, In Progress, Blocked, Completed) with keyboard-accessible column navigation and overdue tracking.
-  8. `/alerts` — Common Alerting Protocol (CAP) inspired alert composer with simulated channel toggles (SMS, Cell Broadcast, Siren, Public Bulletin).
-  9. `/analytics` — Statistical charts and RFC 4180 compliant CSV tabular report exports.
-  10. `/audit` — Client-side immutable activity audit log recording all user mutations with CSV and JSON exports.
-  11. `/settings` — Operational center configuration, time formatting, default map coordinates, and one-click demo data reset.
-  12. `/public` — Accessible public emergency information portal with active simulated warnings, verified emergency helplines, and safety guides.
+### A. Dual Relational Database Layer
+- **PostgreSQL & SQLite Dual-Adapter Client** (`server/db/connection.ts`): Connects to PostgreSQL (`pg.Pool`) when `DATABASE_URL` is configured, or automatically falls back to zero-configuration embedded SQLite (`better-sqlite3` with Write-Ahead Logging and foreign keys enabled) at `server/data/rakshagrid.db`.
+- **Normalized Schema (11 tables)** (`server/db/schema.sql`): `users`, `teams`, `shelters`, `resources`, `inventory_movements`, `incidents`, `incident_timeline`, `tasks`, `alerts`, `audit_events`, `system_settings`, `notifications`.
+- **Baseline Seeding Script** (`server/scripts/seed.ts`): Seeds authenticated personas with hashed passwords, initial operational teams, shelters, resources, tasks, and audit records.
+
+### B. Real Authentication & Session Handling
+- **Password Hashing**: Standard `bcryptjs` encryption with salt rounds of 10.
+- **Session Tokens**: Cryptographically signed JSON Web Tokens (JWT) stored in `HttpOnly`, `SameSite=Lax` cookies with header fallback (`Authorization: Bearer <token>`).
+- **Profile Endpoint**: `/api/auth/me` validates the session and delivers the authenticated persona profile with verified permissions.
+- **User Registration & Login**: Real registration and credential verification endpoints.
+
+### C. Server-Enforced Role-Based Access Control (RBAC)
+- Strict server-side RBAC middleware (`server/middleware/rbac.ts`) protecting sensitive API routes.
+- Returns `HTTP 401 Unauthorized` for missing/invalid sessions and `HTTP 403 Forbidden` for role capability violations.
+- Five operational personas with dedicated server capability sets:
+  - **Administrator** (`admin`): Full administrative command, system preferences, data baseline reset.
+  - **Incident Commander** (`commander`): Tactical incident triage, team dispatch, task assignment, alert review & approval.
+  - **Field Responder** (`responder`): Field operational reporting, incident status updates, task execution.
+  - **Logistics Officer** (`logistics`): Shelter management, inventory allocation and release.
+  - **Read-Only Analyst** (`analyst`): Observer situational awareness, analytics inspection, audit log review.
+
+### D. Server-Side Safety Business Rules
+- **Negative Stock Prevention**: Inventory allocations exceeding depot stock are rejected at the server level (`HTTP 400 Insufficient stock`). Allocations and releases generate entries in `inventory_movements`.
+- **Shelter Capacity Overflow Guard**: Occupancy headcounts exceeding safe capacity are blocked (`HTTP 400 EXCEEDS_CAPACITY`) unless an administrative override is explicitly provided.
+- **Geographic Coordinate Validation**: Validates coordinate boundaries (-90..90 latitude, -180..180 longitude) before saving.
+- **Tamper-Resistant Audit Trail**: Records mutations across all modules, sanitizing sensitive credentials before storage in `audit_events`.
+
+### E. Frontend API Integration with Graceful Offline Fallback
+- Typed REST API client (`src/services/api.ts`) connecting the reactive React store (`RakshaContext`) to backend endpoints.
+- Built-in availability detector: when running without the backend server, the app automatically switches to **Demo Mode** using local storage persistence, ensuring 100% operational functionality in all environments.
+- Real-time connection badge in the application header: `[LIVE API]` vs `[DEMO MODE]`.
 
 ---
 
 ## 4. Technology Stack
 
-- **Framework**: React 18.3 (TypeScript strict mode)
-- **Build Tool**: Vite 5
-- **Styling**: Tailwind CSS 3.4 with custom tactical design tokens
-- **Icons**: Lucide React
+- **Frontend**: React 18.3 (TypeScript strict mode), Vite 5, Tailwind CSS 3.4
+- **Backend API**: Node.js 20+/24+, Express 5.3, TypeScript
+- **Authentication**: JWT (`jsonwebtoken`), `bcryptjs`, `cookie-parser`
+- **Database**: PostgreSQL (`pg`) / Embedded SQLite 3 (`better-sqlite3` WAL)
 - **Mapping**: Leaflet 1.9 with OpenStreetMap / CartoDB tiles
 - **Data Visualization**: Recharts 2.13
-- **Routing**: React Router DOM 6.28
-- **Unit Testing**: Vitest 2.1
-- **Storage**: Browser LocalStorage with schema versioning (`v1.0`) and fallback migration
+- **Testing**: Vitest 2.1, Supertest 7.3
 
 ---
 
-## 5. Architecture and Folder Structure
+## 5. Standard Baseline Credentials
 
-```
-d:\RakshaGrid\
-├── index.html                  # HTML entry point with Plus Jakarta Sans & JetBrains Mono fonts
-├── vite.config.ts              # Vite 5 + React plugin + Vitest configuration
-├── tailwind.config.js          # Tactical operations design tokens
-├── package.json                # Dependencies and npm script targets
-├── .env.example                # Placeholder configuration endpoints
-├── src/
-│   ├── main.tsx                # React DOM root mounting
-│   ├── App.tsx                 # Route declarations & provider nesting
-│   ├── index.css               # Global tactical styles & Leaflet popup customizations
-│   ├── types/                  # Strict TypeScript data contracts
-│   │   ├── incident.ts         # Incident, severity, timeline, coordinates
-│   │   ├── team.ts             # Response teams, staffing, disciplines
-│   │   ├── shelter.ts          # Shelter facilities, capacity, occupancy
-│   │   ├── resource.ts         # Logistics stock, units, depots, status
-│   │   ├── task.ts             # Kanban task cards, priority, status
-│   │   ├── alert.ts            # CAP-inspired warning schemas, channels
-│   │   ├── audit.ts            # Audit trail event contracts
-│   │   ├── role.ts             # Persona identities and permission types
-│   │   └── settings.ts         # Operations center settings & mock feeds
-│   ├── data/                   # Realistic baseline scenario fixtures
-│   │   ├── mockIncidents.ts    # Indraprashtha Sector 4 incidents
-│   │   ├── mockTeams.ts        # NDRF, SDRF, Medical, Fire battalions
-│   │   ├── mockShelters.ts     # Evacuation sports complexes & schools
-│   │   ├── mockResources.ts    # Potable water, medical kits, zodiac boats
-│   │   ├── mockTasks.ts        # Sandbagging, dewatering, hazmat perimeter
-│   │   ├── mockAlerts.ts       # Evacuation orders and chemical advisories
-│   │   ├── mockAuditLogs.ts    # Initial exercise timeline entries
-│   │   └── seedData.ts         # Schema versioning & storage defaults
-│   ├── context/
-│   │   └── RakshaContext.tsx   # Centralized data store, CRUD methods, persistence
-│   ├── utils/
-│   │   ├── permissions.ts      # Persona matrix & permission checking helpers
-│   │   ├── csvExport.ts        # RFC 4180 compliant CSV serializer and downloader
-│   │   ├── formatters.ts       # Date, coordinate, and number formatters
-│   │   └── validators.ts       # Coordinate (-90..90, -180..180) & form checks
-│   ├── components/
-│   │   ├── common/             # Badges, Buttons, Modals, StatCards, ConfirmDialog
-│   │   ├── layout/             # Header, Sidebar, AppLayout, PersonaSelector
-│   │   └── map/                # Leaflet interactive map with custom div-icons
-│   ├── pages/                  # 12 functional operational routes
-│   │   ├── DashboardPage.tsx
-│   │   ├── IncidentsPage.tsx
-│   │   ├── OperationalMapPage.tsx
-│   │   ├── TeamsPage.tsx
-│   │   ├── SheltersPage.tsx
-│   │   ├── ResourcesPage.tsx
-│   │   ├── TaskBoardPage.tsx
-│   │   ├── AlertsPage.tsx
-│   │   ├── AnalyticsPage.tsx
-│   │   ├── AuditLogPage.tsx
-│   │   ├── SettingsPage.tsx
-│   │   └── PublicBulletinPage.tsx
-│   └── tests/                  # Vitest unit test suites
-│       ├── businessRules.test.ts
-│       └── domainOperations.test.ts
-```
-
-For in-depth architectural details, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+| Persona | Role | Email | Password |
+|---|---|---|---|
+| Director Rajesh Verma | `admin` | `admin@rakshagrid.gov.in` | `Admin@RakshaGrid2026` |
+| Cmdr. Ananya Sen | `commander` | `commander@rakshagrid.gov.in` | `Commander@Raksha2026` |
+| Vikramaditya Rao | `responder` | `responder@rakshagrid.gov.in` | `Responder@Raksha2026` |
+| Pooja Kulkarni | `logistics` | `logistics@rakshagrid.gov.in` | `Logistics@Raksha2026` |
+| Dr. Siddharth Mehta | `analyst` | `analyst@rakshagrid.gov.in` | `Analyst@Raksha2026` |
 
 ---
 
-## 6. Screens & Pages Overview
-
-| Route | Page | Purpose |
-| :--- | :--- | :--- |
-| `/dashboard` | Operational Overview | High-level situational summary, live KPI cards, severity distribution, quick action launchers. |
-| `/incidents` | Incident Registry | Full incident lifecycle (Reported &rarr; Verified &rarr; Active &rarr; Contained &rarr; Resolved &rarr; Closed), search, filtering, and field timeline. |
-| `/map` | Operational Map | Geo-spatial visualization with severity markers, team positions, shelter layers, coordinate HUD, and inspector drawer. |
-| `/teams` | Response Teams | Personnel management across Search & Rescue, Medical, Hazmat, Logistics, and Evacuation teams. |
-| `/shelters` | Shelter Management | Evacuation shelter capacity tracking, occupancy meters, overflow warnings, and facility checklists. |
-| `/resources` | Resource Inventory | Emergency supplies ledger with allocation and release mechanics preventing negative inventory. |
-| `/tasks` | Task Board | Kanban board (Backlog, Ready, In Progress, Blocked, Completed) with incident links and overdue tracking. |
-| `/alerts` | Emergency Alerts | Public warning drafting, CAP-inspired previews, channel placeholders, and review/approval flows. |
-| `/analytics` | Analytics & SITREPs | Live charts and CSV tabular report exports (RFC 4180 compliant). |
-| `/audit` | Audit Log | Client-side immutable activity log recording all user mutations across domains with CSV and JSON exports. |
-| `/settings` | System Settings | Operational center configuration, time formatting, default map coordinates, and factory baseline reset. |
-| `/public` | Public Bulletin | Public emergency portal with active simulated warnings, verified emergency helplines, and safety guides. |
-
----
-
-## 7. Screenshots
-
-*(Screenshots will be captured and added following deployment to the staging environment.)*
-
-```
-[ Screenshot Placeholder: Operational Overview Dashboard ]
-[ Screenshot Placeholder: Interactive Leaflet GIS Map ]
-[ Screenshot Placeholder: Incident Registry with Activity Timeline ]
-[ Screenshot Placeholder: Common Alerting Protocol (CAP) Preview ]
-```
-
----
-
-## 8. Prerequisites
-
-- **Node.js**: `v18.0.0` or higher (`v20.x` or `v24.x` recommended)
-- **Package Manager**: `npm` (`v9.x` or higher)
-- **Modern Web Browser**: Chrome, Edge, Firefox, or Safari supporting ES2020 and Canvas.
-
----
-
-## 9. Installation & Local Development
+## 6. Installation & Quick Start
 
 ### 1. Clone the repository
 ```bash
@@ -194,77 +112,57 @@ npm install
 ```
 
 ### 3. Environment configuration
-Copy the example environment configuration:
 ```bash
 cp .env.example .env
 ```
 
-### 4. Start local development server
+### 4. Seed the database (Optional — runs automatically on first start)
+```bash
+npm run server:seed
+```
+
+### 5. Start the backend API server (Port 5000)
+```bash
+npm run server
+```
+
+### 6. Start the frontend development server (Port 3000)
+In a separate terminal:
 ```bash
 npm run dev
 ```
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [http://localhost:3000](http://localhost:3000) in your browser. The Vite dev server will proxy all `/api` requests to `http://localhost:5000`.
 
 ---
 
-## 10. Verification Commands
+## 7. Verification Commands
 
-### TypeScript Strict Type Checking (Lint)
-```bash
-npm run lint
-```
-
-### Run Vitest Unit Tests
+### Run Full Test Suite (39 Tests)
 ```bash
 npm test
 ```
-*Current status: 21 unit tests passing across domain operations, CSV sanitization, and role permissions.*
+*Current status: 39 tests passing (18 backend integration tests + 21 frontend domain logic tests).*
+
+### TypeScript Strict Type Checking (Dual Frontend & Backend)
+```bash
+npm run lint
+```
+Checks strict type safety across both frontend (`tsconfig.json`) and server (`tsconfig.server.json`).
 
 ### Production Build
 ```bash
 npm run build
 ```
-Generates optimized production assets in `dist/`.
+Compiles and generates optimized production distribution in `dist/`.
 
 ---
 
-## 11. Demo Mode & Persistence Explanation
-
-1. **Client-Side Simulation**: In Phase 1, RakshaGrid runs entirely client-side. All incidents, teams, shelters, resources, tasks, and audit logs are managed in a reactive React store.
-2. **Persistence**: Changes are automatically serialized to browser `localStorage` under the key `rakshagrid_state_v1.0`. Your additions and updates persist across browser reloads.
-3. **Reset to Baseline**: To restore pristine demo fixtures at any time, click the **Reset Demo Data** icon in the top header or navigate to **Settings &rarr; Restore Baseline Disaster Scenario**.
-
----
-
-## 12. Security & Operational Disclaimers
-
-> [!WARNING]
-> **SIMULATION ONLY — NOT REAL EMERGENCY DISPATCH**:
-> - RakshaGrid Phase 1 is a non-commercial emergency operations prototype.
-> - **NO REAL EMERGENCY ALERTS ARE TRANSMITTED.** The platform does not send real SMS messages, broadcast over cellular towers, trigger sirens, or contact police/fire dispatchers.
-> - Client-side role checks are a simulation feature for interface evaluation, **NOT a security boundary**.
-> - Never enter confidential credentials or real-world emergency classified data into this prototype.
-
----
-
-## 13. Roadmap (Phases 2–5)
-
-- **Phase 1 (Complete)**: Application Foundation, 12 Core Modules, GIS Map, Role Switcher, Local Persistence, Unit Tests.
-- **Phase 2**: Backend PostgreSQL/PostGIS persistence, genuine OIDC/JWT authentication, and real-time WebSocket state synchronization.
-- **Phase 3**: CAP v1.2 XML protocol engine, telecommunication integrations (SMS/Cell Broadcast gateways), acoustic siren network drivers, and Doppler radar telemetry ingestion.
-- **Phase 4**: Hydrological flood inundation modeling, automated task routing heuristics, and predictive shelter logistics burn-rate forecasting.
-- **Phase 5**: Ruggedized offline-first mobile edge applications (React Native/Flutter) with LoRa/mesh sync and multi-agency federation.
-
-Detailed roadmap documentation is available in [docs/PHASE_ROADMAP.md](docs/PHASE_ROADMAP.md).
-
----
-
-## 14. Git Repository & Contribution Workflow
+## 8. Git Repository & Contribution Rules
 
 The **ONLY** authorized repository destination for this project is:
 **https://github.com/singhrohit09/RAKSHAGRID.git**
 
-### Safe Git Workflow Commands:
+### Mandatory Git Workflow:
 ```bash
 # Verify remote destination
 git remote -v
@@ -272,11 +170,11 @@ git remote -v
 # Check status
 git status
 
-# Stage changes
+# Stage verified changes
 git add .
 
-# Create verified commit
-git commit -m "feat: implement RakshaGrid application foundation"
+# Create descriptive milestone commit
+git commit -m "feat: integrate frontend API client and persistence"
 
 # Push to main branch
 git push origin main

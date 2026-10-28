@@ -1,10 +1,10 @@
-# RakshaGrid Architecture Documentation (Phase 1)
+# RakshaGrid Architecture Documentation (Phase 2 Full-Stack)
 
 ## System Overview
 
 **RakshaGrid** is a specialized disaster intelligence and coordinated emergency operations platform. It is engineered to give Emergency Operations Centers (EOC), Incident Commanders, and field relief authorities situational awareness, tactical coordination tools, resource logistics tracking, and simulated public alert drafting during major emergencies.
 
-Phase 1 provides a fully operational, client-side application foundation with structured data contracts, role-aware persona switching, domain persistence, and an interactive GIS operations map.
+Phase 2 elevates the platform from a client-side prototype to a full-stack, enterprise-grade emergency operations system with a real relational database, secure session authentication, server-enforced Role-Based Access Control (RBAC), and server-validated business rules.
 
 ```
                            +--------------------------------------+
@@ -25,55 +25,94 @@ Phase 1 provides a fully operational, client-side application foundation with st
                                               v
                               +-------------------------------+
                               |     RakshaGrid Data Store     |
-                              |      (React State + Context)  |
+                              |  (React Context + API Client) |
                               +-------------------------------+
                                               |
-                   +--------------------------+--------------------------+
-                   |                          |                          |
-                   v                          v                          v
-      +------------------------+ +------------------------+ +------------------------+
-      |  Domain Services &     | | Audit Activity Logger  | | Role & Permission      |
-      |  CRUD Validators       | | (All CRUD Mutations)   | | Authorizer (5 Personas)|
-      +------------------------+ +------------------------+ +------------------------+
-                   |                          |                          |
-                   +--------------------------+--------------------------+
-                                              |
-                                              v
-                              +-------------------------------+
-                              |    Versioned LocalStorage     |
-                              |  Schema: rakshagrid_state_v1   |
-                              +-------------------------------+
+                         +--------------------+--------------------+
+                         |                                         |
+     (When Offline / Demo Mode)                           (When Online)
+                         |                                         |
+                         v                                         v
+         +-------------------------------+         +-------------------------------+
+         |    Versioned LocalStorage     |         |     Express REST API Layer    |
+         |  Schema: rakshagrid_state_v1  |         |   (Port 5000 /api endpoints)  |
+         +-------------------------------+         +-------------------------------+
+                                                                   |
+                                            +----------------------+----------------------+
+                                            |                      |                      |
+                                            v                      v                      v
+                                 +--------------------+ +--------------------+ +--------------------+
+                                 | JWT Session Auth & | | RBAC Authorization | | Business Rule &    |
+                                 | Password Hashing   | | (5 Personas Matrix)| | Safety Validators  |
+                                 +--------------------+ +--------------------+ +--------------------+
+                                            |                      |                      |
+                                            +----------------------+----------------------+
+                                                                   |
+                                                                   v
+                                                   +-------------------------------+
+                                                   |    Relational Database Layer  |
+                                                   |  (PostgreSQL || SQLite (WAL)) |
+                                                   | 11 Normalized Tables + Audit  |
+                                                   +-------------------------------+
 ```
 
 ---
 
-## Architecture Principles
+## Backend Architecture & Database Selection
 
-1. **Information-Dense Operational Aesthetic**:
-   - Designed for high-stress operations control rooms.
-   - Restrained palette: `#0d1117` (Deep Charcoal), `#161b22` (Elevated Panels), `#30363d` (Borders), `#dc2626` (Emergency), `#d97706` (Hazard), `#059669` (Safe).
-   - Monospace typography (`JetBrains Mono`) for coordinate telemetry, IDs, timestamps, and capacity figures; clean sans-serif (`Plus Jakarta Sans`) for interface controls.
+### 1. Dual-Adapter Database Engine
+To guarantee zero-friction local development without requiring external database installations, RakshaGrid implements a dual-adapter database client (`server/db/connection.ts`):
+- **Production Mode (PostgreSQL)**: When `DATABASE_URL` is set, connects via connection pooling (`pg.Pool`).
+- **Local/Embedded Mode (SQLite)**: When `DATABASE_URL` is omitted, automatically spins up embedded `better-sqlite3` at `server/data/rakshagrid.db` with Write-Ahead Logging (`WAL` mode) and foreign key enforcement enabled.
+- Both engines share the exact same ANSI SQL schema (`server/db/schema.sql`) and ACID transactional semantics.
 
-2. **Unified Reactive Data Store**:
-   - All modules (KPI dashboard, GIS map, registry tables, analytics, task boards) query from a single, centralized reactive data store (`RakshaContext`).
-   - Mutations in one module (e.g., allocating 400 water kits or marking a shelter as 100% full) immediately update dashboard counters and analytical charts without manual page reloads.
+### 2. Normalized Relational Schema
+The database contains 11 normalized tables:
+- `users`: Authenticated personnel profiles with bcrypt hashed passwords (`$2a$10$...`), roles, departments, callsigns.
+- `teams`: Specialized response battalions, staff counts, disciplinary skills (JSON), coordinates, statuses.
+- `shelters`: Evacuation shelter facilities, capacities, current occupancies, regions, notes.
+- `resources`: Logistics inventory items, minimum thresholds, quantities available and allocated.
+- `inventory_movements`: Immutable transactional ledger tracking stock allocations, releases, actor IDs, and notes.
+- `incidents`: Disaster incidents with categories, severities, coordinates, priorities, affected population, casualties.
+- `incident_timeline`: Chronological audit entries linked to parent incident IDs.
+- `tasks`: Response Kanban tasks, priority, statuses, foreign keys to related incidents and response teams.
+- `alerts`: CAP-inspired emergency alerts, safety actions, distribution channels, approval metadata.
+- `audit_events`: Tamper-resistant activity log recording timestamp, actor ID, name, role, action, entity type, entity ID, and description.
+- `system_settings`: Key-value configuration for operational region, defaults, and feed toggles.
+- `notifications`: In-app operational alerts and broadcasts.
 
-3. **Centralized Audit Logging**:
-   - Every mutative action (`incident_created`, `resource_allocated`, `shelter_updated`, `task_status_changed`, `alert_approved`, `demo_data_reset`) produces an immutable audit event recording timestamp, persona, domain, entity ID, and human-readable context.
+---
 
-4. **Zero-Trust Role Simulation**:
-   - Five distinct responder personas:
-     - **Administrator**: Unrestricted authority, system preferences, data baseline reset.
-     - **Incident Commander**: Incident triage, alert review & approval, task dispatch, team coordination.
-     - **Field Responder**: Field status updates, task execution.
-     - **Logistics Officer**: Shelter capacity monitoring, inventory allocation and release.
-     - **Read-Only Analyst**: Situational awareness observer, read-only analytics and audit log review.
+## Authentication & Authorization (RBAC)
 
-5. **Safety by Design**:
-   - Simulated emergency alert mechanisms explicitly disclaim real-world transmission.
-   - Channel toggles (SMS, Cell Broadcast, Siren, Radio) are prominently marked "Not connected — demo only".
-   - Shelter capacity validation warns and requires confirmation before accepting headcount overrides.
-   - Resource allocation prohibits negative stock numbers.
+### 1. Secure Authentication Flow
+- Passwords are encrypted using `bcryptjs` with salt work factor 10.
+- Sessions are maintained using cryptographically signed JSON Web Tokens (JWT).
+- Tokens are delivered via `HttpOnly`, `SameSite=Lax` cookies named `raksha_session` (with fallback support for `Authorization: Bearer <token>` headers).
+- User profile endpoint `GET /api/auth/me` validates the token on every session handshake and returns granted permissions.
+
+### 2. Five Operational Personas
+The system enforces strict server-side RBAC across 5 defined roles:
+
+| Persona | Role | Permissions Summary |
+|---|---|---|
+| **Director Rajesh Verma** | `admin` | Full operational authority, incident management, alerts, settings, system reset. |
+| **Cmdr. Ananya Sen** | `commander` | Incident command, team dispatch, task assignment, alert review & approval. |
+| **Vikramaditya Rao** | `responder` | Field operational view, incident status updates, task execution. |
+| **Pooja Kulkarni** | `logistics` | Shelter management, inventory allocation/release, task execution. |
+| **Dr. Siddharth Mehta** | `analyst` | Read-only situational awareness, analytics, audit log inspection. |
+
+Requests to restricted routes without appropriate permissions return `HTTP 403 Forbidden`.
+
+---
+
+## Server-Side Business Rules & Safety Guardrails
+
+The API layer enforces safety rules independently of client-side validation:
+1. **Negative Inventory Prevention**: Allocations exceeding available depot stock are rejected (`HTTP 400 Insufficient stock`). Allocations and releases write an audit record to `inventory_movements`.
+2. **Shelter Capacity Overflow Guard**: Setting shelter headcount above maximum capacity is blocked (`HTTP 400 EXCEEDS_CAPACITY`) unless an explicit administrative override flag (`allowOverflow: true` / `forceOverride: true`) is submitted.
+3. **Geographic Coordinate Validation**: Incident and team coordinates are bounded to valid terrestrial limits (latitude between -90 and 90, longitude between -180 and 180).
+4. **Tamper-Resistant Audit Logging**: All mutations across incidents, teams, shelters, resources, tasks, alerts, and settings write an immutable audit event to `audit_events`. Sensitive payload items (passwords, tokens, cookies) are automatically redacted before persistence.
 
 ---
 
@@ -82,78 +121,63 @@ Phase 1 provides a fully operational, client-side application foundation with st
 ```
 d:\RakshaGrid\
 ├── index.html                  # HTML entry point with Plus Jakarta Sans & JetBrains Mono fonts
-├── vite.config.ts              # Vite 5 + React plugin + Vitest configuration
+├── vite.config.ts              # Vite 5 + React plugin + API Proxy + Vitest config
 ├── tailwind.config.js          # Tactical operations design tokens
 ├── package.json                # Dependencies and npm script targets
-├── .env.example                # Placeholder configuration endpoints
-├── src/
-│   ├── main.tsx                # React DOM root mounting
+├── tsconfig.json               # Frontend TypeScript configuration
+├── tsconfig.server.json        # Backend TypeScript configuration
+├── .env.example                # Full-stack configuration blueprint
+├── server/                     # Full-Stack Backend Layer
+│   ├── index.ts                # Main Express application & middleware setup
+│   ├── auth/                   # JWT signing, verification, and role definitions
+│   │   ├── jwt.ts              # Token issue and cookie extraction
+│   │   └── roles.ts            # Server-side persona permission matrix
+│   ├── db/                     # Database connection & migrations
+│   │   ├── connection.ts       # Dual PostgreSQL/SQLite client adapter
+│   │   └── schema.sql          # Normalized relational schema (11 tables)
+│   ├── middleware/             # Express middlewares
+│   │   ├── auth.ts             # Session verification middleware
+│   │   ├── rbac.ts             # Permission-checking middleware (401/403)
+│   │   └── audit.ts            # Tamper-resistant audit recording helper
+│   ├── routes/                 # REST API endpoints
+│   │   ├── alerts.routes.ts    # Alert drafting, review, demo approval
+│   │   ├── audit.routes.ts     # Audit log retrieval & CSV export
+│   │   ├── auth.routes.ts      # Login, registration, profile, logout
+│   │   ├── incidents.routes.ts # Incident CRUD, coordinates, timeline
+│   │   ├── notifications.routes.ts # Notification management
+│   │   ├── resources.routes.ts # Inventory allocation & ledger
+│   │   ├── settings.routes.ts  # System settings & baseline reset
+│   │   ├── shelters.routes.ts  # Shelter registry & occupancy guards
+│   │   ├── tasks.routes.ts     # Kanban tasks & assignments
+│   │   └── teams.routes.ts     # Response team roster
+│   ├── scripts/                # Database utilities
+│   │   └── seed.ts             # Baseline scenario seed script
+│   └── tests/                  # Backend integration tests
+│       └── api.test.ts         # Supertest integration test suite
+├── src/                        # Frontend Application Layer
+│   ├── main.tsx                # React root mount
 │   ├── App.tsx                 # Route declarations & provider nesting
-│   ├── index.css               # Global tactical styles & Leaflet popup customizations
-│   ├── types/                  # Strict TypeScript data contracts
-│   │   ├── incident.ts         # Incident, severity, timeline, coordinates
-│   │   ├── team.ts             # Response teams, staffing, disciplines
-│   │   ├── shelter.ts          # Shelter facilities, capacity, occupancy
-│   │   ├── resource.ts         # Logistics stock, units, depots, status
-│   │   ├── task.ts             # Kanban task cards, priority, status
-│   │   ├── alert.ts            # CAP-inspired warning schemas, channels
-│   │   ├── audit.ts            # Audit trail event contracts
-│   │   ├── role.ts             # Persona identities and permission types
-│   │   └── settings.ts         # Operations center settings & mock feeds
-│   ├── data/                   # Realistic baseline scenario fixtures
-│   │   ├── mockIncidents.ts    # Indraprashtha Sector 4 incidents
-│   │   ├── mockTeams.ts        # NDRF, SDRF, Medical, Fire battalions
-│   │   ├── mockShelters.ts     # Evacuation sports complexes & schools
-│   │   ├── mockResources.ts    # Potable water, medical kits, zodiac boats
-│   │   ├── mockTasks.ts        # Sandbagging, dewatering, hazmat perimeter
-│   │   ├── mockAlerts.ts       # Evacuation orders and chemical advisories
-│   │   ├── mockAuditLogs.ts    # Initial exercise timeline entries
-│   │   └── seedData.ts         # Schema versioning & storage defaults
-│   ├── context/
-│   │   └── RakshaContext.tsx   # Centralized data store, CRUD methods, persistence
-│   ├── utils/
-│   │   ├── permissions.ts      # Persona matrix & permission checking helpers
-│   │   ├── csvExport.ts        # RFC 4180 compliant CSV serializer and downloader
-│   │   ├── formatters.ts       # Date, coordinate, and number formatters
-│   │   └── validators.ts       # Coordinate (-90..90, -180..180) & form checks
-│   ├── components/
-│   │   ├── common/             # Badges, Buttons, Modals, StatCards, ConfirmDialog
-│   │   ├── layout/             # Header, Sidebar, AppLayout, PersonaSelector
-│   │   └── map/                # Leaflet interactive map with custom div-icons
-│   ├── pages/                  # 12 functional operational routes
-│   │   ├── DashboardPage.tsx
-│   │   ├── IncidentsPage.tsx
-│   │   ├── OperationalMapPage.tsx
-│   │   ├── TeamsPage.tsx
-│   │   ├── SheltersPage.tsx
-│   │   ├── ResourcesPage.tsx
-│   │   ├── TaskBoardPage.tsx
-│   │   ├── AlertsPage.tsx
-│   │   ├── AnalyticsPage.tsx
-│   │   ├── AuditLogPage.tsx
-│   │   ├── SettingsPage.tsx
-│   │   └── PublicBulletinPage.tsx
-│   └── tests/                  # Vitest unit test suites
-│       ├── businessRules.test.ts
-│       └── domainOperations.test.ts
+│   ├── services/               # Client-side API layer
+│   │   └── api.ts              # Typed REST client with credentials
+│   ├── types/                  # Shared data models
+│   ├── data/                   # Initial fixtures & seed states
+│   ├── context/                # Reactive state management
+│   │   └── RakshaContext.tsx   # Store with backend synchronization & offline fallback
+│   ├── utils/                  # Permissions, formatters, CSV export
+│   ├── components/             # Reusable UI components
+│   ├── pages/                  # 12 operational views
+│   └── tests/                  # Unit and domain business rule tests
+└── docs/                       # Project documentation
+    ├── ARCHITECTURE.md         # Full system architecture
+    ├── DEVELOPMENT_LOG.md      # Mandatory Git milestone history
+    └── PHASE_ROADMAP.md        # Long-term development roadmap
 ```
 
 ---
 
-## Data Flow & Persistence Strategy
+## Verification & Test Automation
 
-1. **Initialization**: On application mount, `RakshaProvider` inspects browser `localStorage` for key `rakshagrid_state_v1.0`. If present and valid, state is restored; otherwise, the baseline scenario from `seedData.ts` is populated.
-2. **Mutations**: User actions trigger typed context callbacks (e.g., `addIncident`, `allocateResource`).
-3. **Audit Dispatch**: The mutation callback atomically constructs an `AuditLogEvent` containing the active persona identity and timestamp, prepending it to `auditLogs`.
-4. **Persistence**: A reactive `useEffect` writes serialized state to `localStorage` automatically.
-5. **Reset & Recovery**: The `resetDemoData()` method wipes customized entries and re-seeds the pristine scenario baseline upon confirmation.
-
----
-
-## Future Phase Integration Path
-
-Phase 1 establishes clean architectural seams to ensure zero UI rewrites when upgrading:
-- `RakshaContext` methods are designed to swap local state dispatch with REST/WebSocket calls to FastAPI or Node.js in Phase 2.
-- Persona tokens will transition from client-side state to signed JWTs / OAuth2 tokens without changing permission check calls (`hasPermission(activePersonaId, permission)`).
-- The Leaflet vector tile layer is configured to connect to PostGIS vector tiles (`MVT`) in Phase 3.
-
+The repository enforces complete test coverage across both frontend domain operations and backend REST endpoints:
+- **`npm test`**: Runs Vitest across domain operations, business rules, and backend integration test suites.
+- **`npm run lint`**: Strict dual-compiler type checking (`tsc --noEmit` and `tsc -p tsconfig.server.json --noEmit`).
+- **`npm run build`**: Production bundling via Vite.

@@ -80,5 +80,28 @@ This log records every verified milestone committed and pushed to [https://githu
   - `npm run lint` (`tsc --noEmit && tsc -p tsconfig.server.json --noEmit`) &rarr; 0 errors.
   - `npm test` (`vitest run`) &rarr; 39 of 39 tests passed (18 backend integration tests + 21 domain tests).
   - `npm run build` (`tsc -b && vite build`) &rarr; Production bundle verified.
+- **Commit Hash**: `89b548e`
+- **Push Status**: Verified (`f188959..89b548e main -> main`)
+
+---
+
+### Milestone 5: Frontend API Client Integration, Live State Sync & Full Documentation
+- **Date**: 2026-10-29
+- **Feature / Fix**:
+  - Implemented typed REST API client (`src/services/api.ts`) connecting frontend React store to backend endpoints with HttpOnly cookie credentials and bearer fallback.
+  - Configured Vite development proxy in `vite.config.ts` forwarding `/api` to Express server on port 5000.
+  - Updated `src/context/RakshaContext.tsx` with:
+    - Auto-detection of backend health on mount (`api.checkHealth()`).
+    - Bidirectional state synchronization between relational database and reactive store.
+    - Automatic offline fallback to LocalStorage demo simulation when server is offline or in demo mode.
+    - Full authentication flows: `login`, `registerUser`, `logout`, `syncWithBackend`.
+  - Added live backend connection badge to application header (`[LIVE API]` vs `[DEMO MODE]`).
+  - Enhanced `PersonaSelector.tsx` modal with real server session status, persona auto-authentication, and direct sign-in form with default credentials.
+  - Added `src/vite-env.d.ts` for Vite client type declarations.
+  - Updated `README.md`, `docs/ARCHITECTURE.md`, `docs/PHASE_ROADMAP.md`, and `.env.example` to document Phase 2 full-stack architecture, relational database schema, RBAC matrix, and verification commands.
+- **Relevant Checks**:
+  - `npm run lint` (`tsc --noEmit && tsc -p tsconfig.server.json --noEmit`) &rarr; 0 errors.
+  - `npm test` (`vitest run`) &rarr; 39 of 39 tests passed (18 backend integration tests + 21 domain tests).
+  - `npm run build` (`tsc -b && vite build`) &rarr; Production bundle verified in 5.60s.
 - **Commit Hash**: (Pending commit)
 - **Push Status**: Pending push to `main`

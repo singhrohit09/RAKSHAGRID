@@ -28,7 +28,9 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
     resetDemoData,
     incidents,
     teams,
-    shelters
+    shelters,
+    backendConnected,
+    isDemoMode
   } = useRaksha();
 
   const navigate = useNavigate();
@@ -117,6 +119,16 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
           <div className="hidden sm:flex items-center gap-1.5 text-xs font-mono text-primary-dim">
             <Clock className="w-3.5 h-3.5 text-primary-muted" />
             <span>{currentTime}</span>
+          </div>
+
+          <div 
+            className="hidden md:flex items-center gap-1.5 text-[11px] font-mono px-2 py-0.5 rounded border border-border bg-panel-elevated"
+            title={backendConnected && !isDemoMode ? "Live PostgreSQL/SQLite relational backend connected with session authentication" : "Operating in standalone local demo simulation"}
+          >
+            <span className={`w-2 h-2 rounded-full ${backendConnected && !isDemoMode ? 'bg-safe animate-pulse' : 'bg-hazard'}`} />
+            <span className={backendConnected && !isDemoMode ? 'text-safe font-semibold' : 'text-hazard font-semibold'}>
+              {backendConnected && !isDemoMode ? 'LIVE API' : 'DEMO MODE'}
+            </span>
           </div>
         </div>
 

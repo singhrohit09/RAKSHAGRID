@@ -9,6 +9,7 @@ import { AuditLogEvent, AuditEntityType } from '../types/audit';
 import { PersonaId } from '../types/role';
 import { AppSettings } from '../types/settings';
 import { PERSONAS, hasPermission } from '../utils/permissions';
+import { api, AuthUser } from '../services/api';
 import { 
   STORAGE_KEY, 
   SETTINGS_KEY, 
@@ -16,6 +17,14 @@ import {
   getInitialDataState, 
   RakshaDataState 
 } from '../data/seedData';
+
+export const DEFAULT_PERSONA_CREDENTIALS: Record<PersonaId, { email: string; password: string }> = {
+  admin: { email: 'admin@rakshagrid.gov.in', password: 'Admin@RakshaGrid2026' },
+  commander: { email: 'commander@rakshagrid.gov.in', password: 'Commander@Raksha2026' },
+  responder: { email: 'responder@rakshagrid.gov.in', password: 'Responder@Raksha2026' },
+  logistics: { email: 'logistics@rakshagrid.gov.in', password: 'Logistics@Raksha2026' },
+  analyst: { email: 'analyst@rakshagrid.gov.in', password: 'Analyst@Raksha2026' }
+};
 
 export interface InAppNotification {
   id: string;
@@ -38,6 +47,17 @@ export interface RakshaContextType {
   settings: AppSettings;
   activePersonaId: PersonaId;
   notifications: InAppNotification[];
+
+  // Auth & Backend Status
+  currentUser: AuthUser | null;
+  isAuthenticated: boolean;
+  backendConnected: boolean;
+  isDemoMode: boolean;
+  setIsDemoMode: (val: boolean) => void;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  registerUser: (payload: { email: string; password: string; displayName: string; role: PersonaId; department?: string; callsign?: string }) => Promise<{ success: boolean; error?: string }>;
+  logout: () => Promise<void>;
+  syncWithBackend: () => Promise<void>;
 
   // Persona
   setActivePersonaId: (id: PersonaId) => void;
@@ -121,6 +141,10 @@ export const RakshaProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   });
 
   const [activePersonaId, setActivePersonaId] = useState<PersonaId>('admin');
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [backendConnected, setBackendConnected] = useState<boolean>(false);
+  const [isDemoMode, setIsDemoMode] = useState<boolean>(false);
 
   const [notifications, setNotifications] = useState<InAppNotification[]>([
     {
@@ -172,6 +196,135 @@ export const RakshaProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
     setNotifications(prev => [newNotif, ...prev.slice(0, 19)]);
   }, [settings.demoNotificationsEnabled]);
+
+  // Synchronize data with live backend
+  const syncWithBackend = useCallback(async () => {
+    try {
+      const [inc, tm, sh, res, tsk, alt, aud, st] = await Promise.all([
+        api.getIncidents().catch(() => null),
+        api.getTeams().catch(() => null),
+        api.getShelters().catch(() => null),
+        api.getResources().catch(() => null),
+        api.getTasks().catch(() => null),
+        api.getAlerts().catch(() => null),
+        api.getAuditLogs().catch(() => null),
+        api.getSettings().catch(() => null)
+      ]);
+
+      setDataState(prev => ({
+        incidents: (inc && Array.isArray(inc) && inc.length > 0) ? inc : prev.incidents,
+        teams: (tm && Array.isArray(tm) && tm.length > 0) ? tm : prev.teams,
+        shelters: (sh && Array.isArray(sh) && sh.length > 0) ? sh : prev.shelters,
+        resources: (res && Array.isArray(res) && res.length > 0) ? res : prev.resources,
+        tasks: (tsk && Array.isArray(tsk) && tsk.length > 0) ? tsk : prev.tasks,
+        alerts: (alt && Array.isArray(alt) && alt.length > 0) ? alt : prev.alerts,
+        auditLogs: (aud && aud.data && Array.isArray(aud.data) && aud.data.length > 0) ? aud.data : prev.auditLogs
+      }));
+
+      if (st && st.data) {
+        setSettings(prev => ({ ...prev, ...st.data }));
+      }
+    } catch (err) {
+      console.warn('Backend sync error:', err);
+    }
+  }, []);
+
+  // Backend Health check and initial session detection
+  useEffect(() => {
+    let isMounted = true;
+    async function initBackend() {
+      try {
+        const health = await api.checkHealth();
+        if (health.status === 'healthy' && isMounted) {
+          setBackendConnected(true);
+          try {
+            const me = await api.getMe();
+            if (me.authenticated && isMounted) {
+              setCurrentUser(me.user);
+              setIsAuthenticated(true);
+              setActivePersonaId(me.user.role);
+            }
+          } catch {
+            // Not authenticated yet
+          }
+          await syncWithBackend();
+        }
+      } catch {
+        if (isMounted) {
+          setBackendConnected(false);
+          setIsDemoMode(true);
+        }
+      }
+    }
+
+    initBackend();
+    return () => { isMounted = false; };
+  }, [syncWithBackend]);
+
+  // Authentication Actions
+  const login = useCallback(async (email: string, pass: string) => {
+    try {
+      const res = await api.login(email, pass);
+      setCurrentUser(res.user);
+      setIsAuthenticated(true);
+      setActivePersonaId(res.user.role);
+      setIsDemoMode(false);
+      pushNotification('Authenticated', `Signed in as ${res.user.displayName} (${res.user.role.toUpperCase()})`, 'success');
+      await syncWithBackend();
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Login failed' };
+    }
+  }, [pushNotification, syncWithBackend]);
+
+  const registerUser = useCallback(async (payload: {
+    email: string;
+    password: string;
+    displayName: string;
+    role: PersonaId;
+    department?: string;
+    callsign?: string;
+  }) => {
+    try {
+      const res = await api.register(payload);
+      setCurrentUser(res.user);
+      setIsAuthenticated(true);
+      setActivePersonaId(res.user.role);
+      setIsDemoMode(false);
+      pushNotification('Registration Successful', `Account created for ${res.user.displayName}`, 'success');
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Registration failed' };
+    }
+  }, [pushNotification]);
+
+  const logout = useCallback(async () => {
+    try {
+      await api.logout();
+    } catch {
+      // ignore
+    }
+    setCurrentUser(null);
+    setIsAuthenticated(false);
+    setIsDemoMode(true);
+    pushNotification('Signed Out', 'Operating in standalone demo simulation mode', 'info');
+  }, [pushNotification]);
+
+  const handleSetActivePersonaId = useCallback(async (id: PersonaId) => {
+    setActivePersonaId(id);
+    if (backendConnected && !isDemoMode) {
+      const creds = DEFAULT_PERSONA_CREDENTIALS[id];
+      if (creds) {
+        try {
+          const res = await api.login(creds.email, creds.password);
+          setCurrentUser(res.user);
+          setIsAuthenticated(true);
+        } catch {
+          // fallback to client-side switch
+        }
+      }
+    }
+  }, [backendConnected, isDemoMode]);
 
   // Centralized Audit Logging Helper
   const logAudit = useCallback((
@@ -805,7 +958,16 @@ export const RakshaProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     settings,
     activePersonaId,
     notifications,
-    setActivePersonaId,
+    currentUser,
+    isAuthenticated,
+    backendConnected,
+    isDemoMode,
+    setIsDemoMode,
+    login,
+    registerUser,
+    logout,
+    syncWithBackend,
+    setActivePersonaId: handleSetActivePersonaId,
     addIncident,
     updateIncident,
     deleteIncident,
@@ -839,7 +1001,16 @@ export const RakshaProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     settings,
     activePersonaId,
     notifications,
-    setActivePersonaId,
+    currentUser,
+    isAuthenticated,
+    backendConnected,
+    isDemoMode,
+    setIsDemoMode,
+    login,
+    registerUser,
+    logout,
+    syncWithBackend,
+    handleSetActivePersonaId,
     addIncident,
     updateIncident,
     deleteIncident,
