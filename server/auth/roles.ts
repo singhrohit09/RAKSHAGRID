@@ -59,3 +59,4 @@ export function hasServerPermission(role: PersonaId, permission: Permission): bo
   if (!allowed) return false;
   return allowed.includes(permission);
 }
+

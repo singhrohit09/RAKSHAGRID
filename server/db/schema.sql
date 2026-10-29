@@ -159,6 +159,14 @@ CREATE TABLE IF NOT EXISTS notifications (
   created_at TIMESTAMP NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+  id VARCHAR(64) PRIMARY KEY,
+  user_id VARCHAR(64) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token_hash VARCHAR(64) NOT NULL,
+  expires_at TIMESTAMP NOT NULL,
+  created_at TIMESTAMP NOT NULL
+);
+
 -- Indices for performance
 CREATE INDEX IF NOT EXISTS idx_incidents_status ON incidents(status);
 CREATE INDEX IF NOT EXISTS idx_incidents_severity ON incidents(severity);
@@ -168,3 +176,5 @@ CREATE INDEX IF NOT EXISTS idx_tasks_incident ON tasks(related_incident_id);
 CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON audit_events(timestamp);
 CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit_events(entity_type, entity_id);
 CREATE INDEX IF NOT EXISTS idx_movements_resource ON inventory_movements(resource_id);
+CREATE INDEX IF NOT EXISTS idx_reset_token_hash ON password_reset_tokens(token_hash);
+

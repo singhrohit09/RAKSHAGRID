@@ -108,3 +108,4 @@ router.post('/reset', authenticate, requirePermission('change_settings'), async 
 });
 
 export default router;
+

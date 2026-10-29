@@ -4,6 +4,8 @@ import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import { db } from './db/connection.js';
 import { seedDatabase } from './scripts/seed.js';
+import { validateProductionEnvironment } from './config/security.js';
+import { csrfProtection } from './middleware/csrf.js';
 
 // Route modules
 import authRoutes from './routes/auth.routes.js';
@@ -18,6 +20,9 @@ import settingsRoutes from './routes/settings.routes.js';
 import notificationsRoutes from './routes/notifications.routes.js';
 
 dotenv.config();
+
+// Fail safely if production environment variables are missing or insecure
+validateProductionEnvironment();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -35,21 +40,25 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps, curl, postman)
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(null, true); // Permissive in dev, or origin check
+    // Non-browser or direct requests without an Origin header are permitted
+    if (!origin) {
+      return callback(null, true);
     }
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    // Strictly reject unapproved origins; never reflect arbitrary origins when credentials=true
+    return callback(new Error(`CORS blocked: Origin '${origin}' is not authorized.`));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Raksha-CSRF', 'X-Test-Rate-Limit']
 }));
 
 app.use(cookieParser());
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '5mb' }));
+app.use(express.urlencoded({ extended: true, limit: '5mb' }));
+app.use(csrfProtection(allowedOrigins));
 
 // Lightweight request logging
 app.use((req: Request, res: Response, next: NextFunction) => {
@@ -105,10 +114,17 @@ app.use('/api', (req: Request, res: Response) => {
 
 // Centralized error handling middleware
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  if (err.message && err.message.startsWith('CORS blocked:')) {
+    return res.status(403).json({
+      success: false,
+      error: err.message
+    });
+  }
+
   console.error('Unhandled server exception:', err);
   res.status(500).json({
     success: false,
-    error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message
+    error: process.env.NODE_ENV === 'production' ? 'Internal server error occurred.' : err.message
   });
 });
 

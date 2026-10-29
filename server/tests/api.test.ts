@@ -1,14 +1,18 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import request from 'supertest';
-import app, { initializeDatabase } from '../index.js';
+import app from '../index.js';
+import { seedDatabase } from '../scripts/seed.js';
 
 describe('RakshaGrid Operational Backend API', () => {
+  const testAdminPassword = 'TestAdminPassword#2026!';
+  const testResponderPassword = 'TestResponderPassword#2026!';
   let adminToken = '';
   let responderToken = '';
 
   beforeAll(async () => {
-    // Initialize schema and default seeded personas
-    await initializeDatabase();
+    process.env.INITIAL_ADMIN_PASSWORD = testAdminPassword;
+    process.env.DEV_BOOTSTRAP_PASSWORD = testResponderPassword;
+    await seedDatabase(true);
   });
 
   describe('System Health & Status', () => {
@@ -33,7 +37,7 @@ describe('RakshaGrid Operational Backend API', () => {
         .post('/api/auth/login')
         .send({
           email: 'admin@rakshagrid.gov.in',
-          password: 'Admin@RakshaGrid2026'
+          password: testAdminPassword
         });
 
       expect(res.status).toBe(200);
@@ -51,7 +55,7 @@ describe('RakshaGrid Operational Backend API', () => {
         .post('/api/auth/login')
         .send({
           email: 'responder@rakshagrid.gov.in',
-          password: 'Responder@Raksha2026'
+          password: testResponderPassword
         });
 
       expect(res.status).toBe(200);
@@ -227,7 +231,7 @@ describe('RakshaGrid Operational Backend API', () => {
     });
   });
 
-  describe('Tamper-Resistant Audit Trail', () => {
+  describe('Application-Level Operational Audit Trail', () => {
     it('records and returns audit logs for operational mutations', async () => {
       const res = await request(app)
         .get('/api/audit')

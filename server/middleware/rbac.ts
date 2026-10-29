@@ -25,3 +25,4 @@ export function requirePermission(permission: Permission) {
     next();
   };
 }
+
