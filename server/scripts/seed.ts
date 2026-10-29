@@ -8,75 +8,120 @@ import { INITIAL_TASKS } from '../../src/data/mockTasks.js';
 import { INITIAL_ALERTS } from '../../src/data/mockAlerts.js';
 import { INITIAL_AUDIT_LOGS } from '../../src/data/mockAuditLogs.js';
 import { DEFAULT_SETTINGS } from '../../src/data/seedData.js';
+import { generateSecurePassword, isPasswordStrong } from '../config/security.js';
 
-export async function seedDatabase(force = false): Promise<void> {
+export interface SeedResult {
+  adminEmail: string;
+  adminPassword?: string;
+  devCredentials?: Record<string, string>;
+}
+
+export async function seedDatabase(force = false): Promise<SeedResult> {
   console.log('🔄 Initializing database schema...');
   await db.initSchema();
 
   const userCount = await db.get<{ count: number }>('SELECT COUNT(*) as count FROM users');
   if (userCount && userCount.count > 0 && !force) {
     console.log('ℹ️  Database already contains records. Skipping seed.');
-    return;
+    return { adminEmail: 'admin@rakshagrid.gov.in' };
   }
 
-  console.log('🌱 Seeding initial users...');
+  const isProduction = process.env.NODE_ENV === 'production';
   const salt = await bcrypt.genSalt(10);
-  const defaultUsers = [
-    {
-      id: 'USR-ADMIN-01',
-      email: 'admin@rakshagrid.gov.in',
-      password: process.env.INITIAL_ADMIN_PASSWORD || 'Admin@RakshaGrid2026',
-      name: 'Director Rajesh Verma',
-      role: 'admin',
-      department: 'State Disaster Management Authority (SDMA)',
-      callsign: 'COMMAND-01'
-    },
-    {
-      id: 'USR-CMDR-02',
-      email: 'commander@rakshagrid.gov.in',
-      password: 'Commander@Raksha2026',
-      name: 'Cmdr. Ananya Sen',
-      role: 'commander',
-      department: 'Unified Incident Command Post',
-      callsign: 'EOC-ALPHA'
-    },
-    {
-      id: 'USR-RESP-03',
-      email: 'responder@rakshagrid.gov.in',
-      password: 'Responder@Raksha2026',
-      name: 'Vikramaditya Rao',
-      role: 'responder',
-      department: 'NDRF Battalion 8',
-      callsign: 'RESCUE-LEAD-8'
-    },
-    {
-      id: 'USR-LOG-04',
-      email: 'logistics@rakshagrid.gov.in',
-      password: 'Logistics@Raksha2026',
-      name: 'Pooja Kulkarni',
-      role: 'logistics',
-      department: 'Relief Supply & Shelters Section',
-      callsign: 'SUPPLY-BASE'
-    },
-    {
-      id: 'USR-ANAL-05',
-      email: 'analyst@rakshagrid.gov.in',
-      password: 'Analyst@Raksha2026',
-      name: 'Dr. Siddharth Mehta',
-      role: 'analyst',
-      department: 'Meteorological & Impact Assessment Group',
-      callsign: 'IMPACT-OBSERVER'
-    }
-  ];
+  const now = new Date().toISOString();
+  let adminPassword = process.env.INITIAL_ADMIN_PASSWORD || process.env.BOOTSTRAP_ADMIN_PASSWORD;
+  const devCredentials: Record<string, string> = {};
 
-  for (const u of defaultUsers) {
-    const hash = await bcrypt.hash(u.password, salt);
-    const now = new Date().toISOString();
-    await db.run(
-      `INSERT OR REPLACE INTO users (id, email, password_hash, display_name, role, department, callsign, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [u.id, u.email, hash, u.name, u.role, u.department, u.callsign, now, now]
-    );
+  if (isProduction) {
+    console.log('🔒 Production mode detected: Skipping dummy development user accounts.');
+    if (adminPassword) {
+      const strength = isPasswordStrong(adminPassword);
+      if (!strength.valid) {
+        throw new Error(`Insecure INITIAL_ADMIN_PASSWORD in production: ${strength.reason}`);
+      }
+      const hash = await bcrypt.hash(adminPassword, salt);
+      await db.run(
+        `INSERT OR REPLACE INTO users (id, email, password_hash, display_name, role, department, callsign, created_at, updated_at)
+         VALUES (?, ?, ?, ?, 'admin', 'State Disaster Management Authority (SDMA)', 'COMMAND-01', ?, ?)`,
+        ['USR-ADMIN-01', 'admin@rakshagrid.gov.in', hash, 'Director Rajesh Verma', now, now]
+      );
+      console.log('✅ Initial administrator provisioned from secure environment variable.');
+    } else {
+      console.log('ℹ️  No INITIAL_ADMIN_PASSWORD provided. Run "npm run server:bootstrap-admin" to provision initial administrator.');
+    }
+  } else {
+    // Non-production (Development & Test): Provision secure development personas
+    console.log('🌱 Seeding development persona accounts...');
+    const defaultDevSecret = process.env.DEV_BOOTSTRAP_PASSWORD || process.env.TEST_PASSWORD || generateSecurePassword(14);
+    adminPassword = adminPassword || defaultDevSecret;
+
+    const devUsers = [
+      {
+        id: 'USR-ADMIN-01',
+        email: 'admin@rakshagrid.gov.in',
+        password: adminPassword,
+        name: 'Director Rajesh Verma',
+        role: 'admin',
+        department: 'State Disaster Management Authority (SDMA)',
+        callsign: 'COMMAND-01'
+      },
+      {
+        id: 'USR-CMDR-02',
+        email: 'commander@rakshagrid.gov.in',
+        password: process.env.DEV_BOOTSTRAP_PASSWORD || generateSecurePassword(14),
+        name: 'Cmdr. Ananya Sen',
+        role: 'commander',
+        department: 'Unified Incident Command Post',
+        callsign: 'EOC-ALPHA'
+      },
+      {
+        id: 'USR-RESP-03',
+        email: 'responder@rakshagrid.gov.in',
+        password: process.env.DEV_BOOTSTRAP_PASSWORD || generateSecurePassword(14),
+        name: 'Vikramaditya Rao',
+        role: 'responder',
+        department: 'NDRF Battalion 8',
+        callsign: 'RESCUE-LEAD-8'
+      },
+      {
+        id: 'USR-LOG-04',
+        email: 'logistics@rakshagrid.gov.in',
+        password: process.env.DEV_BOOTSTRAP_PASSWORD || generateSecurePassword(14),
+        name: 'Pooja Kulkarni',
+        role: 'logistics',
+        department: 'Relief Supply & Shelters Section',
+        callsign: 'SUPPLY-BASE'
+      },
+      {
+        id: 'USR-ANAL-05',
+        email: 'analyst@rakshagrid.gov.in',
+        password: process.env.DEV_BOOTSTRAP_PASSWORD || generateSecurePassword(14),
+        name: 'Dr. Siddharth Mehta',
+        role: 'analyst',
+        department: 'Meteorological & Impact Assessment Group',
+        callsign: 'IMPACT-OBSERVER'
+      }
+    ];
+
+    for (const u of devUsers) {
+      devCredentials[u.email] = u.password;
+      const hash = await bcrypt.hash(u.password, salt);
+      await db.run(
+        `INSERT OR REPLACE INTO users (id, email, password_hash, display_name, role, department, callsign, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [u.id, u.email, hash, u.name, u.role, u.department, u.callsign, now, now]
+      );
+    }
+
+    if (process.env.NODE_ENV !== 'test') {
+      console.log('\n======================================================');
+      console.log('🔑 Development Persona Credentials (Ephemeral / Local)');
+      console.log('======================================================');
+      for (const [em, pw] of Object.entries(devCredentials)) {
+        console.log(`  ${em.padEnd(30)} : ${pw}`);
+      }
+      console.log('======================================================\n');
+    }
   }
 
   console.log('🌱 Seeding teams...');
@@ -253,6 +298,7 @@ export async function seedDatabase(force = false): Promise<void> {
   );
 
   console.log('✅ Database successfully seeded with baseline disaster intelligence records.');
+  return { adminEmail: 'admin@rakshagrid.gov.in', adminPassword, devCredentials };
 }
 
 // Allow direct CLI invocation
@@ -264,3 +310,4 @@ if (import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.endsWith
       process.exit(1);
     });
 }
+
