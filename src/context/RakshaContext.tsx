@@ -18,14 +18,6 @@ import {
   RakshaDataState 
 } from '../data/seedData';
 
-export const DEFAULT_PERSONA_CREDENTIALS: Record<PersonaId, { email: string; password: string }> = {
-  admin: { email: 'admin@rakshagrid.gov.in', password: 'Admin@RakshaGrid2026' },
-  commander: { email: 'commander@rakshagrid.gov.in', password: 'Commander@Raksha2026' },
-  responder: { email: 'responder@rakshagrid.gov.in', password: 'Responder@Raksha2026' },
-  logistics: { email: 'logistics@rakshagrid.gov.in', password: 'Logistics@Raksha2026' },
-  analyst: { email: 'analyst@rakshagrid.gov.in', password: 'Analyst@Raksha2026' }
-};
-
 export interface InAppNotification {
   id: string;
   title: string;
@@ -310,21 +302,11 @@ export const RakshaProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     pushNotification('Signed Out', 'Operating in standalone demo simulation mode', 'info');
   }, [pushNotification]);
 
-  const handleSetActivePersonaId = useCallback(async (id: PersonaId) => {
+  const handleSetActivePersonaId = useCallback((id: PersonaId) => {
     setActivePersonaId(id);
-    if (backendConnected && !isDemoMode) {
-      const creds = DEFAULT_PERSONA_CREDENTIALS[id];
-      if (creds) {
-        try {
-          const res = await api.login(creds.email, creds.password);
-          setCurrentUser(res.user);
-          setIsAuthenticated(true);
-        } catch {
-          // fallback to client-side switch
-        }
-      }
-    }
-  }, [backendConnected, isDemoMode]);
+    // Note: Persona switching is strictly a demo/evaluation UI simulation feature.
+    // In live authenticated mode, the user's authority is determined by their server session.
+  }, []);
 
   // Centralized Audit Logging Helper
   const logAudit = useCallback((

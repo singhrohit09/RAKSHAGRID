@@ -91,7 +91,7 @@ export const AuditLogPage: React.FC = () => {
             </span>
           </div>
           <p className="text-xs text-primary-muted mt-0.5">
-            Tamper-evident client ledger capturing all incidents, allocations, alerts, and state transitions.
+            Application-level operational ledger recording all incidents, allocations, alerts, and state transitions.
           </p>
         </div>
 

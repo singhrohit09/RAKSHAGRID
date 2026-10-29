@@ -130,7 +130,7 @@ export const PersonaSelector: React.FC = () => {
               <div className="p-2.5 bg-hazard/10 border border-hazard/30 rounded text-xs text-primary-muted flex items-start gap-2">
                 <Shield className="w-4 h-4 text-hazard shrink-0 mt-0.5" />
                 <span>
-                  Select any persona below. If the backend is running, selecting a persona automatically establishes an authenticated server session for that persona.
+                  Select any persona below to preview client-side capability tokens and dashboard perspectives in Demo Simulation mode. Live operations require verified credentials under the Direct Sign-In tab.
                 </span>
               </div>
 
@@ -264,10 +264,11 @@ export const PersonaSelector: React.FC = () => {
                   <div className="p-2.5 bg-panel-elevated border border-border rounded text-[11px] text-primary-dim space-y-1">
                     <div className="font-semibold text-primary-muted flex items-center gap-1">
                       <Lock className="w-3 h-3 text-hazard" />
-                      Standard Baseline Credentials:
+                      Secure Operator Authentication:
                     </div>
-                    <div>Admin: <code className="text-primary font-mono">admin@rakshagrid.gov.in</code> / <code className="text-primary font-mono">Admin@RakshaGrid2026</code></div>
-                    <div>Commander: <code className="text-primary font-mono">commander@rakshagrid.gov.in</code> / <code className="text-primary font-mono">Commander@Raksha2026</code></div>
+                    <div>
+                      Sign in using credentials provisioned by your Incident Command authority. In development mode, check your server console or run <code className="text-primary font-mono">npm run server:bootstrap-admin</code> to provision a console administrator.
+                    </div>
                   </div>
 
                   <Button

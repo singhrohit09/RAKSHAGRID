@@ -67,6 +67,8 @@ class ApiService {
     if (!headers.has('Content-Type') && !(options.body instanceof FormData)) {
       headers.set('Content-Type', 'application/json');
     }
+    headers.set('X-Requested-With', 'XMLHttpRequest');
+    headers.set('X-Raksha-CSRF', '1');
 
     if (this.token && !headers.has('Authorization')) {
       headers.set('Authorization', `Bearer ${this.token}`);
@@ -162,10 +164,31 @@ class ApiService {
     return this.request<MeResponse>('/auth/me');
   }
 
-  public async resetPassword(email: string, newPassword: string): Promise<{ message: string }> {
+  public async forgotPassword(email: string): Promise<{ message: string; resetToken?: string }> {
+    return this.request<{ message: string; resetToken?: string }>('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email })
+    });
+  }
+
+  public async resetPasswordWithToken(token: string, newPassword: string): Promise<{ message: string }> {
     return this.request<{ message: string }>('/auth/reset-password', {
       method: 'POST',
-      body: JSON.stringify({ email, newPassword })
+      body: JSON.stringify({ token, newPassword })
+    });
+  }
+
+  public async changePassword(currentPassword: string, newPassword: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword, newPassword })
+    });
+  }
+
+  public async updateUserRole(userId: string, role: PersonaId): Promise<{ message: string; userId: string; newRole: string }> {
+    return this.request<{ message: string; userId: string; newRole: string }>(`/auth/users/${userId}/role`, {
+      method: 'PUT',
+      body: JSON.stringify({ role })
     });
   }
 
@@ -416,3 +439,4 @@ class ApiService {
 }
 
 export const api = new ApiService();
+
