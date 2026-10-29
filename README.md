@@ -8,7 +8,7 @@
 [![React](https://img.shields.io/badge/React-18.3-cyan.svg)]()
 [![Express](https://img.shields.io/badge/Express-5.3-yellow.svg)]()
 [![Database](https://img.shields.io/badge/Database-SQLite%20(WAL)%20%7C%20PostgreSQL-orange.svg)]()
-[![Tests](https://img.shields.io/badge/Vitest-39%20Passed-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/Vitest-56%20Passed-brightgreen.svg)]()
 
 ---
 
@@ -65,7 +65,7 @@ Phase 2 elevates the platform from an offline prototype to a **production-ready,
 - **Negative Stock Prevention**: Inventory allocations exceeding depot stock are rejected at the server level (`HTTP 400 Insufficient stock`). Allocations and releases generate entries in `inventory_movements`.
 - **Shelter Capacity Overflow Guard**: Occupancy headcounts exceeding safe capacity are blocked (`HTTP 400 EXCEEDS_CAPACITY`) unless an administrative override is explicitly provided.
 - **Geographic Coordinate Validation**: Validates coordinate boundaries (-90..90 latitude, -180..180 longitude) before saving.
-- **Tamper-Resistant Audit Trail**: Records mutations across all modules, sanitizing sensitive credentials before storage in `audit_events`.
+- **Application-Level Operational Audit Trail**: Records mutations across all modules, sanitizing sensitive credentials before storage in `audit_events`.
 
 ### E. Frontend API Integration with Graceful Offline Fallback
 - Typed REST API client (`src/services/api.ts`) connecting the reactive React store (`RakshaContext`) to backend endpoints.
@@ -86,15 +86,30 @@ Phase 2 elevates the platform from an offline prototype to a **production-ready,
 
 ---
 
-## 5. Standard Baseline Credentials
+## 5. Security Architecture & Administrator Provisioning
 
-| Persona | Role | Email | Password |
-|---|---|---|---|
-| Director Rajesh Verma | `admin` | `admin@rakshagrid.gov.in` | `Admin@RakshaGrid2026` |
-| Cmdr. Ananya Sen | `commander` | `commander@rakshagrid.gov.in` | `Commander@Raksha2026` |
-| Vikramaditya Rao | `responder` | `responder@rakshagrid.gov.in` | `Responder@Raksha2026` |
-| Pooja Kulkarni | `logistics` | `logistics@rakshagrid.gov.in` | `Logistics@Raksha2026` |
-| Dr. Siddharth Mehta | `analyst` | `analyst@rakshagrid.gov.in` | `Analyst@Raksha2026` |
+RakshaGrid strictly adheres to production security hardening standards:
+- **No Hardcoded or Predictable Credentials**: Default production credentials have been treated as compromised and removed.
+- **Secure Administrator Provisioning**:
+  - Run the dedicated one-time provisioning script to bootstrap the first administrator:
+    ```bash
+    npm run server:bootstrap-admin
+    ```
+  - Alternatively, configure `INITIAL_ADMIN_PASSWORD` (min 10 characters with uppercase, lowercase, numeric, and special symbol) in your secure production environment.
+- **Cryptographic Secret Generation**:
+  - Production deployments require a 256-bit cryptographically random secret for signing JWTs:
+    ```bash
+    npm run generate-secret
+    ```
+  - Set the resulting string to `JWT_SECRET` in `.env`.
+- **Privilege Escalation Defense**: Public user registration (`/api/auth/register`) strictly assigns standard responder permissions and actively rejects attempts to claim `admin` or `commander` roles (HTTP 403 Forbidden). Administrator role promotion is restricted to verified administrators (`PUT /api/auth/users/:id/role`).
+- **Rate Limiting & CSRF Protection**:
+  - Sliding-window rate limiters defend against brute-force attacks on login (10 requests/min) and password reset (5 requests/15 min).
+  - CSRF origin and custom header verification (`X-Requested-With`, `X-Raksha-CSRF`) protect state-changing mutation requests authenticated via cookies.
+- **Tokenized Password Recovery**:
+  - Implements SHA-256 hashed 15-minute expiring reset tokens with constant-time response profiles to avoid account enumeration.
+- **Demo Persona Isolation**:
+  - The UI persona selector is strictly a client-side simulation for demonstration. In live mode, actual operational roles and authorization are verified server-side against cryptographically signed JWT sessions.
 
 ---
 
@@ -137,11 +152,11 @@ Open [http://localhost:3000](http://localhost:3000) in your browser. The Vite de
 
 ## 7. Verification Commands
 
-### Run Full Test Suite (39 Tests)
+### Run Full Test Suite (56 Tests)
 ```bash
 npm test
 ```
-*Current status: 39 tests passing (18 backend integration tests + 21 frontend domain logic tests).*
+*Current status: 56 tests passing (17 security regression + 18 backend integration + 21 frontend domain logic tests).*
 
 ### TypeScript Strict Type Checking (Dual Frontend & Backend)
 ```bash

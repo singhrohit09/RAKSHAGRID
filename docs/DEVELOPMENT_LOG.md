@@ -105,3 +105,55 @@ This log records every verified milestone committed and pushed to [https://githu
   - `npm run build` (`tsc -b && vite build`) &rarr; Production bundle verified in 5.60s.
 - **Commit Hash**: `6955ff0`
 - **Push Status**: Verified (`89b548e..6955ff0 main -> main`)
+
+---
+
+### Milestone 6: Enforce Production Secret Validation and Secure Admin Bootstrap
+- **Date**: 2026-10-29
+- **Feature / Fix**:
+  - Completely purged published default passwords, compromised credentials, and JWT secret placeholders from seed fixtures, documentation, and configuration templates.
+  - Built cryptographic secret validation module (`server/config/security.ts`): enforces `>=32 chars`, blocks compromised dictionary strings, and auto-generates ephemeral 256-bit random secrets in dev/test.
+  - Added `npm run generate-secret` CLI script (`server/scripts/generate-secret.ts`) for operator key generation outside source control.
+  - Implemented dedicated first-administrator bootstrap utility (`npm run server:bootstrap-admin` / `server/scripts/bootstrap-admin.ts`) with strong password validation, one-time random password generation, and non-destructive administrator provisioning.
+  - Updated `server/scripts/seed.ts` to strictly require `INITIAL_ADMIN_PASSWORD` in production; skips dummy accounts in production and generates ephemeral credentials in local development.
+- **Relevant Checks**:
+  - `npm run lint` &rarr; 0 errors.
+  - `npm test` &rarr; All tests passed.
+  - `git diff` & `git status` audited for secret leaks and untracked artifacts.
+- **Commit Hash**: `7524ed4`
+- **Push Status**: Verified (`3cf057d..7524ed4 main -> main`)
+
+---
+
+### Milestone 7: Privilege Escalation Guards, Rate Limiting, and CSRF Protection
+- **Date**: 2026-10-29
+- **Feature / Fix**:
+  - Implemented privilege escalation guards in `POST /api/auth/register`: explicitly rejects attempts to register with `admin` or `commander` roles (HTTP 403 Forbidden). Restricted admin role promotion to `PUT /api/auth/users/:id/role` (requiring `change_settings` capability).
+  - Enforced strong password policy (`isPasswordStrong` requiring >=10 chars, upper, lower, digit, symbol) on registration, reset, and password changes.
+  - Added in-memory sliding window rate limiter (`server/middleware/rateLimiter.ts`) protecting authentication (10 req/min) and password reset (5 req/15 min) endpoints against brute-force attacks.
+  - Implemented CSRF origin and referer verification with custom header checks (`X-Requested-With`, `X-Raksha-CSRF`) on cookie-authenticated mutations (`server/middleware/csrf.ts`).
+  - Added tokenized password recovery flow (`password_reset_tokens` table with SHA-256 token hashing and 15-minute expiration) with constant-time response profiles against user enumeration (`/forgot-password` and `/reset-password`).
+  - Added authenticated user password update endpoint (`POST /api/auth/change-password`).
+  - Strict CORS origin validation: rejected unapproved origins and prevented wildcard reflection with credentials enabled.
+  - Authored comprehensive 17-test security regression suite (`server/tests/security.test.ts`).
+- **Relevant Checks**:
+  - `npm test` &rarr; 56 of 56 tests passed (17 security regression + 18 API integration + 13 business rules + 8 domain operations).
+  - `npm run lint` &rarr; 0 errors.
+- **Commit Hash**: `6c50e69`
+- **Push Status**: Verified (`7524ed4..6c50e69 main -> main`)
+
+---
+
+### Milestone 8: UI Credential Sanitization, Demo Persona Isolation, and Audit Terminology
+- **Date**: 2026-10-29
+- **Feature / Fix**:
+  - Sanitized `src/components/layout/PersonaSelector.tsx`: removed default credentials display box and misleading auto-login text; added guidance on administrator bootstrap.
+  - Decoupled persona switching in `src/context/RakshaContext.tsx`: persona switching is strictly a local simulation in demo mode; in live mode, user identity and capabilities are determined solely by verified server-side JWT sessions.
+  - Enhanced API client (`src/services/api.ts`) with automatic CSRF headers (`X-Requested-With`, `X-Raksha-CSRF`) and new endpoints (`forgotPassword`, `resetPasswordWithToken`, `changePassword`, `updateUserRole`).
+  - Corrected audit logging terminology across UI and documentation from "Tamper-evident/Tamper-resistant" to "Application-Level Operational Audit Trail" to accurately represent system guarantees without overstating cryptographic immutability.
+- **Relevant Checks**:
+  - `npm run lint` &rarr; 0 errors.
+  - `npm test` &rarr; 56 of 56 tests passed.
+  - `npm run build` &rarr; Production bundle verified.
+- **Commit Hash**: `8921458`
+- **Push Status**: Verified (`6c50e69..8921458 main -> main`)

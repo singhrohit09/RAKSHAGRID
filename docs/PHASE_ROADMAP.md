@@ -35,17 +35,26 @@ RakshaGrid is architected as an industrial-grade disaster intelligence and coord
 
 ### Key Milestones Completed:
 - [x] **Dual Relational Database Engine**: PostgreSQL (`pg.Pool`) and zero-configuration embedded SQLite (`better-sqlite3` with WAL mode and foreign key enforcement) sharing normalized ANSI SQL schema (`server/db/schema.sql`).
-- [x] **Normalized Relational Schema**: 11 relational tables (`users`, `teams`, `shelters`, `resources`, `inventory_movements`, `incidents`, `incident_timeline`, `tasks`, `alerts`, `audit_events`, `system_settings`, `notifications`).
-- [x] **Real User Authentication**: Bcrypt password hashing (`$2a$10$...`), cryptographically signed JWT sessions delivered in HttpOnly cookies and Bearer tokens, profile verification (`GET /api/auth/me`), and registration endpoints.
+- [x] **Normalized Relational Schema**: 12 relational tables (`users`, `teams`, `shelters`, `resources`, `inventory_movements`, `incidents`, `incident_timeline`, `tasks`, `alerts`, `audit_events`, `system_settings`, `notifications`, `password_reset_tokens`).
+- [x] **Real User Authentication**: Bcrypt password hashing (`$2a$10$...`), cryptographically signed JWT sessions delivered in HttpOnly cookies and Bearer tokens, profile verification (`GET /api/auth/me`), registration, and tokenized password reset.
 - [x] **Server-Side Role-Based Access Control (RBAC)**: `requirePermission(permission)` middleware enforcing 401 Unauthorized / 403 Forbidden access boundaries across 5 operational personas.
 - [x] **Server Business Rules & Safety Guardrails**:
   - Prohibits negative inventory; records movement history in `inventory_movements`.
   - Rejects shelter occupancy overflowing safe capacity without explicit administrative override.
   - Validates terrestrial coordinate boundaries (-90..90 latitude, -180..180 longitude).
-  - Tamper-resistant audit logging with automatic redaction of sensitive credentials.
+  - Application-level operational audit logging with automatic redaction of sensitive credentials.
+- [x] **Production Security Hardening**:
+  - Cryptographic secret generation outside source control (`npm run generate-secret`).
+  - Production environment startup assertion on JWT secret length and complexity.
+  - Dedicated first-administrator bootstrap CLI (`npm run server:bootstrap-admin`).
+  - Privilege escalation defense blocking unauthorized role claims on registration (403 Forbidden).
+  - Sliding-window rate limiting on login (10 req/min) and password reset (5 req/15 min).
+  - CSRF origin and custom header verification on mutation requests.
+  - Tokenized 15-minute expiring SHA-256 password reset flow.
+  - Demo persona isolation: client-side simulation strictly decoupled from server-authenticated sessions.
 - [x] **Modular Express REST API**: Complete endpoints mounted under `/api/*` (`/auth`, `/incidents`, `/teams`, `/shelters`, `/resources`, `/tasks`, `/alerts`, `/audit`, `/settings`, `/notifications`, `/health`).
 - [x] **Frontend API Integration**: Typed client (`src/services/api.ts`) connecting `RakshaContext` to live backend endpoints with automatic fallback to standalone demo mode when running offline.
-- [x] **Verification & Test Suite**: 39 Vitest tests passed (18 backend integration tests + 21 frontend domain tests); 0 TypeScript lint errors; production Vite bundle built and verified.
+- [x] **Verification & Test Suite**: 56 Vitest tests passed (17 security regression + 18 backend integration + 21 frontend domain tests); 0 TypeScript lint errors; production Vite bundle built and verified.
 
 ---
 
