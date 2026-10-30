@@ -73,7 +73,8 @@ export const AuditLogPage: React.FC = () => {
     task: 'bg-operational-purple/15 text-purple-400 border-purple-500/30',
     alert: 'bg-emergency/20 text-emergency border-emergency/40',
     settings: 'bg-panel-subtle text-primary-muted border-border',
-    system: 'bg-charcoal text-primary-dim border-border'
+    system: 'bg-charcoal text-primary-dim border-border',
+    geofence: 'bg-operational-cyan/20 text-operational-cyan border-operational-cyan/40'
   };
 
   return (

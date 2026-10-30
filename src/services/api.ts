@@ -7,6 +7,13 @@ import { EmergencyAlert } from '../types/alert';
 import { AuditLogEvent } from '../types/audit';
 import { AppSettings } from '../types/settings';
 import { PersonaId } from '../types/role';
+import { GeofenceZone, SpatialEvaluationReport } from '../types/geofence';
+import { 
+  NormalizedWeatherReport, 
+  RiverGaugeReport, 
+  ExternalHazardWarning, 
+  SystemHealthResponse 
+} from '../types/external';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -228,6 +235,13 @@ class ApiService {
     });
   }
 
+  public async escalateIncident(id: string, reason: string, newSeverity = 'Critical', newPriority = 'P1'): Promise<{ message: string; severity: string; priority: string }> {
+    return this.request<{ message: string; severity: string; priority: string }>(`/incidents/${id}/escalate`, {
+      method: 'POST',
+      body: JSON.stringify({ reason, newSeverity, newPriority })
+    });
+  }
+
   // Teams
   public async getTeams(): Promise<ResponseTeam[]> {
     return this.request<ResponseTeam[]>('/teams');
@@ -435,6 +449,67 @@ class ApiService {
     return this.request<{ success: boolean }>('/notifications/read-all', {
       method: 'PUT'
     });
+  }
+
+  public async dispatchNotification(payload: {
+    title: string;
+    message: string;
+    severity?: string;
+    channels?: string[];
+    targetRecipient?: string;
+    incidentId?: string;
+    affectedRegion?: string;
+  }): Promise<{ success: boolean; summary: any }> {
+    return this.request<{ success: boolean; summary: any }>('/notifications/dispatch', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  }
+
+  // Geofences & Spatial Analysis (Phase 3)
+  public async getGeofences(): Promise<GeofenceZone[]> {
+    return this.request<GeofenceZone[]>('/geofences');
+  }
+
+  public async getGeofenceEval(): Promise<{ success: boolean; report: SpatialEvaluationReport }> {
+    return this.request<{ success: boolean; report: SpatialEvaluationReport }>('/geofences/eval');
+  }
+
+  public async createGeofence(zone: Partial<GeofenceZone>): Promise<{ message: string; id: string; zone: GeofenceZone }> {
+    return this.request<{ message: string; id: string; zone: GeofenceZone }>('/geofences', {
+      method: 'POST',
+      body: JSON.stringify(zone)
+    });
+  }
+
+  public async updateGeofence(id: string, partial: Partial<GeofenceZone>): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/geofences/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(partial)
+    });
+  }
+
+  public async deleteGeofence(id: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/geofences/${id}`, {
+      method: 'DELETE'
+    });
+  }
+
+  // External Data & Weather Telemetry (Phase 3)
+  public async getLiveWeather(lat = 28.6139, lng = 77.2090): Promise<{ success: boolean; data: NormalizedWeatherReport }> {
+    return this.request<{ success: boolean; data: NormalizedWeatherReport }>(`/external/weather?lat=${lat}&lng=${lng}`);
+  }
+
+  public async getRiverGauges(): Promise<{ success: boolean; data: RiverGaugeReport[] }> {
+    return this.request<{ success: boolean; data: RiverGaugeReport[] }>('/external/river-gauges');
+  }
+
+  public async getExternalHazards(): Promise<{ success: boolean; data: ExternalHazardWarning[] }> {
+    return this.request<{ success: boolean; data: ExternalHazardWarning[] }>('/external/hazards');
+  }
+
+  public async getSystemHealth(): Promise<SystemHealthResponse> {
+    return this.request<SystemHealthResponse>('/system/health');
   }
 }
 

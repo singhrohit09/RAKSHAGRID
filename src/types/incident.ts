@@ -29,7 +29,7 @@ export interface TimelineEntry {
   timestamp: string;
   actor: string;
   note: string;
-  type: 'status_change' | 'team_assigned' | 'priority_change' | 'general';
+  type: 'status_change' | 'team_assigned' | 'priority_change' | 'general' | 'escalation';
 }
 
 export interface Incident {

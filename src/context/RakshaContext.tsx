@@ -8,6 +8,12 @@ import { EmergencyAlert } from '../types/alert';
 import { AuditLogEvent, AuditEntityType } from '../types/audit';
 import { PersonaId } from '../types/role';
 import { AppSettings } from '../types/settings';
+import { GeofenceZone, SpatialEvaluationReport } from '../types/geofence';
+import { 
+  NormalizedWeatherReport, 
+  RiverGaugeReport, 
+  SystemHealthResponse 
+} from '../types/external';
 import { PERSONAS, hasPermission } from '../utils/permissions';
 import { api, AuthUser } from '../services/api';
 import { 
@@ -58,6 +64,20 @@ export interface RakshaContextType {
   addIncident: (data: Omit<Incident, 'id' | 'reportedAt' | 'updatedAt' | 'timeline'>) => Incident;
   updateIncident: (id: string, partial: Partial<Incident>) => boolean;
   deleteIncident: (id: string) => boolean;
+  escalateIncident: (id: string, reason: string, newSeverity?: string, newPriority?: string) => Promise<{ success: boolean; error?: string }>;
+
+  // Geofencing & Spatial Intelligence (Phase 3)
+  geofences: GeofenceZone[];
+  spatialReport: SpatialEvaluationReport | null;
+  refreshSpatialAnalysis: () => Promise<void>;
+  createGeofenceZone: (zone: Partial<GeofenceZone>) => Promise<{ success: boolean; id?: string; error?: string }>;
+  deleteGeofenceZone: (id: string) => Promise<{ success: boolean; error?: string }>;
+
+  // Live Telemetry & External Providers (Phase 3)
+  weatherReport: NormalizedWeatherReport | null;
+  riverGauges: RiverGaugeReport[];
+  systemHealth: SystemHealthResponse | null;
+  refreshWeather: (lat?: number, lng?: number) => Promise<void>;
 
   // Team Operations
   addTeam: (data: Omit<ResponseTeam, 'id' | 'updatedAt'>) => ResponseTeam;
@@ -138,6 +158,51 @@ export const RakshaProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [backendConnected, setBackendConnected] = useState<boolean>(false);
   const [isDemoMode, setIsDemoMode] = useState<boolean>(false);
 
+  // Phase 3 State
+  const [geofences, setGeofences] = useState<GeofenceZone[]>([
+    {
+      id: 'ZONE-YAMUNA-FLOOD',
+      name: 'Yamuna Riverfront Flood Inundation Buffer (Zone O)',
+      category: 'Flood Risk',
+      severity: 'Critical',
+      status: 'Active',
+      shapeType: 'polygon',
+      coordinates: [
+        [28.7050, 77.2250],
+        [28.6920, 77.2410],
+        [28.6480, 77.2580],
+        [28.6100, 77.2650],
+        [28.5850, 77.2950],
+        [28.5600, 77.3100],
+        [28.5700, 77.2750],
+        [28.6250, 77.2350],
+        [28.6750, 77.2180]
+      ],
+      description: 'Active high water level flood inundation perimeter along low-lying river plains from Wazirabad to Okhla Barrage.',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    },
+    {
+      id: 'ZONE-NORTH-INDUSTRIAL',
+      name: 'North-West HazMat Containment Zone',
+      category: 'Industrial Chemical Hazard',
+      severity: 'High',
+      status: 'Active',
+      shapeType: 'circle',
+      coordinates: [[28.7750, 77.0650]],
+      radiusMeters: 3000,
+      centerLatitude: 28.7750,
+      centerLongitude: 77.0650,
+      description: 'Precautionary 3km atmospheric dispersion and emergency response exclusion zone for industrial chemical complexes.',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+  ]);
+  const [spatialReport, setSpatialReport] = useState<SpatialEvaluationReport | null>(null);
+  const [weatherReport, setWeatherReport] = useState<NormalizedWeatherReport | null>(null);
+  const [riverGauges, setRiverGauges] = useState<RiverGaugeReport[]>([]);
+  const [systemHealth, setSystemHealth] = useState<SystemHealthResponse | null>(null);
+
   const [notifications, setNotifications] = useState<InAppNotification[]>([
     {
       id: 'notif-1',
@@ -192,7 +257,7 @@ export const RakshaProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // Synchronize data with live backend
   const syncWithBackend = useCallback(async () => {
     try {
-      const [inc, tm, sh, res, tsk, alt, aud, st] = await Promise.all([
+      const [inc, tm, sh, res, tsk, alt, aud, st, geo, geoEval, wth, rvr, sysHealth] = await Promise.all([
         api.getIncidents().catch(() => null),
         api.getTeams().catch(() => null),
         api.getShelters().catch(() => null),
@@ -200,7 +265,12 @@ export const RakshaProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         api.getTasks().catch(() => null),
         api.getAlerts().catch(() => null),
         api.getAuditLogs().catch(() => null),
-        api.getSettings().catch(() => null)
+        api.getSettings().catch(() => null),
+        api.getGeofences().catch(() => null),
+        api.getGeofenceEval().catch(() => null),
+        api.getLiveWeather().catch(() => null),
+        api.getRiverGauges().catch(() => null),
+        api.getSystemHealth().catch(() => null)
       ]);
 
       setDataState(prev => ({
@@ -212,6 +282,22 @@ export const RakshaProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         alerts: (alt && Array.isArray(alt) && alt.length > 0) ? alt : prev.alerts,
         auditLogs: (aud && aud.data && Array.isArray(aud.data) && aud.data.length > 0) ? aud.data : prev.auditLogs
       }));
+
+      if (geo && Array.isArray(geo) && geo.length > 0) {
+        setGeofences(geo);
+      }
+      if (geoEval && geoEval.success && geoEval.report) {
+        setSpatialReport(geoEval.report);
+      }
+      if (wth && wth.success && wth.data) {
+        setWeatherReport(wth.data);
+      }
+      if (rvr && rvr.success && Array.isArray(rvr.data)) {
+        setRiverGauges(rvr.data);
+      }
+      if (sysHealth) {
+        setSystemHealth(sysHealth);
+      }
 
       if (st && st.data) {
         setSettings(prev => ({ ...prev, ...st.data }));
@@ -426,6 +512,47 @@ export const RakshaProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     pushNotification('Incident Removed', `Incident ${id} was deleted from registry.`, 'info');
     return true;
   }, [dataState.incidents, logAudit, pushNotification]);
+
+  const escalateIncident = useCallback(async (id: string, reason: string, newSeverity = 'Critical', newPriority = 'P1'): Promise<{ success: boolean; error?: string }> => {
+    try {
+      if (backendConnected && !isDemoMode) {
+        await api.escalateIncident(id, reason, newSeverity, newPriority);
+        await syncWithBackend();
+      } else {
+        const now = new Date().toISOString();
+        setDataState(prev => {
+          const idx = prev.incidents.findIndex(i => i.id === id);
+          if (idx === -1) return prev;
+          const existing = prev.incidents[idx];
+          const updated = {
+            ...existing,
+            severity: newSeverity as any,
+            priority: newPriority as any,
+            updatedAt: now,
+            timeline: [
+              ...existing.timeline,
+              {
+                id: `TL-${Date.now()}`,
+                timestamp: now,
+                actor: PERSONAS[activePersonaId].name,
+                note: `ESCALATED: Severity upgraded to ${newSeverity} (${newPriority}). Reason: ${reason}`,
+                type: 'escalation' as const
+              }
+            ]
+          };
+          const next = [...prev.incidents];
+          next[idx] = updated;
+          return { ...prev, incidents: next };
+        });
+      }
+
+      logAudit('incident_escalated', 'incident', id, `Escalated incident ${id} to ${newSeverity}/${newPriority}. Reason: ${reason}`);
+      pushNotification('Incident Escalated', `Incident ${id} upgraded to ${newSeverity} (${newPriority}).`, 'emergency');
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Failed to escalate incident.' };
+    }
+  }, [backendConnected, isDemoMode, syncWithBackend, activePersonaId, logAudit, pushNotification]);
 
   // ---------------- TEAM CRUD ----------------
   const addTeam = useCallback((
@@ -929,6 +1056,82 @@ export const RakshaProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setNotifications([]);
   }, []);
 
+  // ---------------- GEOFENCES & SPATIAL TELEMETRY (PHASE 3) ----------------
+  const refreshWeather = useCallback(async (lat = 28.6139, lng = 77.2090) => {
+    try {
+      if (backendConnected && !isDemoMode) {
+        const res = await api.getLiveWeather(lat, lng);
+        if (res.success && res.data) {
+          setWeatherReport(res.data);
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to refresh weather telemetry:', err);
+    }
+  }, [backendConnected, isDemoMode]);
+
+  const refreshSpatialAnalysis = useCallback(async () => {
+    try {
+      if (backendConnected && !isDemoMode) {
+        const res = await api.getGeofenceEval();
+        if (res.success && res.report) {
+          setSpatialReport(res.report);
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to refresh spatial analysis:', err);
+    }
+  }, [backendConnected, isDemoMode]);
+
+  const createGeofenceZone = useCallback(async (zone: Partial<GeofenceZone>): Promise<{ success: boolean; id?: string; error?: string }> => {
+    try {
+      if (backendConnected && !isDemoMode) {
+        const res = await api.createGeofence(zone);
+        await syncWithBackend();
+        pushNotification('Geofence Created', `Hazard perimeter "${zone.name}" registered.`, 'warning');
+        return { success: true, id: res.id };
+      } else {
+        const id = `ZONE-DEMO-${Date.now().toString().slice(-4)}`;
+        const now = new Date().toISOString();
+        const newZone: GeofenceZone = {
+          id,
+          name: zone.name || 'Unnamed Zone',
+          category: zone.category || 'Hazard Zone',
+          severity: zone.severity || 'Medium',
+          status: 'Active',
+          shapeType: zone.shapeType || 'polygon',
+          coordinates: zone.coordinates || [],
+          radiusMeters: zone.radiusMeters,
+          description: zone.description,
+          createdAt: now,
+          updatedAt: now
+        };
+        setGeofences(prev => [newZone, ...prev]);
+        logAudit('create_geofence', 'geofence', id, `Established local geofence: ${newZone.name}`);
+        pushNotification('Geofence Created', `Hazard perimeter "${newZone.name}" registered.`, 'warning');
+        return { success: true, id };
+      }
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Failed to create geofence.' };
+    }
+  }, [backendConnected, isDemoMode, syncWithBackend, logAudit, pushNotification]);
+
+  const deleteGeofenceZone = useCallback(async (id: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      if (backendConnected && !isDemoMode) {
+        await api.deleteGeofence(id);
+        await syncWithBackend();
+      } else {
+        setGeofences(prev => prev.filter(z => z.id !== id));
+      }
+      logAudit('delete_geofence', 'geofence', id, `Decommissioned geofenced hazard zone ${id}`);
+      pushNotification('Geofence Decommissioned', `Zone ${id} has been deactivated.`, 'info');
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Failed to remove geofence.' };
+    }
+  }, [backendConnected, isDemoMode, syncWithBackend, logAudit, pushNotification]);
+
   const value = useMemo(() => ({
     incidents: dataState.incidents,
     teams: dataState.teams,
@@ -977,7 +1180,17 @@ export const RakshaProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     resetDemoData,
     logAudit,
     markNotificationAsRead,
-    clearAllNotifications
+    clearAllNotifications,
+    escalateIncident,
+    geofences,
+    spatialReport,
+    weatherReport,
+    riverGauges,
+    systemHealth,
+    refreshWeather,
+    refreshSpatialAnalysis,
+    createGeofenceZone,
+    deleteGeofenceZone
   }), [
     dataState,
     settings,
@@ -996,6 +1209,16 @@ export const RakshaProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     addIncident,
     updateIncident,
     deleteIncident,
+    escalateIncident,
+    geofences,
+    spatialReport,
+    weatherReport,
+    riverGauges,
+    systemHealth,
+    refreshWeather,
+    refreshSpatialAnalysis,
+    createGeofenceZone,
+    deleteGeofenceZone,
     addTeam,
     updateTeam,
     deleteTeam,

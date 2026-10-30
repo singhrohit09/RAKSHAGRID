@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useRaksha } from '../context/RakshaContext';
 import { 
   Flame, 
@@ -10,7 +10,14 @@ import {
   Plus, 
   ShieldAlert, 
   ExternalLink,
-  ArrowRight
+  ArrowRight,
+  CloudRain,
+  Wind,
+  Droplets,
+  RefreshCw,
+  Activity,
+  Layers,
+  CheckCircle2
 } from 'lucide-react';
 import { StatCard } from '../components/common/StatCard';
 import { SeverityBadge, StatusBadge } from '../components/common/Badge';
@@ -40,10 +47,17 @@ export const DashboardPage: React.FC = () => {
     tasks, 
     alerts, 
     settings, 
-    activePersonaId 
+    activePersonaId,
+    weatherReport,
+    riverGauges,
+    geofences,
+    spatialReport,
+    systemHealth,
+    refreshWeather
   } = useRaksha();
 
   const navigate = useNavigate();
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Dynamic Metrics Derived From Real Store Records
   const activeIncidents = incidents.filter(i => i.status === 'Active' || i.status === 'Reported');
@@ -83,6 +97,15 @@ export const DashboardPage: React.FC = () => {
     { status: 'Resolved', count: incidents.filter(i => i.status === 'Resolved').length },
     { status: 'Closed', count: incidents.filter(i => i.status === 'Closed').length },
   ];
+
+  const handleRefreshTelemetry = async () => {
+    setIsRefreshing(true);
+    try {
+      await refreshWeather();
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 600);
+    }
+  };
 
   // Permissions check
   const canCreateIncident = hasPermission(activePersonaId, 'create_incidents');
@@ -212,6 +235,175 @@ export const DashboardPage: React.FC = () => {
           badgeText={`${overdueTasks.length} OVERDUE`}
           onClick={() => navigate('/tasks')}
         />
+      </div>
+
+      {/* Phase 3 Environmental & GIS Intelligence Hub */}
+      <div className="bg-panel border border-border rounded-lg p-4 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-3 border-b border-border mb-3">
+          <div className="flex items-center gap-2">
+            <Activity className="w-4 h-4 text-operational-cyan" />
+            <h2 className="text-xs font-bold uppercase tracking-wider text-primary">
+              Live Environmental Telemetry & GIS Spatial Intelligence
+            </h2>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-operational-cyan/15 text-operational-cyan border border-operational-cyan/30 font-bold">
+              PHASE 3
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleRefreshTelemetry}
+              disabled={isRefreshing}
+              className="text-xs text-primary-muted hover:text-primary flex items-center gap-1.5 px-2.5 py-1 rounded bg-charcoal border border-border transition-colors"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-operational-cyan' : ''}`} />
+              <span>{isRefreshing ? 'Syncing...' : 'Sync Telemetry'}</span>
+            </button>
+            <Link
+              to="/map"
+              className="text-xs font-semibold text-operational-cyan hover:underline flex items-center gap-1"
+            >
+              Open Situation Map &rarr;
+            </Link>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Weather Widget */}
+          <div className="p-3 bg-charcoal rounded border border-border flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-mono text-primary-dim uppercase tracking-wider flex items-center gap-1">
+                  <CloudRain className="w-3.5 h-3.5 text-operational-cyan" />
+                  Meteorological Feed
+                </span>
+                <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded uppercase ${
+                  weatherReport?.isLive
+                    ? 'bg-safe/20 text-safe border border-safe/40'
+                    : 'bg-hazard/20 text-hazard border border-hazard/40'
+                }`}>
+                  {weatherReport?.isLive ? 'LIVE (Open-Meteo)' : 'Simulated Baseline'}
+                </span>
+              </div>
+
+              {weatherReport ? (
+                <div>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-2xl font-extrabold text-primary font-mono">
+                      {weatherReport.temperatureC.toFixed(1)}°C
+                    </span>
+                    <span className="text-xs text-primary-muted capitalize">
+                      {weatherReport.weatherDescription}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 mt-2 pt-2 border-t border-border/50 text-[10px] font-mono text-primary-muted">
+                    <div>
+                      <span className="text-primary-dim block flex items-center gap-0.5">
+                        <Wind className="w-3 h-3 text-primary-dim" /> WIND:
+                      </span>
+                      <span className="text-primary font-semibold">{weatherReport.windSpeedKmh.toFixed(0)} km/h</span>
+                    </div>
+                    <div>
+                      <span className="text-primary-dim block">RAIN:</span>
+                      <span className="text-primary font-semibold">{weatherReport.precipitationMm} mm</span>
+                    </div>
+                    <div>
+                      <span className="text-primary-dim block">HUMIDITY:</span>
+                      <span className="text-primary font-semibold">{weatherReport.relativeHumidity}%</span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-xs text-primary-dim">Connecting to weather feed...</div>
+              )}
+            </div>
+
+            <div className="text-[9px] font-mono text-primary-dim mt-2 truncate">
+              Attribution: {weatherReport?.sourceAttribution || 'Open-Meteo Weather API'}
+            </div>
+          </div>
+
+          {/* Hydrological Telemetry Widget */}
+          <div className="p-3 bg-charcoal rounded border border-border flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-mono text-primary-dim uppercase tracking-wider flex items-center gap-1">
+                  <Droplets className="w-3.5 h-3.5 text-blue-400" />
+                  Hydrology & River Gauges
+                </span>
+                <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-bold uppercase">
+                  {riverGauges.length} Active Stations
+                </span>
+              </div>
+
+              {riverGauges.length > 0 ? (
+                <div className="space-y-1.5">
+                  {riverGauges.slice(0, 2).map((gauge) => (
+                    <div key={gauge.stationId} className="p-1.5 bg-panel/60 rounded border border-border text-[11px]">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-primary truncate max-w-[140px]">{gauge.riverName}</span>
+                        <span className={`text-[9px] font-mono px-1 py-0.5 rounded font-bold uppercase ${
+                          gauge.floodStage === 'warning' || gauge.floodStage === 'severe' || gauge.floodStage === 'inundation'
+                            ? 'bg-emergency/20 text-emergency'
+                            : 'bg-safe/20 text-safe'
+                        }`}>
+                          {gauge.floodStage}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-[10px] font-mono text-primary-dim mt-0.5">
+                        <span>Level: <strong className="text-primary">{gauge.waterLevelMeters}m</strong> (Danger: {gauge.dangerLevelMeters}m)</span>
+                        <span>{gauge.trend}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-xs text-primary-dim">Awaiting hydrology telemetry...</div>
+              )}
+            </div>
+
+            <div className="text-[9px] font-mono text-primary-dim mt-2">
+              Source: Central Water Commission & GloFAS Models
+            </div>
+          </div>
+
+          {/* Spatial Geofences & Infrastructure Health */}
+          <div className="p-3 bg-charcoal rounded border border-border flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-mono text-primary-dim uppercase tracking-wider flex items-center gap-1">
+                  <Layers className="w-3.5 h-3.5 text-orange-400" />
+                  Spatial Risk Zones & Health
+                </span>
+                <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400 font-bold uppercase">
+                  {geofences.length} Geofences
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
+                <div className="p-2 bg-panel/60 rounded border border-border">
+                  <span className="text-primary-dim block text-[10px]">CONTAINED INCIDENTS:</span>
+                  <span className="text-base font-extrabold text-emergency">
+                    {spatialReport?.evaluations.reduce((acc, e) => acc + e.incidentCount, 0) ?? 0}
+                  </span>
+                </div>
+                <div className="p-2 bg-panel/60 rounded border border-border">
+                  <span className="text-primary-dim block text-[10px]">DB / API HEALTH:</span>
+                  <span className="text-xs font-bold text-safe flex items-center gap-1 mt-1">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-safe" />
+                    <span>{systemHealth?.status.toUpperCase() || 'HEALTHY'}</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="text-[9px] font-mono text-primary-dim mt-2 flex items-center justify-between">
+              <span>Ray-Casting GIS Engine Active</span>
+              <span className="text-safe">Latency: ~{systemHealth?.latencyMs || 2}ms</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Operational Charts & Status Breakdown */}

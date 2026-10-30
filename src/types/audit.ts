@@ -6,7 +6,8 @@ export type AuditEntityType =
   | 'task' 
   | 'alert' 
   | 'settings' 
-  | 'system';
+  | 'system'
+  | 'geofence';
 
 export interface AuditLogEvent {
   id: string;
