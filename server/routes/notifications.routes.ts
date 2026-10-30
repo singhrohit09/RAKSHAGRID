@@ -1,6 +1,10 @@
 import { Router, Request, Response } from 'express';
 import { db } from '../db/connection.js';
 import { authenticate } from '../middleware/auth.js';
+import { requirePermission } from '../middleware/rbac.js';
+import { recordAuditEvent } from '../middleware/audit.js';
+import { notificationDispatcher } from '../services/notifications/dispatcher.js';
+import { OutgoingNotification } from '../services/notifications/types.js';
 
 const router = Router();
 
@@ -31,6 +35,25 @@ router.get('/', authenticate, async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/notifications/deliveries - Audit history of multichannel notification deliveries
+router.get('/deliveries', authenticate, requirePermission('view_audit'), async (_req: Request, res: Response) => {
+  try {
+    const deliveries = await db.all<any>(
+      `SELECT * FROM notification_deliveries 
+       ORDER BY created_at DESC LIMIT 100`
+    );
+
+    res.json({
+      success: true,
+      count: deliveries.length,
+      data: deliveries
+    });
+  } catch (error: any) {
+    console.error('Fetch deliveries error:', error);
+    res.status(500).json({ success: false, error: 'Failed to retrieve delivery audit records' });
+  }
+});
+
 // PUT /api/notifications/:id/read - Mark single notification as read
 router.put('/:id/read', authenticate, async (req: Request, res: Response) => {
   try {
@@ -58,12 +81,67 @@ router.put('/read-all', authenticate, async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/notifications - Create an internal broadcast notification
+// POST /api/notifications/dispatch - Multichannel alert dispatcher with deduplication
+router.post('/dispatch', authenticate, requirePermission('create_alerts'), async (req: Request, res: Response) => {
+  try {
+    const {
+      title,
+      message,
+      severity = 'medium',
+      channels = ['in_app'],
+      targetRecipient,
+      incidentId,
+      geofenceId,
+      affectedRegion,
+      recommendedAction,
+      deduplicationKey
+    } = req.body;
+
+    if (!title || !message) {
+      res.status(400).json({ success: false, error: 'Title and message are required.' });
+      return;
+    }
+
+    const payload: OutgoingNotification = {
+      title,
+      message,
+      severity,
+      channels,
+      targetRecipient,
+      incidentId,
+      geofenceId,
+      affectedRegion,
+      recommendedAction,
+      deduplicationKey
+    };
+
+    const summary = await notificationDispatcher.dispatch(payload);
+
+    await recordAuditEvent({
+      actor: req.user,
+      action: 'dispatch_notification',
+      entityType: 'notification',
+      entityId: summary.notificationId,
+      description: `Dispatched ${severity} notification "${title}" to channels [${channels.join(', ')}]. Overall: ${summary.overallStatus}`
+    });
+
+    res.status(200).json({
+      success: summary.overallStatus !== 'failed',
+      summary
+    });
+  } catch (error: any) {
+    console.error('Dispatch error:', error);
+    res.status(500).json({ success: false, error: 'Failed to dispatch notification' });
+  }
+});
+
+// POST /api/notifications - Legacy internal broadcast notification
 router.post('/', authenticate, async (req: Request, res: Response) => {
   try {
     const { title, message, type = 'info', userId } = req.body;
     if (!title || !message) {
-      return res.status(400).json({ success: false, error: 'Title and message are required' });
+      res.status(400).json({ success: false, error: 'Title and message are required' });
+      return;
     }
 
     const id = `NOTIF-${Date.now()}`;

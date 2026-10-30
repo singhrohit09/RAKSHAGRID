@@ -184,6 +184,22 @@ CREATE TABLE IF NOT EXISTS geofences (
   updated_at TIMESTAMP NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS notification_deliveries (
+  id VARCHAR(64) PRIMARY KEY,
+  notification_id VARCHAR(64) NOT NULL,
+  channel VARCHAR(32) NOT NULL,
+  recipient VARCHAR(255) NOT NULL,
+  severity VARCHAR(32) NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  message TEXT NOT NULL,
+  provider VARCHAR(64) NOT NULL,
+  delivery_status VARCHAR(32) NOT NULL,
+  attempts INTEGER NOT NULL DEFAULT 1,
+  error_details TEXT,
+  created_at TIMESTAMP NOT NULL,
+  delivered_at TIMESTAMP
+);
+
 -- Indices for performance
 CREATE INDEX IF NOT EXISTS idx_incidents_status ON incidents(status);
 CREATE INDEX IF NOT EXISTS idx_incidents_severity ON incidents(severity);
@@ -196,4 +212,6 @@ CREATE INDEX IF NOT EXISTS idx_movements_resource ON inventory_movements(resourc
 CREATE INDEX IF NOT EXISTS idx_reset_token_hash ON password_reset_tokens(token_hash);
 CREATE INDEX IF NOT EXISTS idx_geofences_status ON geofences(status);
 CREATE INDEX IF NOT EXISTS idx_geofences_category ON geofences(category);
+CREATE INDEX IF NOT EXISTS idx_deliveries_status ON notification_deliveries(delivery_status);
+CREATE INDEX IF NOT EXISTS idx_deliveries_channel ON notification_deliveries(channel);
 
