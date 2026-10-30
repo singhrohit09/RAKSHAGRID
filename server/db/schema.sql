@@ -167,6 +167,23 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
   created_at TIMESTAMP NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS geofences (
+  id VARCHAR(64) PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  category VARCHAR(64) NOT NULL,
+  severity VARCHAR(32) NOT NULL,
+  status VARCHAR(32) NOT NULL DEFAULT 'Active',
+  shape_type VARCHAR(32) NOT NULL DEFAULT 'polygon',
+  center_latitude REAL,
+  center_longitude REAL,
+  radius_meters INTEGER,
+  coordinates_json TEXT NOT NULL,
+  description TEXT,
+  created_by VARCHAR(255),
+  created_at TIMESTAMP NOT NULL,
+  updated_at TIMESTAMP NOT NULL
+);
+
 -- Indices for performance
 CREATE INDEX IF NOT EXISTS idx_incidents_status ON incidents(status);
 CREATE INDEX IF NOT EXISTS idx_incidents_severity ON incidents(severity);
@@ -177,4 +194,6 @@ CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON audit_events(timestamp);
 CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit_events(entity_type, entity_id);
 CREATE INDEX IF NOT EXISTS idx_movements_resource ON inventory_movements(resource_id);
 CREATE INDEX IF NOT EXISTS idx_reset_token_hash ON password_reset_tokens(token_hash);
+CREATE INDEX IF NOT EXISTS idx_geofences_status ON geofences(status);
+CREATE INDEX IF NOT EXISTS idx_geofences_category ON geofences(category);
 

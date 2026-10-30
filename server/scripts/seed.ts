@@ -297,6 +297,86 @@ export async function seedDatabase(force = false): Promise<SeedResult> {
     ['app_settings', JSON.stringify(DEFAULT_SETTINGS), new Date().toISOString()]
   );
 
+  console.log('🌱 Seeding operational geofences...');
+  const initialGeofences = [
+    {
+      id: 'ZONE-YAMUNA-FLOOD',
+      name: 'Yamuna Riverfront Flood Inundation Buffer (Zone O)',
+      category: 'Flood Risk',
+      severity: 'Critical',
+      status: 'Active',
+      shapeType: 'polygon',
+      coordinates: [
+        [28.7050, 77.2250],
+        [28.6920, 77.2410],
+        [28.6480, 77.2580],
+        [28.6100, 77.2650],
+        [28.5850, 77.2950],
+        [28.5600, 77.3100],
+        [28.5700, 77.2750],
+        [28.6250, 77.2350],
+        [28.6750, 77.2180]
+      ],
+      radiusMeters: null,
+      centerLat: null,
+      centerLng: null,
+      description: 'Active high water level flood inundation perimeter along low-lying river plains from Wazirabad to Okhla Barrage.'
+    },
+    {
+      id: 'ZONE-NORTH-INDUSTRIAL',
+      name: 'North-West HazMat Containment Zone',
+      category: 'Industrial Chemical Hazard',
+      severity: 'High',
+      status: 'Active',
+      shapeType: 'circle',
+      coordinates: [[28.7750, 77.0650]],
+      radiusMeters: 3000,
+      centerLat: 28.7750,
+      centerLng: 77.0650,
+      description: 'Precautionary 3km atmospheric dispersion and emergency response exclusion zone for industrial chemical complexes.'
+    },
+    {
+      id: 'ZONE-RIDGE-LANDSLIDE',
+      name: 'Northern Ridge Unstable Slope Hazard Zone',
+      category: 'Landslide Risk',
+      severity: 'Medium',
+      status: 'Monitoring',
+      shapeType: 'polygon',
+      coordinates: [
+        [28.6900, 77.1950],
+        [28.7050, 77.2100],
+        [28.6850, 77.2200],
+        [28.6750, 77.2050]
+      ],
+      radiusMeters: null,
+      centerLat: null,
+      centerLng: null,
+      description: 'Geologically vulnerable terrain identified with high soil saturation following prolonged monsoon downpours.'
+    }
+  ];
+
+  for (const g of initialGeofences) {
+    await db.run(
+      `INSERT OR REPLACE INTO geofences (id, name, category, severity, status, shape_type, center_latitude, center_longitude, radius_meters, coordinates_json, description, created_by, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'State Incident Command Authority', ?, ?)`,
+      [
+        g.id,
+        g.name,
+        g.category,
+        g.severity,
+        g.status,
+        g.shapeType,
+        g.centerLat,
+        g.centerLng,
+        g.radiusMeters,
+        JSON.stringify(g.coordinates),
+        g.description,
+        now,
+        now
+      ]
+    );
+  }
+
   console.log('✅ Database successfully seeded with baseline disaster intelligence records.');
   return { adminEmail: 'admin@rakshagrid.gov.in', adminPassword, devCredentials };
 }
