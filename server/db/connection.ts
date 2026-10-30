@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import Database from 'better-sqlite3';
 import pg from 'pg';
 import dotenv from 'dotenv';
@@ -9,6 +10,9 @@ dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Scoped transaction storage ensuring Postgres queries inside transactions use the checked-out PoolClient
+const pgTxStorage = new AsyncLocalStorage<pg.PoolClient>();
 
 export interface QueryResult {
   changes: number;
@@ -57,10 +61,10 @@ export class DatabaseClient {
 
   public async query<T = any>(sql: string, params: any[] = []): Promise<T[]> {
     if (this.isPostgres && this.pgPool) {
-      // Convert SQLite ? to Postgres $1, $2, etc. if ? was used
+      const activeExecutor = pgTxStorage.getStore() || this.pgPool;
       let pIdx = 1;
       const pgSql = sql.replace(/\?/g, () => `$${pIdx++}`);
-      const res = await this.pgPool.query(pgSql, params);
+      const res = await activeExecutor.query(pgSql, params);
       return res.rows as T[];
     } else if (this.sqliteDb) {
       // Convert $1, $2, etc. to ? if Postgres style was used
@@ -82,9 +86,10 @@ export class DatabaseClient {
 
   public async run(sql: string, params: any[] = []): Promise<QueryResult> {
     if (this.isPostgres && this.pgPool) {
+      const activeExecutor = pgTxStorage.getStore() || this.pgPool;
       let pIdx = 1;
       const pgSql = sql.replace(/\?/g, () => `$${pIdx++}`);
-      const res = await this.pgPool.query(pgSql, params);
+      const res = await activeExecutor.query(pgSql, params);
       return {
         changes: res.rowCount || 0
       };
@@ -104,7 +109,9 @@ export class DatabaseClient {
       const client = await this.pgPool.connect();
       try {
         await client.query('BEGIN');
-        const result = await callback();
+        const result = await pgTxStorage.run(client, async () => {
+          return await callback();
+        });
         await client.query('COMMIT');
         return result;
       } catch (e) {

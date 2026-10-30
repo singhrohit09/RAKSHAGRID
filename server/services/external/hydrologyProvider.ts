@@ -9,6 +9,7 @@ export class HydrologyAndHazardProvider {
   private lastSuccess: string | null = null;
   private lastError: string | null = null;
   private lastLatencyMs: number | null = null;
+  private lastDataIsLive = false;
 
   /**
    * Retrieves operational river gauge telemetry.
@@ -58,6 +59,8 @@ export class HydrologyAndHazardProvider {
         // Fall back gracefully to monitored baseline station readings
       }
 
+      this.lastDataIsLive = isLive;
+
       const gauges: RiverGaugeReport[] = [
         {
           stationId: 'CWC-YAM-01',
@@ -70,7 +73,7 @@ export class HydrologyAndHazardProvider {
           dangerLevelMeters: 205.33,
           floodStage: 'warning',
           trend: 'rising',
-          source: isLive ? 'Open-Meteo GloFAS Hydrological Model & CWC Telemetry' : 'Central Water Commission (CWC) Monitored Baseline',
+          source: isLive ? 'Open-Meteo GloFAS Hydrological Model & CWC Telemetry' : 'Central Water Commission (CWC) Monitored Baseline (Simulated)',
           sourceAttribution: 'Central Water Commission / Copernicus GloFAS',
           updatedAt: now,
           isLive
@@ -86,8 +89,8 @@ export class HydrologyAndHazardProvider {
           dangerLevelMeters: 201.00,
           floodStage: 'watch',
           trend: 'steady',
-          source: 'Central Water Commission (CWC) Hydrological Telemetry',
-          sourceAttribution: 'State Irrigation & Flood Control Dept',
+          source: 'Central Water Commission (CWC) Monitored Baseline (Simulated)',
+          sourceAttribution: 'State Irrigation & Flood Control Dept (Model)',
           updatedAt: now,
           isLive: false
         },
@@ -102,8 +105,8 @@ export class HydrologyAndHazardProvider {
           dangerLevelMeters: 212.00,
           floodStage: 'normal',
           trend: 'falling',
-          source: 'Delhi Jal Board Hydrological Telemetry',
-          sourceAttribution: 'Delhi Jal Board & Flood Control',
+          source: 'Delhi Jal Board Hydrological Station Baseline (Simulated)',
+          sourceAttribution: 'Delhi Jal Board & Flood Control (Model)',
           updatedAt: now,
           isLive: false
         }
@@ -172,11 +175,18 @@ export class HydrologyAndHazardProvider {
 
   public getHealth(): ProviderHealthStatus {
     const stats = this.gaugeCache.getStats();
+    // Distinguish software adapter execution status from genuine external telemetry sensor availability
+    const status: ProviderHealthStatus['status'] = this.errorsCount > 0 
+      ? 'degraded' 
+      : this.lastDataIsLive 
+      ? 'operational' 
+      : 'simulated';
+
     return {
       providerName: 'Central Hydrological & Flood Telemetry Engine',
       serviceType: 'hydrology',
-      status: this.errorsCount > 0 ? 'degraded' : 'operational',
-      isLive: true,
+      status,
+      isLive: this.lastDataIsLive,
       lastSuccess: this.lastSuccess,
       lastError: this.lastError,
       latencyMs: this.lastLatencyMs,
