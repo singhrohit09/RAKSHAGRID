@@ -20,6 +20,7 @@ import settingsRoutes from './routes/settings.routes.js';
 import notificationsRoutes from './routes/notifications.routes.js';
 import externalRoutes from './routes/external.routes.js';
 import geofencesRoutes from './routes/geofences.routes.js';
+import systemRoutes from './routes/system.routes.js';
 
 dotenv.config();
 
@@ -107,6 +108,7 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/external', externalRoutes);
 app.use('/api/geofences', geofencesRoutes);
+app.use('/api/system', systemRoutes);
 
 // Catch-all 404 for undefined API endpoints
 app.use('/api', (req: Request, res: Response) => {

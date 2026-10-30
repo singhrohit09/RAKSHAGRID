@@ -3,6 +3,7 @@ import { db } from '../db/connection.js';
 import { authenticate } from '../middleware/auth.js';
 import { requirePermission } from '../middleware/rbac.js';
 import { recordAuditEvent } from '../middleware/audit.js';
+import { notificationDispatcher } from '../services/notifications/dispatcher.js';
 
 const router = Router();
 
@@ -226,6 +227,16 @@ router.post('/', authenticate, requirePermission('create_incidents'), async (req
           'general'
         ]
       );
+
+      // If a team is assigned on creation, update its deployment status
+      if (assignedTeamId) {
+        await db.run(
+          `UPDATE teams 
+           SET status = 'Deployed', current_assignment = ?, updated_at = ?
+           WHERE id = ?`,
+          [title, now, assignedTeamId]
+        );
+      }
     });
 
     await recordAuditEvent({
@@ -314,6 +325,16 @@ router.put('/:id', authenticate, requirePermission('edit_incidents'), async (req
       }
 
       if (assignedTeamId && assignedTeamId !== existing.assigned_team_id) {
+        if (existing.assigned_team_id) {
+          await db.run(
+            `UPDATE teams SET status = 'Available', current_assignment = NULL, updated_at = ? WHERE id = ?`,
+            [now, existing.assigned_team_id]
+          );
+        }
+        await db.run(
+          `UPDATE teams SET status = 'Deployed', current_assignment = ?, updated_at = ? WHERE id = ?`,
+          [title, now, assignedTeamId]
+        );
         await db.run(
           `INSERT INTO incident_timeline (id, incident_id, timestamp, actor, note, type)
            VALUES (?, ?, ?, ?, ?, ?)`,
@@ -325,6 +346,14 @@ router.put('/:id', authenticate, requirePermission('edit_incidents'), async (req
             `Assigned to response team: ${assignedTeamId}.`,
             'team_assigned'
           ]
+        );
+      }
+
+      if ((status === 'Closed' || status === 'Resolved') && (assignedTeamId || existing.assigned_team_id)) {
+        const teamToRelease = assignedTeamId || existing.assigned_team_id;
+        await db.run(
+          `UPDATE teams SET status = 'Available', current_assignment = NULL, updated_at = ? WHERE id = ?`,
+          [now, teamToRelease]
         );
       }
     });
@@ -395,6 +424,82 @@ router.post('/:id/timeline', authenticate, requirePermission('edit_incidents'), 
   } catch (error) {
     console.error('Post timeline note error:', error);
     res.status(500).json({ error: 'Failed to record timeline note.' });
+  }
+});
+
+/**
+ * POST /api/incidents/:id/escalate
+ * Formally escalates an incident priority and severity with required reason,
+ * appends an escalation timeline note, broadcasts an emergency notification, and audits the action.
+ * Restricted to Incident Commanders and Administrators.
+ */
+router.post('/:id/escalate', authenticate, requirePermission('create_incidents'), async (req: Request, res: Response) => {
+  try {
+    const { reason, newSeverity = 'Critical', newPriority = 'P1' } = req.body;
+
+    if (!reason || !reason.trim()) {
+      res.status(400).json({ error: 'An explicit operational reason is required for incident escalation.' });
+      return;
+    }
+
+    const existing = await db.get<any>('SELECT * FROM incidents WHERE id = ?', [req.params.id]);
+    if (!existing) {
+      res.status(404).json({ error: 'Incident not found.' });
+      return;
+    }
+
+    const now = new Date().toISOString();
+    const timelineId = `TL-${Date.now()}`;
+
+    await db.transaction(async () => {
+      await db.run(
+        `UPDATE incidents 
+         SET severity = ?, priority = ?, updated_at = ?
+         WHERE id = ?`,
+        [newSeverity, newPriority, now, req.params.id]
+      );
+
+      await db.run(
+        `INSERT INTO incident_timeline (id, incident_id, timestamp, actor, note, type)
+         VALUES (?, ?, ?, ?, ?, 'escalation')`,
+        [
+          timelineId,
+          req.params.id,
+          now,
+          req.user!.displayName,
+          `ESCALATED by Command Authority: Severity upgraded from ${existing.severity} to ${newSeverity} (${newPriority}). Reason: ${reason.trim()}`
+        ]
+      );
+    });
+
+    await recordAuditEvent({
+      actor: req.user,
+      action: 'incident_escalated',
+      entityType: 'incident',
+      entityId: String(req.params.id),
+      description: `Escalated incident "${existing.title}" (${req.params.id}) to ${newSeverity}/${newPriority}. Reason: ${reason.trim()}`
+    });
+
+    // Dispatch operational in-app notification
+    await notificationDispatcher.dispatch({
+      title: `INCIDENT ESCALATION: ${existing.title}`,
+      message: `Incident ${req.params.id} has been escalated to ${newSeverity} (${newPriority}). Reason: ${reason.trim()}`,
+      severity: newSeverity === 'Critical' ? 'critical' : 'high',
+      channels: ['in_app', 'sms'],
+      incidentId: String(req.params.id),
+      affectedRegion: existing.location_name
+    });
+
+    res.json({
+      message: 'Incident successfully escalated',
+      id: req.params.id,
+      severity: newSeverity,
+      priority: newPriority,
+      escalatedAt: now
+    });
+  } catch (error: any) {
+    console.error('Escalate incident error:', error);
+    res.status(500).json({ error: 'Failed to escalate incident.' });
   }
 });
 

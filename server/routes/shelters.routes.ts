@@ -130,6 +130,7 @@ const handleOccupancyUpdate = async (req: Request, res: Response) => {
   try {
     const occVal = req.body.occupancy ?? req.body.currentOccupancy;
     const allowOverflow = Boolean(req.body.allowOverflow || req.body.forceOverride);
+    const overrideReason = req.body.overrideReason || req.body.reason;
     const occ = Number(occVal);
 
     if (isNaN(occ) || occ < 0) {
@@ -164,19 +165,25 @@ const handleOccupancyUpdate = async (req: Request, res: Response) => {
       [occ, newStatus, now, req.params.id]
     );
 
+    const auditDesc = occ > cap
+      ? `Updated shelter ${shelter.name} occupancy to ${occ}/${cap} (OVERFLOW OVERRIDE: ${overrideReason || 'Emergency intake authority authorization'})`
+      : `Updated shelter ${shelter.name} occupancy to ${occ}/${cap} (${newStatus})`;
+
     await recordAuditEvent({
       actor: req.user,
       action: 'shelter_occupancy_updated',
       entityType: 'shelter',
       entityId: String(req.params.id),
-      description: `Updated shelter ${shelter.name} occupancy to ${occ}/${cap} (${newStatus})`
+      description: auditDesc
     });
 
     res.json({
-      message: 'Occupancy updated',
+      message: occ > cap ? 'Occupancy updated with emergency overflow override' : 'Occupancy updated',
       occupancy: occ,
       capacity: cap,
       status: newStatus,
+      isOverflow: occ > cap,
+      overrideReason: occ > cap ? (overrideReason || 'Emergency surge protocol authorized') : undefined,
       shelter: {
         id: req.params.id,
         name: shelter.name,
