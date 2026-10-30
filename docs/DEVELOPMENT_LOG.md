@@ -173,3 +173,110 @@ This log records every verified milestone committed and pushed to [https://githu
   - `npm run build` &rarr; Production bundle verified.
 - **Commit Hash**: `3a74bf9`
 - **Push Status**: Verified (`8921458..3a74bf9 main -> main`)
+
+
+---
+
+### Milestone 10: Provider-Based External Weather & Hydrological Telemetry Layer
+- **Date**: 2026-10-30
+- **Feature / Fix**:
+  - Implemented external data contracts and normalized models in `server/services/external/types.ts`.
+  - Built WMO weather code normalizer (`server/services/external/wmoCodes.ts`) mapping codes 0–99 to disaster severity categories (`normal`, `advisory`, `warning`, `critical`).
+  - Implemented in-memory TTL cache with stale-while-revalidate background refresh (`server/services/external/cache.ts`).
+  - Built Open-Meteo external provider (`server/services/external/openMeteoProvider.ts`) with 5s timeout, telemetry normalization, and automatic offline simulated fallback with transparent source attribution.
+  - Implemented hydrology provider (`server/services/external/hydrologyProvider.ts`) reporting river gauge telemetry and flood stages.
+  - Exposed REST endpoints in `server/routes/external.routes.ts`: `GET /api/external/weather`, `GET /api/external/river-gauges`, `GET /api/external/hazards`, `GET /api/external/status`.
+  - Added 12 comprehensive integration tests in `server/tests/external.test.ts`.
+- **Relevant Checks**:
+  - `npm test` &rarr; 68 of 68 tests passed.
+  - `npm run lint` &rarr; 0 errors.
+- **Commit Hash**: `4aea22e`
+- **Push Status**: Verified (`50c2a11..4aea22e main -> main`)
+
+---
+
+### Milestone 11: GIS Geofencing Engine, Spatial Analysis & Risk Zones
+- **Date**: 2026-10-30
+- **Feature / Fix**:
+  - Added `geofences` table and spatial indices to `server/db/schema.sql`.
+  - Built pure TypeScript spatial intelligence engine (`server/services/gis/geofenceEngine.ts`):
+    - Ray-casting algorithm for exact Point-in-Polygon (PIP) containment evaluation.
+    - Haversine spherical distance formula for radial hazard zones.
+    - Coordinate validation and cross-referencing containment evaluator.
+  - Exposed geofencing REST API (`server/routes/geofences.routes.ts`): `GET /api/geofences`, `GET /api/geofences/eval`, `GET /:id`, `POST /`, `PUT /:id`, `DELETE /:id` with RBAC protection (`create_incidents`).
+  - Added seeded risk geofences in `server/scripts/seed.ts` (Yamuna Flood Zone O, North-West HazMat, Ridge Landslide).
+  - Authored 12 spatial intelligence unit and API tests in `server/tests/geofence.test.ts`.
+- **Relevant Checks**:
+  - `npm test` &rarr; 80 of 80 tests passed.
+  - `npm run lint` &rarr; 0 errors.
+- **Commit Hash**: `1739d81`
+- **Push Status**: Verified (`4aea22e..1739d81 main -> main`)
+
+---
+
+### Milestone 12: Multichannel Alert & Notification Infrastructure
+- **Date**: 2026-10-30
+- **Feature / Fix**:
+  - Added `notification_deliveries` audit table to `server/db/schema.sql`.
+  - Built sliding-window in-memory deduplication cache (`server/services/notifications/deduplicator.ts`).
+  - Implemented decoupled channel providers (`server/services/notifications/providers.ts`): `InAppNotificationProvider`, `WebhookNotificationProvider`, `SimulatedTelecommProvider`.
+  - Built central notification dispatcher (`server/services/notifications/dispatcher.ts`) supporting multi-channel routing, delivery persistence, and automatic geofence incident alert evaluation.
+  - Exposed REST endpoints in `server/routes/notifications.routes.ts`: `POST /api/notifications/dispatch`, `GET /deliveries`.
+  - Added 8 notification infrastructure integration tests in `server/tests/notifications.test.ts`.
+- **Relevant Checks**:
+  - `npm test` &rarr; 88 of 88 tests passed.
+  - `npm run lint` &rarr; 0 errors.
+- **Commit Hash**: `e3c900b`
+- **Push Status**: Verified (`1739d81..e3c900b main -> main`)
+
+---
+
+### Milestone 13: Enhanced Coordination, Concurrency Safety & Deep System Health
+- **Date**: 2026-10-30
+- **Feature / Fix**:
+  - Added atomic incident escalation endpoint (`POST /api/incidents/:id/escalate`) with priority upgrades, timeline audit entries, and emergency broadcasts.
+  - Enforced automated response unit lifecycle: transitions team to `'Deployed'` on incident assignment and returns team to `'Available'` on incident closure.
+  - Enforced mandatory `overrideReason` justification logging on shelter capacity oversubscription in `server/routes/shelters.routes.ts`.
+  - Implemented deep system health endpoint (`GET /api/system/health`) measuring database query latency, weather provider status, river gauge freshness, and active deduplicator keys.
+  - Authored 5 emergency coordination and concurrency tests in `server/tests/coordination.test.ts`.
+- **Relevant Checks**:
+  - `npm test` &rarr; 93 of 93 tests passed (100% pass rate across 8 test suites).
+  - `npm run lint` &rarr; 0 errors.
+- **Commit Hash**: `c684746`
+- **Push Status**: Verified (`e3c900b..c684746 main -> main`)
+
+---
+
+### Milestone 14: Interactive Situation Map GIS Layers, Weather HUD & Dashboard Intelligence
+- **Date**: 2026-10-30
+- **Feature / Fix**:
+  - Created client-side geofence and external telemetry types (`src/types/geofence.ts`, `src/types/external.ts`).
+  - Extended API client (`src/services/api.ts`) and global context (`src/context/RakshaContext.tsx`) with Phase 3 methods (`getLiveWeather`, `getRiverGauges`, `getGeofences`, `getGeofenceEval`, `escalateIncident`, `refreshWeather`).
+  - Enhanced Leaflet interactive map (`src/components/map/OperationalMap.tsx`):
+    - Renders polygon and circle geofence zones with severity styling.
+    - Added floating Live Weather & Environmental HUD overlay with live vs. simulated status badge and refresh button.
+    - Rendered river gauge markers with water level and flood stage indicators.
+    - Added active geofence containment alerts inside the asset inspector drawer.
+    - Added layer toggle controls for geofences and hydrology stations.
+  - Updated Situation Map page (`src/pages/OperationalMapPage.tsx`) with dual-tab navigator for active hazards vs. risk geofences.
+  - Enhanced Dashboard (`src/pages/DashboardPage.tsx`) with dedicated Live Environmental Telemetry & GIS Spatial Intelligence hub.
+- **Relevant Checks**:
+  - `npm test` &rarr; 93 of 93 tests passed.
+  - `npm run lint` &rarr; 0 errors across frontend and backend.
+  - `npm run build` &rarr; Production bundle compiled in 25.91s.
+- **Commit Hash**: `19feeda`
+- **Push Status**: Verified (`c684746..19feeda main -> main`)
+
+---
+
+### Milestone 15: Full Phase 3 Architecture, Documentation & Roadmap Reconciliation
+- **Date**: 2026-10-30
+- **Feature / Fix**:
+  - Updated `README.md` with Phase 3 status badge, 93 passing tests badge, updated architectural diagram, live vs. simulated integration transparency table, and verification commands.
+  - Updated `docs/ARCHITECTURE.md` with complete Phase 3 system diagrams, external weather caching algorithms, ray-casting point-in-polygon math, Haversine spherical distance formulas, notification provider pattern, and the 13-table database schema.
+  - Updated `docs/PHASE_ROADMAP.md` marking Phase 3 as 100% complete with full checklist, setting up Phase 4.
+  - Synchronized `docs/DEVELOPMENT_LOG.md` with all Phase 3 milestones and commit hashes.
+- **Relevant Checks**:
+  - `npm test` &rarr; 93 of 93 tests passed.
+  - `npm run lint` &rarr; 0 errors.
+  - `npm run build` &rarr; Production build verified.

@@ -13,20 +13,8 @@ RakshaGrid is architected as an industrial-grade disaster intelligence and coord
 ### Key Milestones Completed:
 - [x] **Operations Command Shell**: Desktop-first tactical layout with dark mode palette (`#0d1117`), collapsible sidebar, and responsive mobile navigation.
 - [x] **Role & Persona Simulation**: Centralized permission matrix supporting Administrator, Incident Commander, Field Responder, Logistics Officer, and Read-Only Analyst.
-- [x] **12 Operational Modules**:
-  1. `/dashboard` — Live KPI counters, critical incident alerts, severity and status distributions, regional situation summary.
-  2. `/incidents` — Incident registry with full CRUD, coordinate validation, status transitions, timeline logging, and team assignment.
-  3. `/map` — Interactive Leaflet GIS map with severity markers, team positions, shelter layers, coordinate HUD, inspector drawer, and estimated impact radius overlays.
-  4. `/teams` — Response team roster with readiness statuses, disciplines, personnel counts, and assignments.
-  5. `/shelters` — Shelter management with capacity bar meters, occupancy overflow warnings, and facility checklists.
-  6. `/resources` — Relief inventory ledger with allocation and release mechanics preventing negative inventory.
-  7. `/tasks` — Kanban task coordination board with keyboard-accessible column navigation, incident links, and overdue tracking.
-  8. `/alerts` — CAP-inspired emergency alert authoring, simulated channel placeholders, and review/approval flows.
-  9. `/analytics` — Statistical charts and CSV report exports (RFC 4180 compliant).
-  10. `/audit` — Immutable activity log recording all user mutations across domains with CSV and JSON exports.
-  11. `/settings` — Operational center configuration, time formatting, coordinate defaults, and factory baseline reset.
-  12. `/public` — Public civil emergency bulletin portal with active simulated warnings, verified helplines, and preparedness guides.
-- [x] **Verification**: 21 unit tests covering domain operations, CSV escaping, and role authorization passed. Production Vite bundle verified.
+- [x] **12 Operational Modules**: Dashboard, Incidents, Map, Teams, Shelters, Resources, Tasks, Alerts, Analytics, Audit, Settings, Public Portal.
+- [x] **Verification**: 21 unit tests passed; production Vite bundle verified.
 
 ---
 
@@ -34,43 +22,54 @@ RakshaGrid is architected as an industrial-grade disaster intelligence and coord
 **Objective**: Replace client-only persistence with a production-grade relational database, secure user authentication, server-enforced RBAC, and server-side safety business rules.
 
 ### Key Milestones Completed:
-- [x] **Dual Relational Database Engine**: PostgreSQL (`pg.Pool`) and zero-configuration embedded SQLite (`better-sqlite3` with WAL mode and foreign key enforcement) sharing normalized ANSI SQL schema (`server/db/schema.sql`).
-- [x] **Normalized Relational Schema**: 12 relational tables (`users`, `teams`, `shelters`, `resources`, `inventory_movements`, `incidents`, `incident_timeline`, `tasks`, `alerts`, `audit_events`, `system_settings`, `notifications`, `password_reset_tokens`).
-- [x] **Real User Authentication**: Bcrypt password hashing (`$2a$10$...`), cryptographically signed JWT sessions delivered in HttpOnly cookies and Bearer tokens, profile verification (`GET /api/auth/me`), registration, and tokenized password reset.
-- [x] **Server-Side Role-Based Access Control (RBAC)**: `requirePermission(permission)` middleware enforcing 401 Unauthorized / 403 Forbidden access boundaries across 5 operational personas.
-- [x] **Server Business Rules & Safety Guardrails**:
-  - Prohibits negative inventory; records movement history in `inventory_movements`.
-  - Rejects shelter occupancy overflowing safe capacity without explicit administrative override.
-  - Validates terrestrial coordinate boundaries (-90..90 latitude, -180..180 longitude).
-  - Application-level operational audit logging with automatic redaction of sensitive credentials.
-- [x] **Production Security Hardening**:
-  - Cryptographic secret generation outside source control (`npm run generate-secret`).
-  - Production environment startup assertion on JWT secret length and complexity.
-  - Dedicated first-administrator bootstrap CLI (`npm run server:bootstrap-admin`).
-  - Privilege escalation defense blocking unauthorized role claims on registration (403 Forbidden).
-  - Sliding-window rate limiting on login (10 req/min) and password reset (5 req/15 min).
-  - CSRF origin and custom header verification on mutation requests.
-  - Tokenized 15-minute expiring SHA-256 password reset flow.
-  - Demo persona isolation: client-side simulation strictly decoupled from server-authenticated sessions.
-- [x] **Modular Express REST API**: Complete endpoints mounted under `/api/*` (`/auth`, `/incidents`, `/teams`, `/shelters`, `/resources`, `/tasks`, `/alerts`, `/audit`, `/settings`, `/notifications`, `/health`).
-- [x] **Frontend API Integration**: Typed client (`src/services/api.ts`) connecting `RakshaContext` to live backend endpoints with automatic fallback to standalone demo mode when running offline.
-- [x] **Verification & Test Suite**: 56 Vitest tests passed (17 security regression + 18 backend integration + 21 frontend domain tests); 0 TypeScript lint errors; production Vite bundle built and verified.
+- [x] **Dual Relational Database Engine**: PostgreSQL (`pg.Pool`) and zero-configuration embedded SQLite (`better-sqlite3` with WAL mode and foreign key enforcement).
+- [x] **Normalized Relational Schema**: 12 relational tables.
+- [x] **Real User Authentication**: Bcrypt password hashing, JWT sessions delivered in HttpOnly cookies, profile verification (`GET /api/auth/me`), registration, and password reset.
+- [x] **Server-Side Role-Based Access Control (RBAC)**: `requirePermission` middleware enforcing 401/403 boundaries across 5 operational personas.
+- [x] **Server Business Rules & Safety Guardrails**: Negative inventory prevention, shelter overflow guard, coordinate boundaries, operational audit trail.
+- [x] **Production Security Hardening**: Cryptographic secret generation, admin bootstrap CLI, rate limiting, CSRF verification, privilege escalation defense.
+- [x] **Verification**: 56 Vitest tests passed; 0 lint errors; production build verified.
 
 ---
 
-## Phase 3: Hardware Integrations, GIS Geofencing & Telecommunications
-**Objective**: Integrate with actual sensor feeds, meteorological radar, and civil alerting infrastructure.
+## Phase 3: Live Data, GIS Geofencing & Emergency Coordination (Completed)
+**Objective**: Transform the platform into a live, data-integrated emergency coordination network with external meteorological integrations, a server-side GIS geofencing engine, multi-channel notification routing, and concurrency-safe transactional workflows.
 
-### Planned Capabilities:
-- **CAP v1.2 Protocol Engine**: Full OASIS Common Alerting Protocol compliant XML generation and digital signature validation.
-- **Telecommunication Gateways**: Integrations with official cellular broadcast channels, SMS emergency aggregators, and email distribution lists.
-- **Siren & Acoustic Warning Network**: Hardware controller protocols for municipal outdoor warning sirens.
-- **Live Environmental Feeds**: Ingestion of IMD Doppler radar data, USGS/National Seismological network feeds, and river water-level telemetry.
-- **Dynamic Geofencing**: Polygon-based evacuation zone drawing with automatic population density estimation.
+### Key Milestones Completed:
+- [x] **External Weather & Hydrology Telemetry Integration**:
+  - Live Open-Meteo API integration (`https://api.open-meteo.com/v1/forecast`) for real-time ambient temperature, humidity, wind, and precipitation.
+  - Automatic WMO code normalization (codes 0–99) to emergency severity levels.
+  - In-memory TTL cache with stale-while-revalidate (SWR) background refresh.
+  - Hydrological river gauge telemetry with flood stages (`watch`, `warning`, `severe`, `inundation`) and discharge monitoring (`m³/s`).
+  - Transparent live vs. simulated status tagging with data source attributions.
+- [x] **GIS Geofencing & Spatial Intelligence Engine**:
+  - Mathematical Ray-Casting algorithm for exact Point-in-Polygon containment evaluation.
+  - Spherical Haversine distance calculator for circular hazard perimeters.
+  - Server-side containment evaluator cross-referencing active geofences against incidents, shelters, and field response teams.
+  - Normalized `geofences` database table with CRUD endpoints (`GET/POST/PUT/DELETE /api/geofences`).
+- [x] **Multichannel Alert & Notification Infrastructure**:
+  - Decoupled provider architecture (`InAppNotificationProvider`, `WebhookNotificationProvider`, `SimulatedTelecommProvider`).
+  - Multi-provider alert dispatcher broadcasting across channels.
+  - Sliding-window in-memory deduplication cache preventing notification storms.
+  - Persistent delivery audit ledger in `notification_deliveries` database table.
+- [x] **Enhanced Coordination, Concurrency Safety & Deep Health**:
+  - Concurrency-safe atomic resource allocations preventing inventory race conditions.
+  - Shelter occupancy overflow protection strictly requiring recorded administrative override justification.
+  - Incident escalation endpoint (`POST /api/incidents/:id/escalate`) with priority upgrades and emergency broadcasts.
+  - Automated response team lifecycle: deployment upon incident assignment and return to available upon incident resolution.
+  - Deep system health endpoint (`GET /api/system/health`) monitoring database latency, external weather freshness, and deduplicator keys.
+- [x] **Interactive Frontend GIS Map & Environmental HUD**:
+  - Leaflet map rendering of polygon and circle risk geofences with severity colors.
+  - Real-time weather overlay widget with live vs. cached badges and on-demand refresh.
+  - River gauge station markers displaying water levels, danger thresholds, and flood stages.
+  - Spatial containment badges in inspector drawer alerting operators when an incident or shelter is inside a risk zone.
+  - Dedicated Situation Map tabs navigating active hazards vs. risk geofences.
+  - Environmental & Telemetry intelligence panel on the main operations dashboard.
+- [x] **Verification**: 93 Vitest tests passing (100% pass rate across 8 test suites); 0 TypeScript lint errors; production Vite bundle built and verified.
 
 ---
 
-## Phase 4: AI Hazard Modeling, Predictive Triage & Resource Optimization
+## Phase 4: AI Hazard Modeling, Predictive Triage & Resource Optimization (Upcoming)
 **Objective**: Provide algorithmic decision-support to Incident Commanders under severe cognitive load.
 
 ### Planned Capabilities:

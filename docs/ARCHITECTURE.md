@@ -1,10 +1,10 @@
-# RakshaGrid Architecture Documentation (Phase 2 Full-Stack)
+# RakshaGrid Architecture Documentation (Phase 3 Full-Stack & GIS Integration)
 
 ## System Overview
 
-**RakshaGrid** is a specialized disaster intelligence and coordinated emergency operations platform. It is engineered to give Emergency Operations Centers (EOC), Incident Commanders, and field relief authorities situational awareness, tactical coordination tools, resource logistics tracking, and simulated public alert drafting during major emergencies.
+**RakshaGrid** is a specialized disaster intelligence and coordinated emergency operations platform. It is engineered to give Emergency Operations Centers (EOC), Incident Commanders, and field relief authorities real-time situational awareness, tactical coordination tools, resource logistics tracking, spatial geofencing analysis, and multi-channel alerting during major emergencies.
 
-Phase 2 elevates the platform from a client-side prototype to a full-stack, enterprise-grade emergency operations system with a real relational database, secure session authentication, server-enforced Role-Based Access Control (RBAC), and server-validated business rules.
+Phase 3 elevates the platform into a live, data-integrated emergency coordination network with external meteorological integrations, a server-side GIS geofencing engine, multi-channel notification routing, and concurrency-safe transactional workflows.
 
 ```
                            +--------------------------------------+
@@ -42,161 +42,123 @@ Phase 2 elevates the platform from a client-side prototype to a full-stack, ente
                                             |                      |                      |
                                             v                      v                      v
                                  +--------------------+ +--------------------+ +--------------------+
-                                 | JWT Session Auth & | | RBAC Authorization | | Business Rule &    |
-                                 | Password Hashing   | | (5 Personas Matrix)| | Safety Validators  |
+                                 | JWT Session Auth & | | External Weather & | | GIS Geofencing &   |
+                                 | RBAC Matrix (5)    | | Hydrology Feeds    | | Spatial Analysis   |
                                  +--------------------+ +--------------------+ +--------------------+
                                             |                      |                      |
                                             +----------------------+----------------------+
                                                                    |
                                                                    v
                                                    +-------------------------------+
+                                                   |  Multichannel Alert Dispatch  |
+                                                   | (In-App, Webhook, SMS Sim)    |
+                                                   +-------------------------------+
+                                                                   |
+                                                                   v
+                                                   +-------------------------------+
                                                    |    Relational Database Layer  |
                                                    |  (PostgreSQL || SQLite (WAL)) |
-                                                   | 11 Normalized Tables + Audit  |
+                                                   | 13 Normalized Tables + Audit  |
                                                    +-------------------------------+
 ```
 
 ---
 
-## Backend Architecture & Database Selection
+## 1. External Weather & Hydrological Telemetry Layer
 
-### 1. Dual-Adapter Database Engine
-To guarantee zero-friction local development without requiring external database installations, RakshaGrid implements a dual-adapter database client (`server/db/connection.ts`):
-- **Production Mode (PostgreSQL)**: When `DATABASE_URL` is set, connects via connection pooling (`pg.Pool`).
-- **Local/Embedded Mode (SQLite)**: When `DATABASE_URL` is omitted, automatically spins up embedded `better-sqlite3` at `server/data/rakshagrid.db` with Write-Ahead Logging (`WAL` mode) and foreign key enforcement enabled.
-- Both engines share the exact same ANSI SQL schema (`server/db/schema.sql`) and ACID transactional semantics.
+### A. Provider Interface & Model Normalization
+External data ingestion is managed via a pluggable provider pattern (`server/services/external/`):
+- `NormalizedWeatherReport`: Standardized telemetry format across all sources (temperature, apparent temperature, relative humidity, wind speed, wind direction, precipitation, WMO code, condition categorization, and source attribution).
+- `RiverGaugeReport`: Water levels, danger thresholds, discharge rates (`m³/s`), and flood stages (`normal`, `watch`, `warning`, `severe`, `inundation`).
+- `ProviderHealthStatus`: Metrics tracking provider uptime, latency in milliseconds, error counts, and live vs. simulated status.
 
-### 2. Normalized Relational Schema
-The database contains 11 normalized tables:
-- `users`: Authenticated personnel profiles with bcrypt hashed passwords (`$2a$10$...`), roles, departments, callsigns.
-- `teams`: Specialized response battalions, staff counts, disciplinary skills (JSON), coordinates, statuses.
-- `shelters`: Evacuation shelter facilities, capacities, current occupancies, regions, notes.
-- `resources`: Logistics inventory items, minimum thresholds, quantities available and allocated.
-- `inventory_movements`: Immutable transactional ledger tracking stock allocations, releases, actor IDs, and notes.
-- `incidents`: Disaster incidents with categories, severities, coordinates, priorities, affected population, casualties.
-- `incident_timeline`: Chronological audit entries linked to parent incident IDs.
-- `tasks`: Response Kanban tasks, priority, statuses, foreign keys to related incidents and response teams.
-- `alerts`: CAP-inspired emergency alerts, safety actions, distribution channels, approval metadata.
-- `audit_events`: Application-level operational audit log recording timestamp, actor ID, name, role, action, entity type, entity ID, and description.
-- `password_reset_tokens`: SHA-256 hashed 15-minute expiring tokens for secure password recovery.
-- `system_settings`: Key-value configuration for operational region, defaults, and feed toggles.
-- `notifications`: In-app operational alerts and broadcasts.
+### B. Open-Meteo Integration
+- Connects to the public Open-Meteo API (`https://api.open-meteo.com/v1/forecast`) for real-time weather observations.
+- Configured with a 5,000 ms request timeout.
+- Automatic WMO code normalization translating numerical weather codes (0–99) to standardized disaster severity categories (`normal`, `advisory`, `warning`, `critical`).
+- If network requests fail or time out, the system automatically falls back to an offline simulated baseline while setting `isLive: false` and `source: 'RakshaGrid Development Offline Baseline (Simulated)'`.
+
+### C. In-Memory Cache with Stale-While-Revalidate (SWR)
+- `server/services/external/cache.ts` manages telemetry caching with configurable TTL (default 10 minutes).
+- Requests within TTL return immediately from cache (`HIT`).
+- If an entry expires, it is served stale while an asynchronous background refresh is dispatched (`SWR`), preventing latency spikes during emergency operations.
 
 ---
 
-## Authentication & Authorization (RBAC)
+## 2. GIS Geofencing & Spatial Intelligence Engine
 
-### 1. Secure Authentication Flow
-- Passwords are encrypted using `bcryptjs` with salt work factor 10.
-- Sessions are maintained using cryptographically signed JSON Web Tokens (JWT).
-- Tokens are delivered via `HttpOnly`, `SameSite=Lax` cookies named `raksha_session` (with fallback support for `Authorization: Bearer <token>` headers).
-- User profile endpoint `GET /api/auth/me` validates the token on every session handshake and returns granted permissions.
+### A. Mathematical Foundations (`server/services/gis/geofenceEngine.ts`)
+The spatial intelligence engine performs server-side geospatial evaluation without external spatial database extensions:
+1. **Ray-Casting Algorithm for Point-in-Polygon (PIP)**:
+   - For an arbitrary polygon defined by coordinates \([(lat_1, lng_1), (lat_2, lng_2), \dots, (lat_n, lng_n)]\), a horizontal semi-infinite ray is cast from test point \(P(lat, lng)\).
+   - If the ray intersects the polygon boundary an odd number of times, \(P\) is strictly contained inside the polygon.
+   - Handles edge cases including vertices and collinear horizontal segments safely.
+2. **Haversine Spherical Distance for Circular Zones**:
+   \[
+   a = \sin^2\left(\frac{\Delta lat}{2}\right) + \cos(lat_1) \cdot \cos(lat_2) \cdot \sin^2\left(\frac{\Delta lng}{2}\right)
+   \]
+   \[
+   d = 2 \cdot R \cdot \arcsin\left(\sqrt{a}\right) \quad (R = 6,371,000 \text{ meters})
+   \]
+   Point \(P\) is contained in circle \(C\) if \(d \le C.radiusMeters\).
 
-### 2. Five Operational Personas
-The system enforces strict server-side RBAC across 5 defined roles:
-
-| Persona | Role | Permissions Summary |
-|---|---|---|
-| **Director Rajesh Verma** | `admin` | Full operational authority, incident management, alerts, settings, system reset. |
-| **Cmdr. Ananya Sen** | `commander` | Incident command, team dispatch, task assignment, alert review & approval. |
-| **Vikramaditya Rao** | `responder` | Field operational view, incident status updates, task execution. |
-| **Pooja Kulkarni** | `logistics` | Shelter management, inventory allocation/release, task execution. |
-| **Dr. Siddharth Mehta** | `analyst` | Read-only situational awareness, analytics, audit log inspection. |
-
-Requests to restricted routes without appropriate permissions return `HTTP 403 Forbidden`.
-
-### 3. Production Security Hardening
-- **Secret Hygiene & Startup Validation**: Cryptographically random 256-bit secrets are generated outside source control (`npm run generate-secret`). During production startup, `server/config/security.ts` asserts that `JWT_SECRET` is set, at least 32 characters, and not set to known placeholder defaults.
-- **First-Administrator Provisioning**: Provisioned via secure CLI tool (`npm run server:bootstrap-admin`) or `INITIAL_ADMIN_PASSWORD` environment variable. Never exposes bootstrap credentials in logs or API responses.
-- **Privilege Escalation Guard**: Public user registration (`/api/auth/register`) strictly assigns standard responder permissions and rejects attempts to self-grant `admin` or `commander` roles with `HTTP 403 Forbidden`. Admin role promotion is strictly restricted to verified administrators (`PUT /api/auth/users/:id/role`).
-- **Password Strength Policy**: Enforces a minimum of 10 characters with uppercase, lowercase, numeric, and symbol classes.
-- **Rate Limiting Middleware**: Sliding-window rate limiting on authentication routes (10 requests/min) and password reset (5 requests/15 min) prevents credential stuffing and brute-force attacks (`server/middleware/rateLimiter.ts`).
-- **CSRF Protection**: For cookie-authenticated mutation requests (`POST`, `PUT`, `DELETE`), `server/middleware/csrf.ts` enforces origin/referer matching and requires custom client verification headers (`X-Requested-With`, `X-Raksha-CSRF`).
-- **Tokenized Password Reset Flow**: Secure 15-minute token lifecycle with SHA-256 storage and constant-time user enumeration defense (`POST /api/auth/forgot-password` and `POST /api/auth/reset-password`).
-- **CORS Lockdown**: Validates request origins against configured whitelist (`CLIENT_ORIGIN`) and blocks unauthorized origins without reflection when credentials are used.
-- **Demo Isolation**: UI persona switching is isolated to local simulation; in live mode, identity and authorizations are strictly governed by authenticated server sessions.
+### B. Dynamic Containment Evaluation
+The evaluator runs on demand or automatically during incident updates (`GET /api/geofences/eval`):
+- Cross-references all active geofence zones against active incidents, shelters, and field response teams.
+- Generates bidirectional lookup maps: `incidentZoneMap` and `shelterZoneMap`.
+- If an incident falls inside an active high-severity geofence, the system automatically triggers containment warnings and can dispatch automated multichannel alerts.
 
 ---
 
-## Server-Side Business Rules & Safety Guardrails
+## 3. Multichannel Alert & Notification Infrastructure
 
-The API layer enforces safety rules independently of client-side validation:
-1. **Negative Inventory Prevention**: Allocations exceeding available depot stock are rejected (`HTTP 400 Insufficient stock`). Allocations and releases write an audit record to `inventory_movements`.
-2. **Shelter Capacity Overflow Guard**: Setting shelter headcount above maximum capacity is blocked (`HTTP 400 EXCEEDS_CAPACITY`) unless an explicit administrative override flag (`allowOverflow: true` / `forceOverride: true`) is submitted.
-3. **Geographic Coordinate Validation**: Incident and team coordinates are bounded to valid terrestrial limits (latitude between -90 and 90, longitude between -180 and 180).
-4. **Application-Level Operational Audit Trail**: All mutations across incidents, teams, shelters, resources, tasks, alerts, and settings write an operational record to `audit_events`. Sensitive payload items (passwords, tokens, cookies) are automatically redacted before persistence.
+### A. Provider Pattern Architecture
+The notification hub (`server/services/notifications/`) decouples notification creation from delivery channels:
+- `InAppNotificationProvider`: Writes persistent alert records to the `notifications` table for real-time client polling.
+- `WebhookNotificationProvider`: Delivers JSON payloads via HTTP POST to registered external endpoints (e.g. Civil Defense EOCs, municipal portals).
+- `SimulatedTelecommProvider`: Simulates SMS/Cell Broadcast transmission, recording simulated carrier handshakes and latency in `notification_deliveries`.
+
+### B. Sliding-Window Deduplication Cache
+- Prevents notification storms during mass-casualty incidents.
+- A sliding-window cache tracks composite keys `[channel:recipient:fingerprint]`. Duplicate alerts within the debounce window (default 300 seconds) are suppressed, logging a deduplication event in the audit trail.
 
 ---
 
-## Folder & Component Structure
+## 4. Emergency Coordination & Concurrency Controls
 
+### A. Concurrency-Safe Transactional Inventory Allocation
+- Resource allocations execute in atomic transactions (`BEGIN IMMEDIATE` in SQLite, serializable transactions in PostgreSQL).
+- Verifies current available depot stock immediately before decrementing, preventing race conditions when multiple logistics officers allocate from the same depot simultaneously.
+
+### B. Shelter Capacity Override Tracking
+- Enforces safe capacity ceilings.
+- If occupancy exceeds 100% capacity, the server strictly requires an `overrideReason` parameter, recording the justification in the audit ledger and tagging the shelter response with `isOverflow: true`.
+
+### C. Incident Escalation & Response Unit Lifecycle
+- `POST /api/incidents/:id/escalate`: Atomically upgrades incident severity and priority, appends an escalation event to the incident timeline, and broadcasts emergency notifications.
+- Assigning a response team to an active incident automatically transitions the team status from `'Available'` to `'Deployed'`.
+- Resolving or closing an incident automatically returns assigned teams to `'Available'`.
+
+### D. Deep System Health Telemetry
+- `GET /api/system/health`: Reports end-to-end health metrics including database query latency, weather provider status, river gauge telemetry freshness, and active deduplication counts.
+
+---
+
+## 5. Normalized Relational Database Schema (13 Tables)
+
+```sql
+users (id, email, password_hash, name, role, department, callsign, phone, is_active, created_at, updated_at)
+teams (id, name, type, status, staff_count, skills_json, latitude, longitude, home_base, current_assignment, contact_callsign, contact_phone, created_at, updated_at)
+shelters (id, name, address, region, latitude, longitude, capacity, current_occupancy, status, facilities_json, notes, created_at, updated_at)
+resources (id, name, category, quantity_available, quantity_allocated, unit, status, min_threshold, depot_location, notes, created_at, updated_at)
+inventory_movements (id, resource_id, movement_type, quantity, actor_id, actor_name, incident_id, shelter_id, notes, created_at)
+incidents (id, title, description, category, severity, status, priority, location_name, latitude, longitude, assigned_team_id, assigned_team_name, affected_population, casualties, estimated_radius_meters, reported_at, updated_at)
+incident_timeline (id, incident_id, timestamp, actor, note, type)
+tasks (id, title, description, status, priority, due_date, assigned_team_id, assigned_team_name, incident_id, incident_title, created_at, updated_at)
+alerts (id, type, title, body, severity, status, target_region, affected_count, approved_by, approved_at, broadcast_at, created_at)
+audit_events (id, timestamp, actor_id, actor_name, actor_role, action, entity_type, entity_id, description, metadata_json)
+password_reset_tokens (id, user_id, token_hash, expires_at, used_at, created_at)
+geofences (id, name, category, severity, status, shape_type, center_latitude, center_longitude, radius_meters, coordinates_json, description, created_by, created_at, updated_at)
+notification_deliveries (id, notification_id, channel, recipient, status, attempts, error_message, delivered_at, created_at)
+system_settings (id, key, value, updated_at)
 ```
-d:\RakshaGrid\
-├── index.html                  # HTML entry point with Plus Jakarta Sans & JetBrains Mono fonts
-├── vite.config.ts              # Vite 5 + React plugin + API Proxy + Vitest config
-├── tailwind.config.js          # Tactical operations design tokens
-├── package.json                # Dependencies and npm script targets
-├── tsconfig.json               # Frontend TypeScript configuration
-├── tsconfig.server.json        # Backend TypeScript configuration
-├── .env.example                # Full-stack configuration blueprint
-├── server/                     # Full-Stack Backend Layer
-│   ├── index.ts                # Main Express application & middleware setup
-│   ├── config/                 # Security policies and configuration
-│   │   └── security.ts         # JWT validation, password policies, secret hygiene
-│   ├── auth/                   # JWT signing, verification, and role definitions
-│   │   ├── jwt.ts              # Token issue and cookie extraction
-│   │   └── roles.ts            # Server-side persona permission matrix
-│   ├── db/                     # Database connection & migrations
-│   │   ├── connection.ts       # Dual PostgreSQL/SQLite client adapter
-│   │   └── schema.sql          # Normalized relational schema (12 tables including password resets)
-│   ├── middleware/             # Express middlewares
-│   │   ├── auth.ts             # Session verification middleware
-│   │   ├── rbac.ts             # Permission-checking middleware (401/403)
-│   │   ├── audit.ts            # Operational audit recording helper
-│   │   ├── csrf.ts             # CSRF origin & custom header verification
-│   │   └── rateLimiter.ts      # Sliding-window brute force protection
-│   ├── routes/                 # REST API endpoints
-│   │   ├── alerts.routes.ts    # Alert drafting, review, demo approval
-│   │   ├── audit.routes.ts     # Audit log retrieval & CSV export
-│   │   ├── auth.routes.ts      # Login, registration, profile, password recovery
-│   │   ├── incidents.routes.ts # Incident CRUD, coordinates, timeline
-│   │   ├── notifications.routes.ts # Notification management
-│   │   ├── resources.routes.ts # Inventory allocation & ledger
-│   │   ├── settings.routes.ts  # System settings & baseline reset
-│   │   ├── shelters.routes.ts  # Shelter registry & occupancy guards
-│   │   ├── tasks.routes.ts     # Kanban tasks & assignments
-│   │   └── teams.routes.ts     # Response team roster
-│   ├── scripts/                # Database and provisioning utilities
-│   │   ├── seed.ts             # Baseline scenario seed script
-│   │   ├── bootstrap-admin.ts  # Secure first-administrator provisioning
-│   │   └── generate-secret.ts  # Cryptographic secret generation CLI
-│   └── tests/                  # Backend integration & security tests
-│       ├── api.test.ts         # Supertest integration test suite
-│       └── security.test.ts    # Security hardening regression suite (17 tests)
-├── src/                        # Frontend Application Layer
-│   ├── main.tsx                # React root mount
-│   ├── App.tsx                 # Route declarations & provider nesting
-│   ├── services/               # Client-side API layer
-│   │   └── api.ts              # Typed REST client with credentials
-│   ├── types/                  # Shared data models
-│   ├── data/                   # Initial fixtures & seed states
-│   ├── context/                # Reactive state management
-│   │   └── RakshaContext.tsx   # Store with backend synchronization & offline fallback
-│   ├── utils/                  # Permissions, formatters, CSV export
-│   ├── components/             # Reusable UI components
-│   ├── pages/                  # 12 operational views
-│   └── tests/                  # Unit and domain business rule tests
-└── docs/                       # Project documentation
-    ├── ARCHITECTURE.md         # Full system architecture
-    ├── DEVELOPMENT_LOG.md      # Mandatory Git milestone history
-    └── PHASE_ROADMAP.md        # Long-term development roadmap
-```
-
----
-
-## Verification & Test Automation
-
-The repository enforces complete test coverage across frontend domain operations, backend REST endpoints, and security hardening:
-- **`npm test`**: Runs Vitest across 56 tests (17 security regression + 18 backend integration + 21 frontend domain operations).
-- **`npm run lint`**: Strict dual-compiler type checking (`tsc --noEmit` and `tsc -p tsconfig.server.json --noEmit`).
-- **`npm run build`**: Production bundling via Vite.

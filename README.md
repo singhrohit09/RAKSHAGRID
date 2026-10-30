@@ -3,12 +3,12 @@
 > **"Disaster Intelligence. Coordinated Response. Safer Communities."**
 
 [![GitHub Repository](https://img.shields.io/badge/GitHub-singhrohit09%2FRAKSHAGRID-red.svg)](https://github.com/singhrohit09/RAKSHAGRID)
-[![Phase](https://img.shields.io/badge/Phase-2%20Backend%20%26%20Database%20Complete-emerald.svg)]()
+[![Phase](https://img.shields.io/badge/Phase-3%20Live%20Data%2C%20GIS%20%26%20Coordination%20Complete-emerald.svg)]()
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict%205.6-blue.svg)]()
 [![React](https://img.shields.io/badge/React-18.3-cyan.svg)]()
 [![Express](https://img.shields.io/badge/Express-5.3-yellow.svg)]()
 [![Database](https://img.shields.io/badge/Database-SQLite%20(WAL)%20%7C%20PostgreSQL-orange.svg)]()
-[![Tests](https://img.shields.io/badge/Vitest-56%20Passed-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/Vitest-93%20Passed%20(100%25)-brightgreen.svg)]()
 
 ---
 
@@ -18,8 +18,9 @@ Natural disasters and extreme emergencies — including riverine flooding, flash
 
 Emergency Operations Centers (EOCs), district administrations, and disaster response forces (NDRF/SDRF) frequently face:
 - **Fragmented Situational Awareness**: Information scattered across ad-hoc phone calls, field radios, paper logs, and disparate spreadsheets.
-- **Resource Bottlenecks & Depletion**: Relief items (water rations, trauma medical supplies, inflatable boats) allocated without real-time inventory visibility, leading to stock depletion and uncoordinated deliveries.
-- **Shelter Overcrowding**: Evacuation centers exceeding safe capacities while nearby shelters remain underutilized.
+- **Disconnected External Data**: Weather radar, hydrological river telemetry, and seismic alerts siloed in separate government agency websites.
+- **Resource Bottlenecks & Depletion**: Relief items (water rations, trauma medical supplies, inflatable boats) allocated without real-time inventory visibility or concurrency safety.
+- **Shelter Overcrowding**: Evacuation centers exceeding safe capacities without traceable justification or overflow routing.
 - **Delayed Public Warning Workflows**: Incoherent alert drafting and review bottlenecks during crucial evacuation windows.
 
 ---
@@ -27,89 +28,97 @@ Emergency Operations Centers (EOCs), district administrations, and disaster resp
 ## 2. Project Objectives
 
 **RakshaGrid** is designed to provide unified emergency operations intelligence and coordination:
-1. **Consolidated Incident Registry**: Log, triage, track, and update disaster incidents with validated coordinate telemetry, priorities, and audit timelines.
-2. **Interactive Geo-Spatial Map**: Real-time Leaflet GIS mapping linking active incident markers, response units, and shelters with estimated hazard impact zones.
-3. **Response Unit Coordination**: Maintain rosters of field search-and-rescue, medical, and fire battalions with readiness states and assignments.
-4. **Capacity-Aware Shelter Management**: Monitor evacuation center headcounts with automated overflow warnings to safeguard vulnerable displaced populations.
-5. **Relief Inventory Control**: Prevent negative stock allocations and alert logisticians when essential reserves drop below minimum thresholds.
-6. **Accessible Public Information**: Deliver verified civil emergency guidelines, simulated warning bulletins, and authoritative helpline directories.
+1. **Consolidated Incident Registry & Escalation**: Log, triage, track, escalate, and update disaster incidents with validated coordinate telemetry, priorities, and audit timelines.
+2. **GIS Spatial Geofencing Engine**: Dynamic polygon ray-casting and Haversine circle containment evaluator identifying high-risk disaster perimeters and affected operational assets.
+3. **External Meteorological & Hydrological Telemetry**: Live Open-Meteo weather integration with WMO code translation, flood gauges, and cached fallbacks.
+4. **Multichannel Notification Infrastructure**: In-App, Webhook, and telecommunications alert dispatch with sliding-window deduplication and audit tracking.
+5. **Response Unit Coordination**: Maintain rosters of field search-and-rescue, medical, and fire battalions with automated deployment lifecycle tracking.
+6. **Capacity-Aware Shelter Management**: Monitor evacuation center headcounts with strict capacity safeguards and recorded administrative override justifications.
+7. **Relief Inventory Control**: Concurrency-safe atomic resource allocations preventing negative inventory.
 
 ---
 
-## 3. Phase 2 Features Implemented
+## 3. Architecture & Integrated Systems (Phase 3)
 
-Phase 2 elevates the platform from an offline prototype to a **production-ready, full-stack application**:
+Phase 3 transitions RakshaGrid from an isolated operational system into a **live, data-integrated emergency coordination platform**:
 
-### A. Dual Relational Database Layer
-- **PostgreSQL & SQLite Dual-Adapter Client** (`server/db/connection.ts`): Connects to PostgreSQL (`pg.Pool`) when `DATABASE_URL` is configured, or automatically falls back to zero-configuration embedded SQLite (`better-sqlite3` with Write-Ahead Logging and foreign keys enabled) at `server/data/rakshagrid.db`.
-- **Normalized Schema (11 tables)** (`server/db/schema.sql`): `users`, `teams`, `shelters`, `resources`, `inventory_movements`, `incidents`, `incident_timeline`, `tasks`, `alerts`, `audit_events`, `system_settings`, `notifications`.
-- **Baseline Seeding Script** (`server/scripts/seed.ts`): Seeds authenticated personas with hashed passwords, initial operational teams, shelters, resources, tasks, and audit records.
-
-### B. Real Authentication & Session Handling
-- **Password Hashing**: Standard `bcryptjs` encryption with salt rounds of 10.
-- **Session Tokens**: Cryptographically signed JSON Web Tokens (JWT) stored in `HttpOnly`, `SameSite=Lax` cookies with header fallback (`Authorization: Bearer <token>`).
-- **Profile Endpoint**: `/api/auth/me` validates the session and delivers the authenticated persona profile with verified permissions.
-- **User Registration & Login**: Real registration and credential verification endpoints.
-
-### C. Server-Enforced Role-Based Access Control (RBAC)
-- Strict server-side RBAC middleware (`server/middleware/rbac.ts`) protecting sensitive API routes.
-- Returns `HTTP 401 Unauthorized` for missing/invalid sessions and `HTTP 403 Forbidden` for role capability violations.
-- Five operational personas with dedicated server capability sets:
-  - **Administrator** (`admin`): Full administrative command, system preferences, data baseline reset.
-  - **Incident Commander** (`commander`): Tactical incident triage, team dispatch, task assignment, alert review & approval.
-  - **Field Responder** (`responder`): Field operational reporting, incident status updates, task execution.
-  - **Logistics Officer** (`logistics`): Shelter management, inventory allocation and release.
-  - **Read-Only Analyst** (`analyst`): Observer situational awareness, analytics inspection, audit log review.
-
-### D. Server-Side Safety Business Rules
-- **Negative Stock Prevention**: Inventory allocations exceeding depot stock are rejected at the server level (`HTTP 400 Insufficient stock`). Allocations and releases generate entries in `inventory_movements`.
-- **Shelter Capacity Overflow Guard**: Occupancy headcounts exceeding safe capacity are blocked (`HTTP 400 EXCEEDS_CAPACITY`) unless an administrative override is explicitly provided.
-- **Geographic Coordinate Validation**: Validates coordinate boundaries (-90..90 latitude, -180..180 longitude) before saving.
-- **Application-Level Operational Audit Trail**: Records mutations across all modules, sanitizing sensitive credentials before storage in `audit_events`.
-
-### E. Frontend API Integration with Graceful Offline Fallback
-- Typed REST API client (`src/services/api.ts`) connecting the reactive React store (`RakshaContext`) to backend endpoints.
-- Built-in availability detector: when running without the backend server, the app automatically switches to **Demo Mode** using local storage persistence, ensuring 100% operational functionality in all environments.
-- Real-time connection badge in the application header: `[LIVE API]` vs `[DEMO MODE]`.
+```
+                              +-------------------------------------------+
+                              |         Browser User Interface (React 18) |
+                              |    - Tactical Operations Shell            |
+                              |    - Interactive Leaflet GIS Map with HUD |
+                              |    - Environmental Telemetry & Geofences  |
+                              +-------------------------------------------+
+                                                    |
+                                                    v
+                              +-------------------------------------------+
+                              |         Typed REST API Client (Axios/Fetch)|
+                              |         src/services/api.ts               |
+                              +-------------------------------------------+
+                                                    |
+                                                    v
+                              +-------------------------------------------+
+                              |         Express 5 Backend API (Port 5000) |
+                              +-------------------------------------------+
+                                   |              |               |
+             +---------------------+              |               +---------------------+
+             v                                    v                                     v
++--------------------------+       +-----------------------------+       +-----------------------------+
+| External Telemetry Layer |       | GIS Spatial Engine          |       | Multichannel Notifications  |
+| - Open-Meteo WMO Client  |       | - Ray-Casting Polygon PIP   |       | - In-App Notification Hub   |
+| - GloFAS River Gauges    |       | - Haversine Distance Calc   |       | - Webhook Push Dispatcher   |
+| - Memory Cache + SWR     |       | - Dynamic Containment Eval  |       | - Telecommunications Sim    |
+| - Live / Simulated Flag  |       | - Multi-Zone Intersection   |       | - Deduplication Cache       |
++--------------------------+       +-----------------------------+       +-----------------------------+
+             |                                    |                                     |
+             +---------------------+--------------+-------------------------------------+
+                                   |
+                                   v
++-----------------------------------------------------------------------------------------------+
+| Dual-Adapter Relational Database Layer (PostgreSQL || SQLite 3 WAL Mode)                       |
+| 13 Normalized Tables:                                                                        |
+| users, teams, shelters, resources, inventory_movements, incidents, incident_timeline,         |
+| tasks, alerts, audit_events, password_reset_tokens, geofences, notification_deliveries        |
++-----------------------------------------------------------------------------------------------+
+```
 
 ---
 
-## 4. Technology Stack
+## 4. Live vs. Simulated Integration Status
 
-- **Frontend**: React 18.3 (TypeScript strict mode), Vite 5, Tailwind CSS 3.4
-- **Backend API**: Node.js 20+/24+, Express 5.3, TypeScript
-- **Authentication**: JWT (`jsonwebtoken`), `bcryptjs`, `cookie-parser`
-- **Database**: PostgreSQL (`pg`) / Embedded SQLite 3 (`better-sqlite3` WAL)
-- **Mapping**: Leaflet 1.9 with OpenStreetMap / CartoDB tiles
-- **Data Visualization**: Recharts 2.13
-- **Testing**: Vitest 2.1, Supertest 7.3
+RakshaGrid maintains absolute transparency regarding live external data versus simulated local fallbacks:
+
+| Component / Subsystem | Integration Status | Data Source / Technology | Production Operational Notes |
+|---|---|---|---|
+| **Meteorological Weather Telemetry** | **LIVE** | Open-Meteo WMO Forecast API (`https://api.open-meteo.com/v1/forecast`) | Real temperature, humidity, wind speed, precipitation, and WMO severity classification with 10-minute in-memory caching and stale-while-revalidate. Falls back to offline baseline gracefully if network fails. |
+| **Hydrological River Gauges** | **HYBRID / SIMULATED** | Central Water Commission & GloFAS Models | Provides calibrated stage thresholds (normal, watch, warning, severe, inundation) and discharge telemetry (`m³/s`) for regional rivers. Live CWC telemetry gateway ready for sensor credentials. |
+| **GIS Geofencing Engine** | **LIVE / REAL** | In-Engine Ray-Casting & Haversine Spherical Calculation | Server-side mathematical containment engine evaluates exact point-in-polygon coordinates and radial circles against incidents, shelters, and field units. |
+| **Relational Database** | **LIVE / REAL** | PostgreSQL (`pg`) or SQLite 3 (`better-sqlite3` WAL) | Dual-adapter client with ACID transactions, strict foreign keys, and 13 normalized tables. |
+| **Multichannel Dispatcher** | **LIVE / SIMULATED** | In-App (Live), Webhooks (Live), Cellular SMS (Simulated) | Dispatches real in-app alerts and outgoing HTTP webhooks; cellular SMS adapter logs transmission payloads to `notification_deliveries` ledger. |
 
 ---
 
 ## 5. Security Architecture & Administrator Provisioning
 
 RakshaGrid strictly adheres to production security hardening standards:
-- **No Hardcoded or Predictable Credentials**: Default production credentials have been treated as compromised and removed.
+- **No Hardcoded or Published Credentials**: All published default passwords have been removed from source and documentation.
 - **Secure Administrator Provisioning**:
   - Run the dedicated one-time provisioning script to bootstrap the first administrator:
     ```bash
     npm run server:bootstrap-admin
     ```
-  - Alternatively, configure `INITIAL_ADMIN_PASSWORD` (min 10 characters with uppercase, lowercase, numeric, and special symbol) in your secure production environment.
+  - Alternatively, configure `INITIAL_ADMIN_PASSWORD` in your secure production environment.
 - **Cryptographic Secret Generation**:
   - Production deployments require a 256-bit cryptographically random secret for signing JWTs:
     ```bash
     npm run generate-secret
     ```
-  - Set the resulting string to `JWT_SECRET` in `.env`.
 - **Privilege Escalation Defense**: Public user registration (`/api/auth/register`) strictly assigns standard responder permissions and actively rejects attempts to claim `admin` or `commander` roles (HTTP 403 Forbidden). Administrator role promotion is restricted to verified administrators (`PUT /api/auth/users/:id/role`).
 - **Rate Limiting & CSRF Protection**:
   - Sliding-window rate limiters defend against brute-force attacks on login (10 requests/min) and password reset (5 requests/15 min).
   - CSRF origin and custom header verification (`X-Requested-With`, `X-Raksha-CSRF`) protect state-changing mutation requests authenticated via cookies.
-- **Tokenized Password Recovery**:
-  - Implements SHA-256 hashed 15-minute expiring reset tokens with constant-time response profiles to avoid account enumeration.
-- **Demo Persona Isolation**:
-  - The UI persona selector is strictly a client-side simulation for demonstration. In live mode, actual operational roles and authorization are verified server-side against cryptographically signed JWT sessions.
+- **Application-Level Operational Audit Trail**:
+  - Automatically logs mutations across all domains with actor callsign, IP, action, entity type, and sanitized payload in `audit_events`.
 
 ---
 
@@ -131,34 +140,42 @@ npm install
 cp .env.example .env
 ```
 
-### 4. Seed the database (Optional — runs automatically on first start)
+### 4. Seed database baseline
 ```bash
 npm run server:seed
 ```
 
-### 5. Start the backend API server (Port 5000)
+### 5. Start backend API server (Port 5000)
 ```bash
 npm run server
 ```
 
-### 6. Start the frontend development server (Port 3000)
+### 6. Start frontend development server (Port 3000)
 In a separate terminal:
 ```bash
 npm run dev
 ```
-Open [http://localhost:3000](http://localhost:3000) in your browser. The Vite dev server will proxy all `/api` requests to `http://localhost:5000`.
+Open [http://localhost:3000](http://localhost:3000) in your browser. The Vite dev server proxies all `/api` requests to `http://localhost:5000`.
 
 ---
 
 ## 7. Verification Commands
 
-### Run Full Test Suite (56 Tests)
+### Run Full Test Suite (93 Tests Passing across 8 Test Suites)
 ```bash
 npm test
 ```
-*Current status: 56 tests passing (17 security regression + 18 backend integration + 21 frontend domain logic tests).*
+*Current test coverage includes:*
+- `server/tests/security.test.ts` (17 tests) — Secret enforcement, admin bootstrap, rate limiting, CSRF, privilege escalation.
+- `server/tests/api.test.ts` (18 tests) — Full REST endpoint CRUD, authentication, RBAC, inventory safety, shelter capacity.
+- `server/tests/geofence.test.ts` (12 tests) — Ray-casting point-in-polygon math, circle Haversine distance, containment evaluator, REST API.
+- `server/tests/external.test.ts` (12 tests) — Open-Meteo weather client, WMO code parser, TTL cache, SWR, river gauges, REST API.
+- `server/tests/coordination.test.ts` (5 tests) — Incident escalation, team assignment state machine, shelter overflow tracking, concurrency safety.
+- `server/tests/notifications.test.ts` (8 tests) — Multi-channel dispatcher, deduplication cache, webhook delivery, audit ledger.
+- `src/tests/businessRules.test.ts` (13 tests) — Client domain validation and business constraints.
+- `src/tests/domainOperations.test.ts` (8 tests) — CSV formatting, date calculations, search utilities.
 
-### TypeScript Strict Type Checking (Dual Frontend & Backend)
+### TypeScript Strict Type Checking (Frontend & Backend)
 ```bash
 npm run lint
 ```
@@ -186,10 +203,10 @@ git remote -v
 git status
 
 # Stage verified changes
-git add .
+git add <files>
 
 # Create descriptive milestone commit
-git commit -m "feat: integrate frontend API client and persistence"
+git commit -m "feat(module): description"
 
 # Push to main branch
 git push origin main
