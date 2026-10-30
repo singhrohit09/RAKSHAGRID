@@ -82,3 +82,4 @@ export const passwordResetRateLimiter = createRateLimiter({
   max: 5,                   // 5 requests per 15 minutes
   message: 'Too many password recovery requests. Please wait before requesting another reset.'
 });
+

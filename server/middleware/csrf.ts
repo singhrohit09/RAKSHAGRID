@@ -51,3 +51,4 @@ export function csrfProtection(allowedOrigins: string[]) {
     next();
   };
 }
+
