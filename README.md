@@ -3,12 +3,12 @@
 > **"Disaster Intelligence. Coordinated Response. Safer Communities."**
 
 [![GitHub Repository](https://img.shields.io/badge/GitHub-singhrohit09%2FRAKSHAGRID-red.svg)](https://github.com/singhrohit09/RAKSHAGRID)
-[![Phase](https://img.shields.io/badge/Phase-3%20Live%20Data%2C%20GIS%20%26%20Coordination%20Complete-emerald.svg)]()
+[![Phase](https://img.shields.io/badge/Phase-4%20Multi--Agent%20AI%20%26%20Disaster%20Intelligence%20Complete-emerald.svg)]()
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict%205.6-blue.svg)]()
 [![React](https://img.shields.io/badge/React-18.3-cyan.svg)]()
 [![Express](https://img.shields.io/badge/Express-5.3-yellow.svg)]()
 [![Database](https://img.shields.io/badge/Database-SQLite%20(WAL)%20%7C%20PostgreSQL-orange.svg)]()
-[![Tests](https://img.shields.io/badge/Vitest-93%20Passed%20(100%25)-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/Vitest-110%20Passed%20(100%25)-brightgreen.svg)]()
 
 ---
 
@@ -38,47 +38,51 @@ Emergency Operations Centers (EOCs), district administrations, and disaster resp
 
 ---
 
-## 3. Architecture & Integrated Systems (Phase 3)
+## 3. Architecture & Multi-Agent AI System (Phase 4)
 
-Phase 3 transitions RakshaGrid from an isolated operational system into a **live, data-integrated emergency coordination platform**:
+Phase 4 transforms RakshaGrid into an explainable **multi-agent AI disaster intelligence and response coordination platform**:
 
 ```
-                              +-------------------------------------------+
-                              |         Browser User Interface (React 18) |
-                              |    - Tactical Operations Shell            |
-                              |    - Interactive Leaflet GIS Map with HUD |
-                              |    - Environmental Telemetry & Geofences  |
-                              +-------------------------------------------+
-                                                    |
-                                                    v
-                              +-------------------------------------------+
-                              |         Typed REST API Client (Axios/Fetch)|
-                              |         src/services/api.ts               |
-                              +-------------------------------------------+
-                                                    |
-                                                    v
-                              +-------------------------------------------+
-                              |         Express 5 Backend API (Port 5000) |
-                              +-------------------------------------------+
-                                   |              |               |
-             +---------------------+              |               +---------------------+
-             v                                    v                                     v
-+--------------------------+       +-----------------------------+       +-----------------------------+
-| External Telemetry Layer |       | GIS Spatial Engine          |       | Multichannel Notifications  |
-| - Open-Meteo WMO Client  |       | - Ray-Casting Polygon PIP   |       | - In-App Notification Hub   |
-| - GloFAS River Gauges    |       | - Haversine Distance Calc   |       | - Webhook Push Dispatcher   |
-| - Memory Cache + SWR     |       | - Dynamic Containment Eval  |       | - Telecommunications Sim    |
-| - Live / Simulated Flag  |       | - Multi-Zone Intersection   |       | - Deduplication Cache       |
-+--------------------------+       +-----------------------------+       +-----------------------------+
-             |                                    |                                     |
-             +---------------------+--------------+-------------------------------------+
-                                   |
-                                   v
++-----------------------------------------------------------------------------------------------+
+|                       Browser User Interface (React 18 & TypeScript)                          |
+|  - Operations Dashboard & Incident Registry        - Leaflet GIS Map & Environmental HUD      |
+|  - AI Disaster Intelligence Center                 - Human-in-the-Loop Approval Queue         |
+|  - Disaster Simulation Lab                         - Audit Logs & Execution History           |
++-----------------------------------------------------------------------------------------------+
+                                               |
+                                               v
++-----------------------------------------------------------------------------------------------+
+|                        Express 5 Backend API & Modular Services (Port 5000)                   |
+|  /api/auth       /api/incidents    /api/teams      /api/shelters   /api/resources             |
+|  /api/tasks      /api/alerts       /api/audit      /api/external   /api/geofences             |
+|  /api/ai/risk    /api/ai/incidents /api/ai/resources /api/ai/coordinator /api/ai/simulation   |
++-----------------------------------------------------------------------------------------------+
+                                               |
+                                               v
++-----------------------------------------------------------------------------------------------+
+|                                  MULTI-AGENT AI ORCHESTRATOR                                  |
+|  - Agent 1: Disaster Risk Intelligence Agent (Multi-hazard risk score & exposure)             |
+|  - Agent 2: Incident Intelligence & Prioritization Agent (Dynamic P1-P4 triage ranking)      |
+|  - Agent 3: Smart Resource Allocation Agent (Haversine proximity & inventory matching)        |
+|  - Agent 4: AI Emergency Response Coordinator (NLP intent parsing & 3-phase action plan)      |
+|  - Agent 5: Disaster Simulation Agent (Isolated sandbox stress-testing & strategy comparison) |
++-----------------------------------------------------------------------------------------------+
+                                               |
+                                               v
++-----------------------------------------------------------------------------------------------+
+|                       AI Provider Abstraction & Deterministic Fallback                        |
+|  - External LLM: Google Gemini 1.5 Flash / OpenAI (Backend-only keys, timeout & retries)      |
+|  - Fallback Engine: Deterministic Analytical Heuristics (Zero credentials, always available)  |
+|  - Human Approval Gate: Recommendations staged as 'pending' prior to atomic execution         |
++-----------------------------------------------------------------------------------------------+
+                                               |
+                                               v
 +-----------------------------------------------------------------------------------------------+
 | Dual-Adapter Relational Database Layer (PostgreSQL || SQLite 3 WAL Mode)                       |
-| 13 Normalized Tables:                                                                        |
+| 16 Normalized Relational Tables:                                                              |
 | users, teams, shelters, resources, inventory_movements, incidents, incident_timeline,         |
-| tasks, alerts, audit_events, password_reset_tokens, geofences, notification_deliveries        |
+| tasks, alerts, audit_events, password_reset_tokens, geofences, notification_deliveries,        |
+| ai_agent_executions, ai_recommendations, ai_simulation_records                                |
 +-----------------------------------------------------------------------------------------------+
 ```
 

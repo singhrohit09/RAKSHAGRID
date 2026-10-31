@@ -9,11 +9,9 @@ import { resourceAllocationAgent } from '../services/ai/agents/resourceAllocatio
 import { responseCoordinatorAgent } from '../services/ai/agents/responseCoordinatorAgent.js';
 import { disasterSimulationAgent } from '../services/ai/agents/disasterSimulationAgent.js';
 import { orchestrator } from '../services/ai/orchestrator.js';
-import { providerFactory } from '../services/ai/providers/providerFactory.js';
 
 describe('RakshaGrid Phase 4: Multi-Agent AI & Disaster Intelligence Test Suite', () => {
   const adminPassword = 'AdminSecureSecret#2026!';
-  const commanderPassword = 'CommanderSecureSecret#2026!';
   const responderPassword = 'ResponderSecureSecret#2026!';
   
   let adminToken = '';
