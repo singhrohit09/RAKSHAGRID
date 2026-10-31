@@ -21,7 +21,10 @@ export type Permission =
   | 'view_analytics'
   | 'view_audit'
   | 'change_settings'
-  | 'reset_demo_data';
+  | 'reset_demo_data'
+  | 'run_ai_analysis'
+  | 'approve_ai_recommendations'
+  | 'run_disaster_simulation';
 
 export interface Persona {
   id: PersonaId;

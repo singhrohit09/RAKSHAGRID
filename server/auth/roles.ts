@@ -17,7 +17,10 @@ export const SERVER_PERMISSIONS: Record<PersonaId, Permission[]> = {
     'view_analytics',
     'view_audit',
     'change_settings',
-    'reset_demo_data'
+    'reset_demo_data',
+    'run_ai_analysis',
+    'approve_ai_recommendations',
+    'run_disaster_simulation'
   ],
   commander: [
     'view_incidents',
@@ -31,13 +34,17 @@ export const SERVER_PERMISSIONS: Record<PersonaId, Permission[]> = {
     'create_alerts',
     'approve_alerts',
     'view_analytics',
-    'view_audit'
+    'view_audit',
+    'run_ai_analysis',
+    'approve_ai_recommendations',
+    'run_disaster_simulation'
   ],
   responder: [
     'view_incidents',
     'edit_incidents',
     'manage_tasks',
-    'view_analytics'
+    'view_analytics',
+    'run_ai_analysis'
   ],
   logistics: [
     'view_incidents',
@@ -45,12 +52,15 @@ export const SERVER_PERMISSIONS: Record<PersonaId, Permission[]> = {
     'manage_resources',
     'assign_tasks',
     'manage_tasks',
-    'view_analytics'
+    'view_analytics',
+    'run_ai_analysis'
   ],
   analyst: [
     'view_incidents',
     'view_analytics',
-    'view_audit'
+    'view_audit',
+    'run_ai_analysis',
+    'run_disaster_simulation'
   ]
 };
 
