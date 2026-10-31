@@ -83,3 +83,33 @@ export const passwordResetRateLimiter = createRateLimiter({
   message: 'Too many password recovery requests. Please wait before requesting another reset.'
 });
 
+export const apiRateLimiter = createRateLimiter({
+  windowMs: 60 * 1000, // 1 minute
+  max: 120,            // 120 requests per minute
+  message: 'Operational API rate limit reached. Please throttle requests.'
+});
+
+export const aiRateLimiter = createRateLimiter({
+  windowMs: 60 * 1000, // 1 minute
+  max: 30,             // 30 requests per minute
+  message: 'AI agent dispatch rate limit reached. Please wait before triggering additional analyses.'
+});
+
+/**
+ * Returns current rate limiter storage mode and operational characteristics.
+ */
+export function getRateLimiterStatus(): {
+  mode: 'distributed-redis' | 'in-memory-single-instance';
+  distributed: boolean;
+  notes: string;
+} {
+  const hasRedis = Boolean(process.env.REDIS_URL && process.env.REDIS_URL.trim().length > 0);
+  return {
+    mode: hasRedis ? 'distributed-redis' : 'in-memory-single-instance',
+    distributed: hasRedis,
+    notes: hasRedis 
+      ? 'Distributed Redis cluster rate limiting configured.' 
+      : 'In-memory sliding window rate limiter active (suitable for single-node container deployment; horizontal scaling requires REDIS_URL).'
+  };
+}
+

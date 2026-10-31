@@ -178,7 +178,12 @@ router.post('/logout', authenticate, async (req: Request, res: Response) => {
     });
   }
 
-  res.clearCookie('raksha_session', { path: '/' });
+  res.clearCookie('raksha_session', { 
+    path: '/',
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax'
+  });
   res.json({ message: 'Logged out successfully' });
 });
 

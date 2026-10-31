@@ -4,6 +4,7 @@ import { requirePermission } from '../middleware/rbac.js';
 import { orchestrator } from '../services/ai/orchestrator.js';
 import { providerFactory } from '../services/ai/providers/providerFactory.js';
 import { AgentId } from '../services/ai/types.js';
+import { aiRateLimiter } from '../middleware/rateLimiter.js';
 
 const router = Router();
 
@@ -77,7 +78,7 @@ router.get('/agents/:id', authenticate, (req: Request, res: Response) => {
  * POST /api/ai/risk/analyze
  * Triggers Agent 1: Disaster Risk Intelligence Agent.
  */
-router.post('/risk/analyze', authenticate, requirePermission('run_ai_analysis'), async (req: Request, res: Response) => {
+router.post('/risk/analyze', aiRateLimiter, authenticate, requirePermission('run_ai_analysis'), async (req: Request, res: Response) => {
   try {
     const { latitude, longitude, radiusKm, focusRegionName } = req.body;
 
@@ -118,7 +119,7 @@ router.post('/risk/analyze', authenticate, requirePermission('run_ai_analysis'),
  * POST /api/ai/incidents/prioritize
  * Triggers Agent 2: Incident Intelligence & Prioritization Agent.
  */
-router.post('/incidents/prioritize', authenticate, requirePermission('run_ai_analysis'), async (req: Request, res: Response) => {
+router.post('/incidents/prioritize', aiRateLimiter, authenticate, requirePermission('run_ai_analysis'), async (req: Request, res: Response) => {
   try {
     const result = await orchestrator.executeAgent('incident_prioritization', {}, req.user);
 
@@ -143,7 +144,7 @@ router.post('/incidents/prioritize', authenticate, requirePermission('run_ai_ana
  * POST /api/ai/resources/recommend
  * Triggers Agent 3: Smart Resource Allocation Agent.
  */
-router.post('/resources/recommend', authenticate, requirePermission('run_ai_analysis'), async (req: Request, res: Response) => {
+router.post('/resources/recommend', aiRateLimiter, authenticate, requirePermission('run_ai_analysis'), async (req: Request, res: Response) => {
   try {
     const { targetIncidentId } = req.body;
 
@@ -172,7 +173,7 @@ router.post('/resources/recommend', authenticate, requirePermission('run_ai_anal
  * POST /api/ai/coordinator/run
  * Triggers Agent 4: AI Emergency Response Coordinator.
  */
-router.post('/coordinator/run', authenticate, requirePermission('run_ai_analysis'), async (req: Request, res: Response) => {
+router.post('/coordinator/run', aiRateLimiter, authenticate, requirePermission('run_ai_analysis'), async (req: Request, res: Response) => {
   try {
     const { query, focusRegion, latitude, longitude } = req.body;
 
@@ -220,7 +221,7 @@ router.post('/coordinator/run', authenticate, requirePermission('run_ai_analysis
  * POST /api/ai/simulation/run
  * Triggers Agent 5: Disaster Simulation Agent (Isolated Sandbox).
  */
-router.post('/simulation/run', authenticate, requirePermission('run_disaster_simulation'), async (req: Request, res: Response) => {
+router.post('/simulation/run', aiRateLimiter, authenticate, requirePermission('run_disaster_simulation'), async (req: Request, res: Response) => {
   try {
     const {
       scenarioName,
