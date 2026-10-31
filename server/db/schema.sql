@@ -200,6 +200,49 @@ CREATE TABLE IF NOT EXISTS notification_deliveries (
   delivered_at TIMESTAMP
 );
 
+-- Phase 4: Multi-Agent AI System & Simulation Ledgers
+CREATE TABLE IF NOT EXISTS ai_agent_executions (
+  id VARCHAR(64) PRIMARY KEY,
+  execution_id VARCHAR(64) NOT NULL,
+  agent_name VARCHAR(64) NOT NULL,
+  status VARCHAR(32) NOT NULL,
+  input_summary TEXT,
+  output_summary TEXT,
+  full_output TEXT,
+  confidence REAL NOT NULL DEFAULT 0.0,
+  provider VARCHAR(64) NOT NULL,
+  execution_duration INTEGER NOT NULL DEFAULT 0,
+  error_message TEXT,
+  created_at TIMESTAMP NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS ai_recommendations (
+  id VARCHAR(64) PRIMARY KEY,
+  execution_id VARCHAR(64) NOT NULL,
+  recommendation_type VARCHAR(64) NOT NULL,
+  target_entity_type VARCHAR(64) NOT NULL,
+  target_entity_id VARCHAR(64) NOT NULL,
+  recommendation_title VARCHAR(255) NOT NULL,
+  recommendation_data TEXT NOT NULL,
+  reasoning TEXT NOT NULL,
+  confidence REAL NOT NULL DEFAULT 0.0,
+  approval_status VARCHAR(32) NOT NULL DEFAULT 'pending',
+  approved_by VARCHAR(255),
+  approved_at TIMESTAMP,
+  rejection_reason TEXT,
+  created_at TIMESTAMP NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS ai_simulation_records (
+  id VARCHAR(64) PRIMARY KEY,
+  scenario_name VARCHAR(255) NOT NULL,
+  scenario_input TEXT NOT NULL,
+  simulation_result TEXT NOT NULL,
+  status VARCHAR(32) NOT NULL DEFAULT 'completed',
+  created_by VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP NOT NULL
+);
+
 -- Indices for performance
 CREATE INDEX IF NOT EXISTS idx_incidents_status ON incidents(status);
 CREATE INDEX IF NOT EXISTS idx_incidents_severity ON incidents(severity);
@@ -214,4 +257,12 @@ CREATE INDEX IF NOT EXISTS idx_geofences_status ON geofences(status);
 CREATE INDEX IF NOT EXISTS idx_geofences_category ON geofences(category);
 CREATE INDEX IF NOT EXISTS idx_deliveries_status ON notification_deliveries(delivery_status);
 CREATE INDEX IF NOT EXISTS idx_deliveries_channel ON notification_deliveries(channel);
+CREATE INDEX IF NOT EXISTS idx_ai_exec_id ON ai_agent_executions(execution_id);
+CREATE INDEX IF NOT EXISTS idx_ai_exec_agent ON ai_agent_executions(agent_name);
+CREATE INDEX IF NOT EXISTS idx_ai_exec_status ON ai_agent_executions(status);
+CREATE INDEX IF NOT EXISTS idx_ai_exec_created ON ai_agent_executions(created_at);
+CREATE INDEX IF NOT EXISTS idx_ai_rec_exec ON ai_recommendations(execution_id);
+CREATE INDEX IF NOT EXISTS idx_ai_rec_status ON ai_recommendations(approval_status);
+CREATE INDEX IF NOT EXISTS idx_ai_rec_entity ON ai_recommendations(target_entity_type, target_entity_id);
+CREATE INDEX IF NOT EXISTS idx_ai_sim_created ON ai_simulation_records(created_at);
 
