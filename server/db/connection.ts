@@ -29,7 +29,20 @@ export class DatabaseClient {
 
     if (dbUrl && (dbUrl.startsWith('postgres://') || dbUrl.startsWith('postgresql://'))) {
       this.isPostgres = true;
-      this.pgPool = new pg.Pool({ connectionString: dbUrl });
+      const useSsl = process.env.DATABASE_SSL === 'true' || dbUrl.includes('sslmode=require');
+      this.pgPool = new pg.Pool({
+        connectionString: dbUrl,
+        max: process.env.DB_POOL_MAX ? parseInt(process.env.DB_POOL_MAX, 10) : 20,
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 5000,
+        ...(useSsl ? { ssl: { rejectUnauthorized: false } } : {})
+      });
+
+      // Handle background errors on idle pool clients without terminating process
+      this.pgPool.on('error', (err) => {
+        console.error('⚠️ RakshaGrid PostgreSQL Pool Client Error:', err.message);
+      });
+
       console.log('✅ RakshaGrid Database: Connected to PostgreSQL server.');
     } else {
       this.isPostgres = false;
@@ -46,6 +59,28 @@ export class DatabaseClient {
       this.sqliteDb.pragma('journal_mode = WAL');
       this.sqliteDb.pragma('foreign_keys = ON');
       console.log(`✅ RakshaGrid Database: Connected to SQLite (${dbPath}).`);
+    }
+  }
+
+  public getEngine(): 'postgres' | 'sqlite' {
+    return this.isPostgres ? 'postgres' : 'sqlite';
+  }
+
+  public async ping(): Promise<{ ok: boolean; dialect: 'sqlite' | 'postgres'; latencyMs: number }> {
+    const start = Date.now();
+    try {
+      const res = await this.get<{ ok: number }>('SELECT 1 as ok');
+      return {
+        ok: Boolean(res && res.ok === 1),
+        dialect: this.getEngine(),
+        latencyMs: Date.now() - start
+      };
+    } catch {
+      return {
+        ok: false,
+        dialect: this.getEngine(),
+        latencyMs: Date.now() - start
+      };
     }
   }
 
