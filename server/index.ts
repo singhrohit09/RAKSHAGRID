@@ -2,6 +2,9 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { db } from './db/connection.js';
 import { seedDatabase } from './scripts/seed.js';
 import { validateProductionEnvironment } from './config/security.js';
@@ -31,6 +34,15 @@ validateProductionEnvironment();
 const app = express();
 const PORT = process.env.PORT || 5000;
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const distPath = path.resolve(__dirname, '../dist');
+
+// Serve static frontend bundle if built (production / unified container mode)
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath));
+}
 
 // CORS configuration supporting credentials (cookies)
 const allowedOrigins = [
@@ -132,6 +144,16 @@ app.use('/api', (req: Request, res: Response) => {
     error: `API endpoint '${req.method} ${req.originalUrl}' does not exist`
   });
 });
+
+// Serve SPA index.html for all non-API GET requests in unified container mode
+if (fs.existsSync(distPath)) {
+  app.get('*', (req: Request, res: Response, next: NextFunction) => {
+    if (req.path.startsWith('/api')) {
+      return next();
+    }
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+}
 
 // Centralized error handling middleware
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {

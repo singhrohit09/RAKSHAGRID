@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: rakshagrid-platform
+    runtime: node
+    plan: starter
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: CLIENT_ORIGIN
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: rakshagrid-db
+          property: connectionString
+      - key: DATABASE_SSL
+        value: "true"
+      - key: INITIAL_ADMIN_PASSWORD
+        generateValue: true
+
+databases:
+  - name: rakshagrid-db
+    databaseName: rakshagrid
+    user: raksha_admin
+    plan: starter

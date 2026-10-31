@@ -6,6 +6,7 @@
   "description": "Disaster Intelligence and Coordinated Response Platform",
   "scripts": {
     "dev": "vite",
+    "start": "tsx server/index.ts",
     "server": "tsx server/index.ts",
     "server:seed": "tsx server/scripts/seed.ts",
     "server:bootstrap-admin": "tsx server/scripts/bootstrap-admin.ts",
