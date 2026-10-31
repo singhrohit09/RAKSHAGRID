@@ -3,12 +3,12 @@
 > **"Disaster Intelligence. Coordinated Response. Safer Communities."**
 
 [![GitHub Repository](https://img.shields.io/badge/GitHub-singhrohit09%2FRAKSHAGRID-red.svg)](https://github.com/singhrohit09/RAKSHAGRID)
-[![Phase](https://img.shields.io/badge/Phase-4%20Multi--Agent%20AI%20%26%20Disaster%20Intelligence%20Complete-emerald.svg)]()
+[![Phase](https://img.shields.io/badge/Phase-5%20Finalization%20%26%20Production%20Deployment%20Complete-emerald.svg)]()
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict%205.6-blue.svg)]()
 [![React](https://img.shields.io/badge/React-18.3-cyan.svg)]()
 [![Express](https://img.shields.io/badge/Express-5.3-yellow.svg)]()
 [![Database](https://img.shields.io/badge/Database-SQLite%20(WAL)%20%7C%20PostgreSQL-orange.svg)]()
-[![Tests](https://img.shields.io/badge/Vitest-110%20Passed%20(100%25)-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/Vitest-132%20Passed%20(100%25)-brightgreen.svg)]()
 
 ---
 
@@ -163,13 +163,15 @@ Open [http://localhost:3000](http://localhost:3000) in your browser. The Vite de
 
 ---
 
-## 7. Verification Commands
+## 7. Verification & Testing
 
-### Run Full Test Suite (93 Tests Passing across 8 Test Suites)
+### Run Full Automated Test Suite (132 Tests Passing across 10 Test Suites)
 ```bash
 npm test
 ```
 *Current test coverage includes:*
+- `server/tests/e2eWorkflows.test.ts` (22 tests) — Comprehensive end-to-end operational workflows (Workflows A through F).
+- `server/tests/aiAgents.test.ts` (17 tests) — 5 AI agents, fallback heuristics, provenance, and isolated sandbox execution.
 - `server/tests/security.test.ts` (17 tests) — Secret enforcement, admin bootstrap, rate limiting, CSRF, privilege escalation.
 - `server/tests/api.test.ts` (18 tests) — Full REST endpoint CRUD, authentication, RBAC, inventory safety, shelter capacity.
 - `server/tests/geofence.test.ts` (12 tests) — Ray-casting point-in-polygon math, circle Haversine distance, containment evaluator, REST API.
@@ -185,15 +187,38 @@ npm run lint
 ```
 Checks strict type safety across both frontend (`tsconfig.json`) and server (`tsconfig.server.json`).
 
-### Production Build
+### Production Build & Code-Splitting Verification
 ```bash
 npm run build
 ```
-Compiles and generates optimized production distribution in `dist/`.
+Compiles and generates optimized production distribution in `dist/` with route-level code splitting and manual vendor chunks (all chunks < 400 kB).
+
+### Docker Containerized Deployment
+```bash
+# Build and run complete platform with PostgreSQL 16
+docker compose up -d --build
+
+# Inspect container health
+curl -s http://localhost:5000/api/system/health | jq .
+```
 
 ---
 
-## 8. Git Repository & Contribution Rules
+## 8. Documentation & Operational Reference
+
+- [Final System Architecture](docs/FINAL_ARCHITECTURE.md) — Comprehensive technical architecture, AI system, and security design.
+- [Production Deployment Guide](docs/DEPLOYMENT_GUIDE.md) — Unified Render/Railway container, Vercel frontend, and Docker Compose setup.
+- [Hackathon & Presentation Guide](docs/HACKATHON_DEMO_GUIDE.md) — 3 high-impact demonstration scenarios, presenter walkthroughs, and Q&A answers.
+- [Monitoring & Operations Manual](docs/MONITORING_AND_OPERATIONS.md) — Synthetic health monitoring, metrics, and incident runbooks.
+- [Production Security Architecture](docs/PRODUCTION_SECURITY.md) — Zero-trust access controls, rate limiting, and secret management.
+- [Database Operations & Reliability](docs/DATABASE_OPERATIONS.md) — PostgreSQL connection pooling, migrations, backup, and restore.
+- [Integration Verification Audit](docs/INTEGRATION_VERIFICATION.md) — Telemetry providers, GIS engine, and notification deduplication.
+- [Phase 5 Verification Report](docs/PHASE_5_VERIFICATION_REPORT.md) — Independent verification audit and quality gate sign-off.
+- [Development Milestone Log](docs/DEVELOPMENT_LOG.md) — Complete commit-by-commit milestone log.
+
+---
+
+## 9. Git Repository & Contribution Rules
 
 The **ONLY** authorized repository destination for this project is:
 **https://github.com/singhrohit09/RAKSHAGRID.git**

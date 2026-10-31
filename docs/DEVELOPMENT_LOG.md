@@ -387,3 +387,114 @@ This log records every verified milestone committed and pushed to [https://githu
   - `npm test` &rarr; 110 of 110 tests passed.
   - `npm run lint` &rarr; 0 errors.
   - `npm run build` &rarr; Production build verified.
+- **Commit Hash**: `9f930b3`
+- **Push Status**: Verified (`9a8203b..9f930b3 main -> main`)
+
+---
+
+### Milestone 22: Production Security Hardening, Rate Limiting & HTTP Security Headers
+- **Date**: 2026-11-01
+- **Feature / Fix**:
+  - Implemented HTTP security headers middleware (`X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `X-XSS-Protection: 1; mode=block`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy`, and production `Strict-Transport-Security`).
+  - Implemented sliding-window rate limiters for general API endpoints (120 req/min) and AI agent invocations (30 req/min).
+  - Enhanced logout endpoint with secure cookie clearing matching production attributes (`httpOnly: true`, `sameSite: 'lax'`, `secure: production`).
+  - Authored `docs/PRODUCTION_SECURITY.md` detailing security policies, session lifecycle, and credential isolation.
+- **Relevant Checks**:
+  - `npm run lint` &rarr; 0 errors.
+  - `npm test` &rarr; 110 of 110 tests passed.
+- **Commit Hash**: `be5880f`
+- **Push Status**: Verified (`9f930b3..be5880f main -> main`)
+
+---
+
+### Milestone 23: Production Database Pool Tuning & Operations Manual
+- **Date**: 2026-11-01
+- **Feature / Fix**:
+  - Enhanced PostgreSQL connection pool client (`DB_POOL_MAX`, idle timeout, SSL handling, background socket fault handlers).
+  - Added `db.getEngine()` and `db.ping()` diagnostics to evaluate database latency and engine dialect dynamically.
+  - Authored `docs/DATABASE_OPERATIONS.md` covering dual-engine management, connection pooling, migrations, backup, restore, and high availability.
+- **Relevant Checks**:
+  - `npm run lint` &rarr; 0 errors.
+  - `npm test` &rarr; 110 of 110 tests passed.
+- **Commit Hash**: `39c28de`
+- **Push Status**: Verified (`be5880f..39c28de main -> main`)
+
+---
+
+### Milestone 24: Production Containerization, Deployment Blueprints & Static SPA Serving
+- **Date**: 2026-11-01
+- **Feature / Fix**:
+  - Created multi-stage production `Dockerfile` with non-root user (`raksha`) and built-in healthcheck probe.
+  - Authored `docker-compose.yml` for unified single-command deployment with PostgreSQL 16.
+  - Created cloud deployment manifests: `render.yaml` (Render Web Service + Postgres blueprint), `vercel.json` (SPA routing & edge headers), and `Procfile`.
+  - Added `"start": "tsx server/index.ts"` to `package.json`.
+  - Added static frontend serving in `server/index.ts` with Express 5 SPA routing fallback.
+  - Authored `docs/DEPLOYMENT_GUIDE.md` covering Render, Vercel, Railway, and Docker container deployment.
+- **Relevant Checks**:
+  - `npm run lint` &rarr; 0 errors.
+- **Commit Hash**: `50a5bf7`
+- **Push Status**: Verified (`39c28de..50a5bf7 main -> main`)
+
+---
+
+### Milestone 25: Performance Optimization, React.lazy Route Code-Splitting & Vendor Chunking
+- **Date**: 2026-11-01
+- **Feature / Fix**:
+  - Refactored `src/App.tsx` using `React.lazy()` and `Suspense` for all 13 application routes.
+  - Created `RouteLoadingFallback` skeleton component with tactical disaster intelligence branding.
+  - Configured `rollupOptions.output.manualChunks` in `vite.config.ts` (`vendor-react`, `vendor-maps`, `vendor-charts`, `vendor-icons`).
+  - Fixed Express 5 SPA route handler using universal middleware.
+  - Reduced monolithic 1,072 kB bundle to clean modular chunks all under 400 kB (0 build warnings).
+- **Relevant Checks**:
+  - `npm run build` &rarr; Completed in 6.21s with 0 chunk size warnings.
+  - `npm test` &rarr; 110 of 110 tests passed.
+  - `npm run lint` &rarr; 0 errors.
+- **Commit Hash**: `3846f29`
+- **Push Status**: Verified (`50a5bf7..3846f29 main -> main`)
+
+---
+
+### Milestone 26: Observability Metrics, Hackathon Demo Mode & Playbook
+- **Date**: 2026-11-01
+- **Feature / Fix**:
+  - Implemented `GET /api/system/metrics` exposing process uptime, memory RSS/heap, rate limiter mode, and table entity counts.
+  - Implemented `POST /api/system/reset-demo` allowing authenticated administrators to reset the database to baseline demo state in <100ms with permanent audit logging.
+  - Authored `docs/MONITORING_AND_OPERATIONS.md` covering synthetic health monitoring, telemetry freshness, and operational runbooks.
+  - Authored `docs/HACKATHON_DEMO_GUIDE.md` detailing 3 high-impact presentation scenarios, persona switching, and judge Q&A cheat sheet.
+- **Relevant Checks**:
+  - `npm run lint` &rarr; 0 errors.
+- **Commit Hash**: `418f368`
+- **Push Status**: Verified (`3846f29..418f368 main -> main`)
+
+---
+
+### Milestone 27: Comprehensive End-to-End Automated Operational Workflows
+- **Date**: 2026-11-01
+- **Feature / Fix**:
+  - Created `server/tests/e2eWorkflows.test.ts` implementing 22 comprehensive end-to-end operational tests covering Workflows A through F:
+    - Workflow A: Authentication, cookie sessions, private routes, and logout invalidation.
+    - Workflow B: Incident lifecycle, geospatial coordinates, timeline append, priority escalation, and status closure.
+    - Workflow C: Smart Resource Allocation, unauthorized approval denial (403), Commander sign-off, atomic inventory deduction, and audit ledger entry.
+    - Workflow D: Open-Meteo weather telemetry, system health diagnostics, and process memory metrics.
+    - Workflow E: Disaster simulation sandbox isolation and strict zero-mutation guarantees.
+    - Workflow F: Multi-role RBAC boundaries (Admin, Commander, Responder, Logistics, Analyst) and demo reset security.
+- **Relevant Checks**:
+  - `npm test` &rarr; 132 of 132 tests passed across 10 test suites (100% pass rate).
+  - `npm run lint` &rarr; 0 errors.
+- **Commit Hash**: `c65174a`
+- **Push Status**: Verified (`418f368..c65174a main -> main`)
+
+---
+
+### Milestone 28: Phase 5 Final Architecture, Telemetry Audit & Verification Sign-Off
+- **Date**: 2026-11-01
+- **Feature / Fix**:
+  - Authored `docs/FINAL_ARCHITECTURE.md` (comprehensive final system architecture, multi-agent AI, security, and performance).
+  - Authored `docs/INTEGRATION_VERIFICATION.md` (external weather, hydrology, notifications, geofencing, AI, and dual-database audit).
+  - Authored `docs/PHASE_5_VERIFICATION_REPORT.md` (independent audit and Phase 5 completion sign-off).
+  - Updated `README.md` and `docs/DEVELOPMENT_LOG.md`.
+- **Relevant Checks**:
+  - `npm test` &rarr; 132 of 132 tests passed.
+  - `npm run lint` &rarr; 0 errors.
+  - `npm run build` &rarr; Production build verified.
+
