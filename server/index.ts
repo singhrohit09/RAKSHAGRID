@@ -147,11 +147,11 @@ app.use('/api', (req: Request, res: Response) => {
 
 // Serve SPA index.html for all non-API GET requests in unified container mode
 if (fs.existsSync(distPath)) {
-  app.get('*', (req: Request, res: Response, next: NextFunction) => {
-    if (req.path.startsWith('/api')) {
-      return next();
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    if (req.method === 'GET' && !req.path.startsWith('/api')) {
+      return res.sendFile(path.join(distPath, 'index.html'));
     }
-    res.sendFile(path.join(distPath, 'index.html'));
+    next();
   });
 }
 
