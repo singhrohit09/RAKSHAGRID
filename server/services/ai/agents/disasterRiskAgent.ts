@@ -362,3 +362,4 @@ Generate a structured regional disaster risk assessment.`;
 }
 
 export const disasterRiskAgent = new DisasterRiskAgent();
+

@@ -11,6 +11,7 @@ import {
   AlertTriangle, 
   BarChart3, 
   History, 
+  BrainCircuit,
   Settings as SettingsIcon, 
   Globe2,
   ShieldAlert,
@@ -104,6 +105,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: 'Operational Analytics',
       shortLabel: 'Analytics',
       icon: BarChart3
+    },
+    {
+      to: '/ai-intelligence',
+      label: 'AI Intelligence Center',
+      shortLabel: 'AI Intel',
+      icon: BrainCircuit,
+      badge: 'AI',
+      badgeColor: 'bg-accent-blue/20 text-accent-blue border border-accent-blue/40'
     },
     {
       to: '/audit',

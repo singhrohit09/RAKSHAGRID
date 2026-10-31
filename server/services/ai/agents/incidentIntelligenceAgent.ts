@@ -243,3 +243,4 @@ Perform triage and rank each incident.`;
 }
 
 export const incidentIntelligenceAgent = new IncidentIntelligenceAgent();
+

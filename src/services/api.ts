@@ -14,6 +14,17 @@ import {
   ExternalHazardWarning, 
   SystemHealthResponse 
 } from '../types/external';
+import {
+  AiHealthResponse,
+  AgentDescriptor,
+  DisasterRiskOutput,
+  IncidentPrioritizationOutput,
+  ResourceAllocationOutput,
+  ResponseCoordinatorOutput,
+  DisasterSimulationOutput,
+  ExecutionRecord,
+  RecommendationRecord
+} from '../types/ai';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -510,6 +521,151 @@ class ApiService {
 
   public async getSystemHealth(): Promise<SystemHealthResponse> {
     return this.request<SystemHealthResponse>('/system/health');
+  }
+
+  // Phase 4: Multi-Agent AI & Disaster Intelligence
+  public async getAiHealth(): Promise<AiHealthResponse> {
+    return this.request<AiHealthResponse>('/ai/health');
+  }
+
+  public async getAiAgents(): Promise<{ success: boolean; data: AgentDescriptor[] }> {
+    return this.request<{ success: boolean; data: AgentDescriptor[] }>('/ai/agents');
+  }
+
+  public async getAiAgent(id: string): Promise<{ success: boolean; data: AgentDescriptor }> {
+    return this.request<{ success: boolean; data: AgentDescriptor }>(`/ai/agents/${id}`);
+  }
+
+  public async runDisasterRiskAnalysis(params?: { latitude?: number; longitude?: number; radiusKm?: number; focusRegionName?: string }): Promise<{
+    success: boolean;
+    executionId: string;
+    status: string;
+    durationMs: number;
+    data: DisasterRiskOutput;
+  }> {
+    return this.request('/ai/risk/analyze', {
+      method: 'POST',
+      body: JSON.stringify(params || {})
+    });
+  }
+
+  public async runIncidentPrioritization(): Promise<{
+    success: boolean;
+    executionId: string;
+    status: string;
+    durationMs: number;
+    data: IncidentPrioritizationOutput;
+  }> {
+    return this.request('/ai/incidents/prioritize', {
+      method: 'POST',
+      body: JSON.stringify({})
+    });
+  }
+
+  public async runResourceAllocation(params?: { targetIncidentId?: string }): Promise<{
+    success: boolean;
+    executionId: string;
+    status: string;
+    durationMs: number;
+    data: ResourceAllocationOutput;
+  }> {
+    return this.request('/ai/resources/recommend', {
+      method: 'POST',
+      body: JSON.stringify(params || {})
+    });
+  }
+
+  public async runAiCoordinator(params: { query: string; focusRegion?: string; latitude?: number; longitude?: number }): Promise<{
+    success: boolean;
+    executionId: string;
+    status: string;
+    durationMs: number;
+    data: ResponseCoordinatorOutput;
+  }> {
+    return this.request('/ai/coordinator/run', {
+      method: 'POST',
+      body: JSON.stringify(params)
+    });
+  }
+
+  public async runDisasterSimulation(params: {
+    scenarioName?: string;
+    rainfallIntensityMmPerHour?: number;
+    riverGaugeRiseMeters?: number;
+    simultaneousIncidentsCount?: number;
+    disabledTeamIds?: string[];
+    targetRegion?: string;
+    durationHours?: number;
+  }): Promise<{
+    success: boolean;
+    executionId: string;
+    status: string;
+    durationMs: number;
+    data: DisasterSimulationOutput;
+  }> {
+    return this.request('/ai/simulation/run', {
+      method: 'POST',
+      body: JSON.stringify(params)
+    });
+  }
+
+  public async getAiExecutions(params?: { page?: number; limit?: number; agentName?: string; status?: string }): Promise<{
+    success: boolean;
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+    executions: ExecutionRecord[];
+  }> {
+    const q = new URLSearchParams();
+    if (params?.page) q.set('page', params.page.toString());
+    if (params?.limit) q.set('limit', params.limit.toString());
+    if (params?.agentName) q.set('agentName', params.agentName);
+    if (params?.status) q.set('status', params.status);
+    return this.request(`/ai/executions?${q.toString()}`);
+  }
+
+  public async getAiExecutionById(id: string): Promise<{ success: boolean; data: ExecutionRecord }> {
+    return this.request<{ success: boolean; data: ExecutionRecord }>(`/ai/executions/${id}`);
+  }
+
+  public async getAiRecommendations(params?: { status?: string; limit?: number }): Promise<{ success: boolean; data: RecommendationRecord[] }> {
+    const q = new URLSearchParams();
+    if (params?.status) q.set('status', params.status);
+    if (params?.limit) q.set('limit', params.limit.toString());
+    return this.request(`/ai/recommendations?${q.toString()}`);
+  }
+
+  public async approveAiRecommendation(id: string): Promise<{ success: boolean; message: string }> {
+    return this.request<{ success: boolean; message: string }>(`/ai/recommendations/${id}/approve`, {
+      method: 'POST',
+      body: JSON.stringify({})
+    });
+  }
+
+  public async rejectAiRecommendation(id: string, reason?: string): Promise<{ success: boolean; message: string }> {
+    return this.request<{ success: boolean; message: string }>(`/ai/recommendations/${id}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ reason })
+    });
+  }
+
+  public async getAiSimulations(params?: { page?: number; limit?: number }): Promise<{
+    success: boolean;
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+    simulations: any[];
+  }> {
+    const q = new URLSearchParams();
+    if (params?.page) q.set('page', params.page.toString());
+    if (params?.limit) q.set('limit', params.limit.toString());
+    return this.request(`/ai/simulations?${q.toString()}`);
+  }
+
+  public async getAiSimulationById(id: string): Promise<{ success: boolean; data: any }> {
+    return this.request<{ success: boolean; data: any }>(`/ai/simulations/${id}`);
   }
 }
 

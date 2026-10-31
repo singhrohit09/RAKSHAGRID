@@ -16,6 +16,7 @@ import { AnalyticsPage } from './pages/AnalyticsPage';
 import { AuditLogPage } from './pages/AuditLogPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { PublicBulletinPage } from './pages/PublicBulletinPage';
+import { AiIntelligencePage } from './pages/AiIntelligencePage';
 
 export const App: React.FC = () => {
   return (
@@ -37,6 +38,7 @@ export const App: React.FC = () => {
             <Route path="tasks" element={<TaskBoardPage />} />
             <Route path="alerts" element={<AlertsPage />} />
             <Route path="analytics" element={<AnalyticsPage />} />
+            <Route path="ai-intelligence" element={<AiIntelligencePage />} />
             <Route path="audit" element={<AuditLogPage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>
