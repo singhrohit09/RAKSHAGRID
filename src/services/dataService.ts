@@ -25,11 +25,19 @@ const STORAGE_KEYS = {
   AUDIT: 'rakshagrid_audit_v1',
 };
 
+// In-memory backing store for non-browser environments (e.g. Node.js unit tests, SSR)
+const memoryStore = new Map<string, string>();
+
 function getStored<T>(key: string, fallback: T): T {
   try {
-    const item = localStorage.getItem(key);
-    if (!item) return fallback;
-    return JSON.parse(item);
+    if (typeof localStorage !== 'undefined') {
+      const item = localStorage.getItem(key);
+      if (!item) return fallback;
+      return JSON.parse(item);
+    }
+    const mem = memoryStore.get(key);
+    if (!mem) return fallback;
+    return JSON.parse(mem);
   } catch (err) {
     console.warn(`Error reading ${key} from storage, using initial fallback`, err);
     return fallback;
@@ -38,7 +46,12 @@ function getStored<T>(key: string, fallback: T): T {
 
 function setStored<T>(key: string, value: T): void {
   try {
-    localStorage.setItem(key, JSON.stringify(value));
+    const serialized = JSON.stringify(value);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(key, serialized);
+    } else {
+      memoryStore.set(key, serialized);
+    }
   } catch (err) {
     console.error(`Error saving ${key} to storage`, err);
   }

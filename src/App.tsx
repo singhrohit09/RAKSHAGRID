@@ -3,26 +3,38 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { DataService } from './services/dataService';
 import { Incident, Team, Shelter, Resource, Task, Alert, AuditEvent, TeamStatus, TaskStatus } from './types';
 import { AppLayout } from './components/layout/AppLayout';
-import { PublicPortal } from './pages/PublicPortal';
-import { LoginPage } from './pages/LoginPage';
-import { RegisterPage } from './pages/RegisterPage';
-import { DashboardPage } from './pages/DashboardPage';
-import { IncidentsPage } from './pages/IncidentsPage';
-import { MapPage } from './pages/MapPage';
-import { TeamsPage } from './pages/TeamsPage';
-import { SheltersPage } from './pages/SheltersPage';
-import { ResourcesPage } from './pages/ResourcesPage';
-import { TasksPage } from './pages/TasksPage';
-import { AnalyticsPage } from './pages/AnalyticsPage';
-import { AlertsPage } from './pages/AlertsPage';
-import { SettingsPage } from './pages/SettingsPage';
-import { AuditLogPage } from './pages/AuditLogPage';
-import { AIIntelligencePage } from './pages/AIIntelligencePage';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
+
+// Dynamic route code-splitting for high-performance lazy module loading
+const PublicPortal = lazy(() => import('./pages/PublicPortal').then((m) => ({ default: m.PublicPortal })));
+const LoginPage = lazy(() => import('./pages/LoginPage').then((m) => ({ default: m.LoginPage })));
+const RegisterPage = lazy(() => import('./pages/RegisterPage').then((m) => ({ default: m.RegisterPage })));
+const DashboardPage = lazy(() => import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage })));
+const IncidentsPage = lazy(() => import('./pages/IncidentsPage').then((m) => ({ default: m.IncidentsPage })));
+const MapPage = lazy(() => import('./pages/MapPage').then((m) => ({ default: m.MapPage })));
+const TeamsPage = lazy(() => import('./pages/TeamsPage').then((m) => ({ default: m.TeamsPage })));
+const SheltersPage = lazy(() => import('./pages/SheltersPage').then((m) => ({ default: m.SheltersPage })));
+const ResourcesPage = lazy(() => import('./pages/ResourcesPage').then((m) => ({ default: m.ResourcesPage })));
+const TasksPage = lazy(() => import('./pages/TasksPage').then((m) => ({ default: m.TasksPage })));
+const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage').then((m) => ({ default: m.AnalyticsPage })));
+const AlertsPage = lazy(() => import('./pages/AlertsPage').then((m) => ({ default: m.AlertsPage })));
+const SettingsPage = lazy(() => import('./pages/SettingsPage').then((m) => ({ default: m.SettingsPage })));
+const AuditLogPage = lazy(() => import('./pages/AuditLogPage').then((m) => ({ default: m.AuditLogPage })));
+const AIIntelligencePage = lazy(() => import('./pages/AIIntelligencePage').then((m) => ({ default: m.AIIntelligencePage })));
+
+const TacticalRouteLoader = () => (
+  <div className="min-h-[420px] flex flex-col items-center justify-center p-8 text-center" role="status" aria-label="Loading operational module">
+    <div className="w-10 h-10 border-2 border-[#1f6feb] border-t-transparent rounded-full animate-spin mb-4" />
+    <p className="text-xs font-mono uppercase tracking-widest text-[#8b949e]">
+      Decrypting & Initializing Subsystem...
+    </p>
+  </div>
+);
 
 function MainApp() {
   const { user, isAuthenticated } = useAuth();
@@ -182,50 +194,66 @@ function MainApp() {
           alerts={alerts}
           onAcknowledgeAlert={handleAcknowledgeAlert}
         >
-          <DashboardPage
-            incidents={incidents}
-            teams={teams}
-            shelters={shelters}
-            resources={resources}
-            tasks={tasks}
-            alerts={alerts}
-            auditLogs={auditLogs}
-            onNavigate={navigateTo}
-            onAcknowledgeAlert={handleAcknowledgeAlert}
-            onRefreshData={handleRefreshData}
-          />
+          <ErrorBoundary fallbackTitle="Operations Dashboard Failure">
+            <Suspense fallback={<TacticalRouteLoader />}>
+              <DashboardPage
+                incidents={incidents}
+                teams={teams}
+                shelters={shelters}
+                resources={resources}
+                tasks={tasks}
+                alerts={alerts}
+                auditLogs={auditLogs}
+                onNavigate={navigateTo}
+                onAcknowledgeAlert={handleAcknowledgeAlert}
+                onRefreshData={handleRefreshData}
+              />
+            </Suspense>
+          </ErrorBoundary>
         </AppLayout>
       );
     }
     return (
-      <PublicPortal
-        incidents={incidents}
-        alerts={alerts}
-        onEnterCommand={() => navigateTo('/dashboard')}
-        onNavigateToLogin={() => navigateTo('/login')}
-      />
+      <ErrorBoundary fallbackTitle="Public Portal Subsystem Error">
+        <Suspense fallback={<TacticalRouteLoader />}>
+          <PublicPortal
+            incidents={incidents}
+            alerts={alerts}
+            onEnterCommand={() => navigateTo('/dashboard')}
+            onNavigateToLogin={() => navigateTo('/login')}
+          />
+        </Suspense>
+      </ErrorBoundary>
     );
   }
 
   // 2. Login Page
   if (currentRoute === '/login') {
     return (
-      <LoginPage
-        onSuccess={() => navigateTo('/dashboard')}
-        onNavigateToRegister={() => navigateTo('/register')}
-        onNavigateToPublic={() => navigateTo('/?view=public')}
-        redirectReason={routeQuery.reason}
-      />
+      <ErrorBoundary fallbackTitle="Authentication Subsystem Error">
+        <Suspense fallback={<TacticalRouteLoader />}>
+          <LoginPage
+            onSuccess={() => navigateTo('/dashboard')}
+            onNavigateToRegister={() => navigateTo('/register')}
+            onNavigateToPublic={() => navigateTo('/?view=public')}
+            redirectReason={routeQuery.reason}
+          />
+        </Suspense>
+      </ErrorBoundary>
     );
   }
 
   // 3. Register Page
   if (currentRoute === '/register') {
     return (
-      <RegisterPage
-        onSuccess={() => navigateTo('/dashboard')}
-        onNavigateToLogin={() => navigateTo('/login')}
-      />
+      <ErrorBoundary fallbackTitle="Registration Subsystem Error">
+        <Suspense fallback={<TacticalRouteLoader />}>
+          <RegisterPage
+            onSuccess={() => navigateTo('/dashboard')}
+            onNavigateToLogin={() => navigateTo('/login')}
+          />
+        </Suspense>
+      </ErrorBoundary>
     );
   }
 
@@ -247,12 +275,16 @@ function MainApp() {
 
   if (!isAuthenticated && protectedRoutes.includes(currentRoute)) {
     return (
-      <LoginPage
-        onSuccess={() => navigateTo(currentRoute)}
-        onNavigateToRegister={() => navigateTo('/register')}
-        onNavigateToPublic={() => navigateTo('/?view=public')}
-        redirectReason="Authentication required: Please sign in with an authorized agency account to access operational emergency systems."
-      />
+      <ErrorBoundary fallbackTitle="Authentication Required">
+        <Suspense fallback={<TacticalRouteLoader />}>
+          <LoginPage
+            onSuccess={() => navigateTo(currentRoute)}
+            onNavigateToRegister={() => navigateTo('/register')}
+            onNavigateToPublic={() => navigateTo('/?view=public')}
+            redirectReason="Authentication required: Please sign in with an authorized agency account to access operational emergency systems."
+          />
+        </Suspense>
+      </ErrorBoundary>
     );
   }
 
@@ -269,6 +301,8 @@ function MainApp() {
       alerts={alerts}
       onAcknowledgeAlert={handleAcknowledgeAlert}
     >
+      <ErrorBoundary>
+        <Suspense fallback={<TacticalRouteLoader />}>
       {currentRoute === '/dashboard' && (
         <DashboardPage
           incidents={incidents}
@@ -386,6 +420,8 @@ function MainApp() {
       {currentRoute === '/audit-log' && (
         <AuditLogPage auditLogs={auditLogs} />
       )}
+        </Suspense>
+      </ErrorBoundary>
     </AppLayout>
   );
 }

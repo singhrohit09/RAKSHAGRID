@@ -3,12 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 import { MobileDrawer } from './MobileDrawer';
 import { GlobalSearchModal } from '../common/GlobalSearchModal';
 import { Incident, Team, Shelter, Resource, Task, Alert } from '../../types';
+import { WifiOff, Wifi } from 'lucide-react';
 
 interface AppLayoutProps {
   currentRoute: string;
@@ -38,6 +39,30 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  const [showReconnected, setShowReconnected] = useState(false);
+
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      setShowReconnected(true);
+      const timer = setTimeout(() => setShowReconnected(false), 4000);
+      return () => clearTimeout(timer);
+    };
+
+    const handleOffline = () => {
+      setIsOnline(false);
+      setShowReconnected(false);
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   const activeAlertCount = alerts.filter((a) => !a.acknowledgedByCommander).length;
 
@@ -79,8 +104,28 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
           isSidebarCollapsed={isSidebarCollapsed}
         />
 
+        {/* Tactical Network Status Notification */}
+        {!isOnline && (
+          <div className="bg-[#b35900]/25 border-b border-[#d29922]/50 px-4 py-2 flex items-center justify-between text-xs text-[#d29922] font-mono mt-14 z-20">
+            <div className="flex items-center space-x-2">
+              <WifiOff className="w-4 h-4 text-[#d29922] animate-pulse shrink-0" />
+              <span>DISCONNECTED — Operating in resilient offline cache mode. Telemetry buffered locally.</span>
+            </div>
+            <span className="hidden sm:inline bg-[#d29922]/20 px-2 py-0.5 rounded text-[10px] uppercase font-bold">LOCAL CACHE ACTIVE</span>
+          </div>
+        )}
+        {isOnline && showReconnected && (
+          <div className="bg-[#238636]/20 border-b border-[#238636]/50 px-4 py-2 flex items-center justify-between text-xs text-[#3fb950] font-mono mt-14 z-20">
+            <div className="flex items-center space-x-2">
+              <Wifi className="w-4 h-4 text-[#3fb950] shrink-0" />
+              <span>NETWORK RESTORED — Emergency telemetry and incident streams synchronized with command grid.</span>
+            </div>
+            <span className="hidden sm:inline bg-[#238636]/20 px-2 py-0.5 rounded text-[10px] uppercase font-bold">GRID ONLINE</span>
+          </div>
+        )}
+
         {/* Viewport content */}
-        <main className="flex-1 mt-14 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+        <main className={`flex-1 ${!isOnline || showReconnected ? 'mt-2' : 'mt-14'} p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto`}>
           {children}
         </main>
       </div>
