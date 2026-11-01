@@ -13,6 +13,7 @@ import {
   INITIAL_ALERTS,
   INITIAL_AUDIT_LOGS,
 } from './mockData';
+import { realtimeService } from './realtime/realtime.service';
 
 const STORAGE_KEYS = {
   INCIDENTS: 'rakshagrid_incidents_v1',
@@ -71,6 +72,7 @@ export const DataService = {
 
     const updated = [newIncident, ...incidents];
     setStored(STORAGE_KEYS.INCIDENTS, updated);
+    realtimeService.broadcastLocalChange('incidents', 'INSERT', newIncident);
 
     // Audit log
     if (currentUser) {
@@ -97,6 +99,7 @@ export const DataService = {
     const index = incidents.findIndex((inc) => inc.id === id);
     if (index === -1) return null;
 
+    const oldIncident = { ...incidents[index] };
     const updatedIncident: Incident = {
       ...incidents[index],
       ...updates,
@@ -105,6 +108,7 @@ export const DataService = {
 
     incidents[index] = updatedIncident;
     setStored(STORAGE_KEYS.INCIDENTS, incidents);
+    realtimeService.broadcastLocalChange('incidents', 'UPDATE', updatedIncident, oldIncident);
 
     if (currentUser) {
       this.logAudit({
@@ -132,6 +136,7 @@ export const DataService = {
 
     const filtered = incidents.filter((i) => i.id !== id);
     setStored(STORAGE_KEYS.INCIDENTS, filtered);
+    realtimeService.broadcastLocalChange('incidents', 'DELETE', target);
 
     if (currentUser) {
       this.logAudit({
@@ -171,6 +176,7 @@ export const DataService = {
 
     teams[index] = updatedTeam;
     setStored(STORAGE_KEYS.TEAMS, teams);
+    realtimeService.broadcastLocalChange('teams', 'UPDATE', updatedTeam);
 
     if (currentUser) {
       this.logAudit({
@@ -213,6 +219,7 @@ export const DataService = {
 
     shelters[index] = updatedShelter;
     setStored(STORAGE_KEYS.SHELTERS, shelters);
+    realtimeService.broadcastLocalChange('shelters', 'UPDATE', updatedShelter);
 
     if (currentUser) {
       this.logAudit({
