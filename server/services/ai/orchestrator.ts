@@ -240,8 +240,9 @@ export class AgentOrchestrator {
 
     // 1. Team Allocation Recommendations
     if (data.teamRecommendations && Array.isArray(data.teamRecommendations)) {
-      for (const rec of data.teamRecommendations) {
-        const id = `REC-${Date.now().toString().slice(-5)}-${Math.floor(100 + Math.random() * 900)}`;
+      for (let i = 0; i < data.teamRecommendations.length; i++) {
+        const rec = data.teamRecommendations[i];
+        const id = `REC-${Date.now()}-${Math.random().toString(36).substring(2, 9)}-${i + 1}`;
         await db.run(
           `INSERT INTO ai_recommendations 
            (id, execution_id, recommendation_type, target_entity_type, target_entity_id, recommendation_title, recommendation_data, reasoning, confidence, approval_status, created_at)
@@ -264,8 +265,9 @@ export class AgentOrchestrator {
 
     // 2. Supply Allocation Recommendations
     if (data.supplyRecommendations && Array.isArray(data.supplyRecommendations)) {
-      for (const rec of data.supplyRecommendations) {
-        const id = `REC-${Date.now().toString().slice(-5)}-${Math.floor(100 + Math.random() * 900)}`;
+      for (let i = 0; i < data.supplyRecommendations.length; i++) {
+        const rec = data.supplyRecommendations[i];
+        const id = `REC-${Date.now()}-${Math.random().toString(36).substring(2, 9)}-${i + 1}`;
         await db.run(
           `INSERT INTO ai_recommendations 
            (id, execution_id, recommendation_type, target_entity_type, target_entity_id, recommendation_title, recommendation_data, reasoning, confidence, approval_status, created_at)
@@ -288,9 +290,10 @@ export class AgentOrchestrator {
 
     // 3. Incident Priority Escalation Recommendations
     if (data.prioritizedIncidents && Array.isArray(data.prioritizedIncidents)) {
-      for (const inc of data.prioritizedIncidents) {
+      for (let i = 0; i < data.prioritizedIncidents.length; i++) {
+        const inc = data.prioritizedIncidents[i];
         if (inc.escalationNeeded) {
-          const id = `REC-${Date.now().toString().slice(-5)}-${Math.floor(100 + Math.random() * 900)}`;
+          const id = `REC-${Date.now()}-${Math.random().toString(36).substring(2, 9)}-${i + 1}`;
           await db.run(
             `INSERT INTO ai_recommendations 
              (id, execution_id, recommendation_type, target_entity_type, target_entity_id, recommendation_title, recommendation_data, reasoning, confidence, approval_status, created_at)

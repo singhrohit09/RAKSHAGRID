@@ -164,6 +164,13 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
     });
   }
 
+  if ((err as any).type === 'entity.parse.failed' || (err as any).status === 400) {
+    return res.status(400).json({
+      success: false,
+      error: 'Invalid or malformed JSON payload in request body.'
+    });
+  }
+
   console.error('Unhandled server exception:', err);
   res.status(500).json({
     success: false,
