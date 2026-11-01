@@ -94,3 +94,46 @@ export const PriorityBadge: React.FC<{ priority: IncidentPriority }> = ({ priori
   }
 };
 
+export type TelemetryStatus = 'live' | 'live_modeled' | 'simulated' | 'cached' | 'unavailable';
+
+export const TelemetryBadge: React.FC<{
+  status: TelemetryStatus;
+  label?: string;
+  size?: 'sm' | 'md';
+  className?: string;
+}> = ({ status, label, size = 'sm', className = '' }) => {
+  switch (status) {
+    case 'live':
+      return (
+        <Badge variant="safe" size={size} dot className={className}>
+          {label || 'LIVE'}
+        </Badge>
+      );
+    case 'live_modeled':
+      return (
+        <Badge variant="info" size={size} dot className={className}>
+          {label || 'LIVE MODELLED'}
+        </Badge>
+      );
+    case 'simulated':
+      return (
+        <Badge variant="hazard" size={size} className={className}>
+          {label || 'SIMULATED'}
+        </Badge>
+      );
+    case 'cached':
+      return (
+        <Badge variant="neutral" size={size} className={className}>
+          {label || 'CACHED'}
+        </Badge>
+      );
+    case 'unavailable':
+    default:
+      return (
+        <Badge variant="emergency" size={size} className={className}>
+          {label || 'UNAVAILABLE'}
+        </Badge>
+      );
+  }
+};
+

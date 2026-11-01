@@ -20,7 +20,7 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { StatCard } from '../components/common/StatCard';
-import { SeverityBadge, StatusBadge } from '../components/common/Badge';
+import { SeverityBadge, StatusBadge, TelemetryBadge } from '../components/common/Badge';
 import { Button } from '../components/common/Button';
 import { AlertBanner } from '../components/common/AlertBanner';
 import { formatRelativeTime, formatNumber } from '../utils/formatters';
@@ -277,13 +277,10 @@ export const DashboardPage: React.FC = () => {
                   <CloudRain className="w-3.5 h-3.5 text-operational-cyan" />
                   Meteorological Feed
                 </span>
-                <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded uppercase ${
-                  weatherReport?.isLive
-                    ? 'bg-safe/20 text-safe border border-safe/40'
-                    : 'bg-hazard/20 text-hazard border border-hazard/40'
-                }`}>
-                  {weatherReport?.isLive ? 'LIVE (Open-Meteo)' : 'Simulated Baseline'}
-                </span>
+                <TelemetryBadge 
+                  status={!weatherReport ? 'unavailable' : weatherReport.isStale ? 'cached' : weatherReport.isLive ? 'live' : 'simulated'} 
+                  label={!weatherReport ? 'UNAVAILABLE' : weatherReport.isStale ? 'CACHED' : weatherReport.isLive ? 'LIVE (Open-Meteo)' : 'SIMULATED'}
+                />
               </div>
 
               {weatherReport ? (
@@ -332,17 +329,25 @@ export const DashboardPage: React.FC = () => {
                   <Droplets className="w-3.5 h-3.5 text-blue-400" />
                   Hydrology & River Gauges
                 </span>
-                <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-bold uppercase">
-                  {riverGauges.length} Active Stations
-                </span>
+                <TelemetryBadge 
+                  status={riverGauges.some(g => g.telemetryType === 'live_modeled' || g.dischargeStatus === 'live_modeled') ? 'live_modeled' : 'simulated'}
+                  label={riverGauges.some(g => g.telemetryType === 'live_modeled' || g.dischargeStatus === 'live_modeled') ? 'LIVE MODELLED' : 'SIMULATED'}
+                />
               </div>
 
               {riverGauges.length > 0 ? (
                 <div className="space-y-1.5">
                   {riverGauges.slice(0, 2).map((gauge) => (
-                    <div key={gauge.stationId} className="p-1.5 bg-panel/60 rounded border border-border text-[11px]">
+                    <div key={gauge.stationId} className="p-1.5 bg-panel/60 rounded border border-border text-[11px] space-y-1">
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-primary truncate max-w-[140px]">{gauge.riverName}</span>
+                        <div className="flex items-center gap-1 truncate max-w-[150px]">
+                          <span className="font-bold text-primary truncate">{gauge.riverName}</span>
+                          <span className={`text-[8px] font-mono px-1 py-0 rounded font-bold uppercase ${
+                            gauge.telemetryType === 'live_modeled' ? 'bg-operational-cyan/20 text-operational-cyan' : 'bg-hazard/20 text-hazard'
+                          }`}>
+                            {gauge.telemetryType === 'live_modeled' ? 'MODEL' : 'SIM'}
+                          </span>
+                        </div>
                         <span className={`text-[9px] font-mono px-1 py-0.5 rounded font-bold uppercase ${
                           gauge.floodStage === 'warning' || gauge.floodStage === 'severe' || gauge.floodStage === 'inundation'
                             ? 'bg-emergency/20 text-emergency'
@@ -351,9 +356,22 @@ export const DashboardPage: React.FC = () => {
                           {gauge.floodStage}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between text-[10px] font-mono text-primary-dim mt-0.5">
-                        <span>Level: <strong className="text-primary">{gauge.waterLevelMeters}m</strong> (Danger: {gauge.dangerLevelMeters}m)</span>
+                      <div className="flex items-center justify-between text-[10px] font-mono text-primary-dim">
+                        <span>
+                          Discharge: <strong className="text-primary">{gauge.dischargeM3s} m³/s</strong>
+                          <span className="ml-1 text-[8px] px-1 py-0 rounded bg-operational-cyan/15 text-operational-cyan font-semibold">
+                            {gauge.dischargeStatus === 'live_modeled' ? 'GloFAS' : 'SIM'}
+                          </span>
+                        </span>
                         <span>{gauge.trend}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-[10px] font-mono text-primary-dim">
+                        <span>
+                          Level: <strong className="text-primary">{gauge.waterLevelMeters}m</strong> (Danger: {gauge.dangerLevelMeters}m)
+                          <span className="ml-1 text-[8px] px-1 py-0 rounded bg-hazard/15 text-hazard font-semibold">
+                            BASELINE
+                          </span>
+                        </span>
                       </div>
                     </div>
                   ))}
@@ -364,7 +382,7 @@ export const DashboardPage: React.FC = () => {
             </div>
 
             <div className="text-[9px] font-mono text-primary-dim mt-2">
-              Source: Central Water Commission & GloFAS Models
+              Source: Copernicus GloFAS (Discharge) & CWC Benchmark Elevation
             </div>
           </div>
 

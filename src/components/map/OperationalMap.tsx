@@ -20,7 +20,7 @@ import {
   RefreshCw,
   AlertTriangle
 } from 'lucide-react';
-import { SeverityBadge, StatusBadge } from '../common/Badge';
+import { SeverityBadge, StatusBadge, TelemetryBadge } from '../common/Badge';
 import { formatCoordinates } from '../../utils/formatters';
 
 interface OperationalMapProps {
@@ -417,15 +417,24 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
           setActiveItem({ type: 'riverGauge', data: gauge });
         });
 
+        const isModeledDischarge = gauge.dischargeStatus === 'live_modeled';
         marker.bindPopup(`
-          <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 12px;">
-            <div style="font-weight: 700; color: #f0f3f6;">${gauge.riverName} - ${gauge.locationName}</div>
-            <div style="color: #9da7b3; font-size: 11px; margin-top: 2px;">
-              Water Level: <strong>${gauge.waterLevelMeters} m</strong> (Danger: ${gauge.dangerLevelMeters} m)<br/>
-              Discharge: <strong>${gauge.dischargeM3s} m³/s</strong> (${gauge.trend})
+          <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 12px; min-width: 200px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px;">
+              <span style="font-weight: 700; color: #f0f3f6;">${gauge.riverName}</span>
+              <span style="font-family: monospace; font-size: 9px; padding: 1px 4px; border-radius: 2px; background: ${gauge.telemetryType === 'live_modeled' ? 'rgba(14,165,233,0.2)' : 'rgba(234,179,8,0.2)'}; color: ${gauge.telemetryType === 'live_modeled' ? '#38bdf8' : '#eab308'}; font-weight: bold;">
+                ${gauge.telemetryType === 'live_modeled' ? 'LIVE MODELLED' : 'SIMULATED'}
+              </span>
             </div>
-            <div style="margin-top: 4px; font-family: monospace; font-size: 10px; color: ${color}; font-weight: bold;">
-              STAGE: ${gauge.floodStage.toUpperCase()}
+            <div style="color: #9da7b3; font-size: 10px; margin-top: 1px;">${gauge.locationName}</div>
+            <div style="color: #9da7b3; font-size: 11px; margin-top: 4px; line-height: 1.4;">
+              Discharge: <strong>${gauge.dischargeM3s} m³/s</strong> <span style="font-size: 9px; color: ${isModeledDischarge ? '#38bdf8' : '#eab308'}; font-weight: 600;">(${isModeledDischarge ? 'GloFAS Runoff' : 'Simulated'})</span><br/>
+              Water Level: <strong>${gauge.waterLevelMeters} m</strong> <span style="font-size: 9px; color: #eab308;">(Danger: ${gauge.dangerLevelMeters} m [Baseline])</span><br/>
+              Trend: <strong>${gauge.trend}</strong>
+            </div>
+            <div style="margin-top: 6px; display: flex; align-items: center; justify-content: space-between; font-family: monospace; font-size: 10px;">
+              <span style="color: ${color}; font-weight: bold;">STAGE: ${gauge.floodStage.toUpperCase()}</span>
+              <span style="color: #9da7b3; font-size: 9px;">${gauge.stationId}</span>
             </div>
           </div>
         `, { className: 'raksha-leaflet-popup' });
@@ -930,9 +939,10 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
                     <span className="text-[10px] font-mono px-2 py-0.5 rounded font-bold uppercase bg-blue-500/20 text-blue-400 border border-blue-500/40">
                       {gauge.floodStage.toUpperCase()}
                     </span>
-                    <span className="text-[10px] font-mono text-primary-dim uppercase">
-                      TREND: {gauge.trend}
-                    </span>
+                    <TelemetryBadge
+                      status={gauge.telemetryType || (gauge.isLive ? 'live' : 'simulated')}
+                      label={gauge.telemetryType === 'live_modeled' ? 'LIVE MODELLED' : 'SIMULATED'}
+                    />
                   </div>
 
                   <div>
@@ -941,22 +951,39 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
                     <div className="text-primary-muted text-[11px]">{gauge.locationName} ({gauge.stationId})</div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 p-2 bg-charcoal rounded border border-border font-mono text-[11px]">
-                    <div>
-                      <span className="text-primary-dim block">WATER LEVEL:</span>
-                      <span className="text-primary font-bold">{gauge.waterLevelMeters} m</span>
+                  <div className="p-2 bg-charcoal rounded border border-border font-mono text-[11px] space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-primary-dim">DISCHARGE RATE:</span>
+                      <div className="text-right">
+                        <span className="text-primary font-bold">{gauge.dischargeM3s} m³/s</span>
+                        <span className={`block text-[9px] ${gauge.dischargeStatus === 'live_modeled' ? 'text-operational-cyan font-semibold' : 'text-hazard'}`}>
+                          {gauge.dischargeStatus === 'live_modeled' ? '● GloFAS Live Model' : '▲ Simulated Rate'}
+                        </span>
+                      </div>
                     </div>
-                    <div>
-                      <span className="text-primary-dim block">DANGER LEVEL:</span>
-                      <span className="text-hazard font-bold">{gauge.dangerLevelMeters} m</span>
+
+                    <div className="flex items-center justify-between pt-1 border-t border-border/50">
+                      <span className="text-primary-dim">WATER LEVEL:</span>
+                      <div className="text-right">
+                        <span className="text-primary font-bold">{gauge.waterLevelMeters} m</span>
+                        <span className="block text-[9px] text-hazard">
+                          (Danger: {gauge.dangerLevelMeters} m [Historical Baseline])
+                        </span>
+                      </div>
                     </div>
-                    <div>
-                      <span className="text-primary-dim block">DISCHARGE:</span>
-                      <span className="text-primary font-bold">{gauge.dischargeM3s} m³/s</span>
+
+                    <div className="flex items-center justify-between pt-1 border-t border-border/50">
+                      <span className="text-primary-dim">TREND & STAGE:</span>
+                      <div className="text-right">
+                        <span className="text-primary uppercase font-bold">{gauge.trend}</span>
+                        <span className="block text-[9px] text-primary-dim">Estimated from baseline</span>
+                      </div>
                     </div>
-                    <div>
-                      <span className="text-primary-dim block">SOURCE:</span>
-                      <span className="text-primary-muted text-[10px]">{gauge.source}</span>
+
+                    <div className="pt-1 border-t border-border/50 text-[10px]">
+                      <span className="text-primary-dim block">DATA PROVENANCE:</span>
+                      <span className="text-primary-muted leading-tight block">{gauge.source}</span>
+                      <span className="text-[9px] text-primary-dim block mt-0.5">{gauge.sourceAttribution}</span>
                     </div>
                   </div>
                 </>

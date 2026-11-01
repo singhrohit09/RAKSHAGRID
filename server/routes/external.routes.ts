@@ -92,7 +92,7 @@ router.get('/status', async (_req: Request, res: Response) => {
       success: true,
       timestamp: new Date().toISOString(),
       providers: [weatherHealth, hydroHealth],
-      overallStatus: weatherHealth.status === 'operational' && hydroHealth.status === 'operational' ? 'healthy' : 'degraded'
+      overallStatus: weatherHealth.status === 'operational' && (hydroHealth.status === 'operational' || hydroHealth.status === 'simulated') ? 'healthy' : 'degraded'
     });
   } catch (error: any) {
     res.status(500).json({

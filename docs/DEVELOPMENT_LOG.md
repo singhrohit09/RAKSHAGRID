@@ -518,4 +518,25 @@ This log records every verified milestone committed and pushed to [https://githu
   - `npm run lint` &rarr; 0 errors across frontend and backend.
   - `npm run build` &rarr; Production build verified in 3.79s.
 
+---
+
+### Milestone 30: External Telemetry Truth, Hydrology Provenance & Simulated Warning Accuracy
+- **Date**: 2026-11-01
+- **Feature / Fix**:
+  - **Hydrology Provenance Separation**: Cleanly separated live modeled river discharge from simulated station measurements in `server/services/external/hydrologyProvider.ts`. Yamuna river discharge ($m^3/s$) is attributed strictly to Copernicus GloFAS via Open-Meteo (`dischargeStatus: 'live_modeled'`), while static water levels (205.33m) and danger thresholds are strictly marked `waterLevelStatus: 'reference_baseline'` and `waterLevelIsLive: false`.
+  - **Station Sensor Truthfulness**: Set station `isLive: false` to truthfully reflect that in-situ physical acoustic Doppler gauges are not streaming; GloFAS provides numerical runoff model forecasts rather than in-situ sensor measurements.
+  - **Regional Tributaries**: Hindon Barrage (`CWC-HIND-02`) and Najafgarh Regulator (`CWC-NAJAF-03`) are explicitly flagged `telemetryType: 'simulated'`, `isLive: false`, `isModeled: false`, `isSimulated: true`. Added `getSimulatedFallbackGauges()` for deterministic fallback and testing.
+  - **Hazard Warning Truthfulness**: Audited and corrected `getExternalHazardWarnings()`. Replaced simulated government claims with transparent exercise scenario records (`isLive: false`, `isSimulated: true`, `telemetryType: 'simulated'`, `verificationStatus: 'simulated_drill'`). Added mandatory `simulationNotice` disclaiming active real-world emergency bulletins.
+  - **Frontend UI Transparency**: Implemented `TelemetryBadge` in `src/components/common/Badge.tsx` visibly rendering 5-tier status indicators: `LIVE`, `LIVE MODELLED`, `SIMULATED`, `CACHED`, and `UNAVAILABLE`. Integrated pills into `DashboardPage.tsx` and Leaflet popups/inspector panels in `OperationalMap.tsx`.
+  - **Automated Verification Suite**: Added 5 dedicated test cases in `server/tests/external.test.ts` verifying:
+    1. Simulated warnings cannot be labelled live.
+    2. Fallback hydrology measurements are not reported as live.
+    3. A live discharge response does not automatically make static water levels or trends live.
+    4. Expired or stale information is identified.
+    5. Source attribution is accurate across all streams.
+- **Relevant Checks**:
+  - `npm test` &rarr; 137 of 137 tests passed across 10 test suites (100% pass rate).
+  - `npm run lint` &rarr; 0 errors across frontend and backend.
+  - `npm run build` &rarr; Production build verified in 23.39s (all chunks clean).
+
 

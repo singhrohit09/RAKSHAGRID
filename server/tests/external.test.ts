@@ -3,7 +3,8 @@ import request from 'supertest';
 import app from '../index.js';
 import { interpretWmoCode } from '../services/external/wmoCodes.js';
 import { ExternalDataCache } from '../services/external/cache.js';
-import { OpenMeteoWeatherProvider } from '../services/external/openMeteoProvider.js';
+import { OpenMeteoWeatherProvider, openMeteoWeather } from '../services/external/openMeteoProvider.js';
+import { hydrologyAndHazard } from '../services/external/hydrologyProvider.js';
 
 describe('RakshaGrid External Provider & Telemetry Integration', () => {
   describe('WMO Meteorological Code Interpretation', () => {
@@ -162,6 +163,9 @@ describe('RakshaGrid External Provider & Telemetry Integration', () => {
       expect(firstWarning.headline).toBeDefined();
       expect(firstWarning.severity).toBeDefined();
       expect(firstWarning.issuingAgency).toBeDefined();
+      expect(firstWarning.isLive).toBe(false);
+      expect(firstWarning.isSimulated).toBe(true);
+      expect(firstWarning.verificationStatus).toBe('simulated_drill');
     });
 
     it('GET /api/external/status - reports provider connectivity and cache metrics', async () => {
@@ -173,6 +177,120 @@ describe('RakshaGrid External Provider & Telemetry Integration', () => {
       expect(res.body.providers).toBeDefined();
       expect(Array.isArray(res.body.providers)).toBe(true);
       expect(res.body.overallStatus).toBeDefined();
+    });
+  });
+
+  describe('Telemetry Truth, Provenance & Accuracy Verification', () => {
+    it('1. Simulated warnings cannot be labelled live', async () => {
+      hydrologyAndHazard.clearCache();
+      const warnings = await hydrologyAndHazard.getExternalHazardWarnings();
+
+      expect(warnings.length).toBeGreaterThan(0);
+      for (const warning of warnings) {
+        expect(warning.isLive).toBe(false);
+        expect(warning.isSimulated).toBe(true);
+        expect(warning.telemetryType).toBe('simulated');
+        expect(warning.verificationStatus).toBe('simulated_drill');
+        expect(warning.simulationNotice).toBeDefined();
+        expect(warning.simulationNotice).toMatch(/SIMULATION|EXERCISE/i);
+        expect(warning.headline).toContain('Simulated');
+        expect(warning.issuingAgency).toContain('Simulation Exercise');
+        expect(warning.source).toContain('Simulated');
+      }
+
+      // Also verify through REST endpoint
+      const res = await request(app).get('/api/external/hazards');
+      expect(res.status).toBe(200);
+      for (const w of res.body.data) {
+        expect(w.isLive).toBe(false);
+        expect(w.isSimulated).toBe(true);
+        expect(w.telemetryType).toBe('simulated');
+      }
+    });
+
+    it('2. Fallback hydrology measurements are not reported as live', () => {
+      const fallbackGauges = hydrologyAndHazard.getSimulatedFallbackGauges();
+      expect(fallbackGauges.length).toBe(3);
+
+      for (const gauge of fallbackGauges) {
+        expect(gauge.isLive).toBe(false);
+        expect(gauge.telemetryType).toBe('simulated');
+        expect(gauge.dischargeStatus).toBe('simulated');
+        expect(gauge.dischargeIsLive).toBe(false);
+        expect(gauge.waterLevelStatus).toBe('simulated');
+        expect(gauge.waterLevelIsLive).toBe(false);
+        expect(gauge.floodStageIsLive).toBe(false);
+        expect(gauge.trendIsLive).toBe(false);
+        expect(gauge.isModeled).toBe(false);
+        expect(gauge.isSimulated).toBe(true);
+        expect(gauge.modelRunTimestamp).toBeNull();
+      }
+    });
+
+    it('3. A live discharge response does not automatically make static water levels or trends live', async () => {
+      const gauges = await hydrologyAndHazard.getRiverGauges();
+      const yamunaGauge = gauges.find(g => g.stationId === 'CWC-YAM-01');
+
+      expect(yamunaGauge).toBeDefined();
+      // Even if discharge is live modeled from Copernicus GloFAS, static baseline fields must NEVER be marked live
+      expect(yamunaGauge!.waterLevelIsLive).toBe(false);
+      expect(yamunaGauge!.trendIsLive).toBe(false);
+      expect(yamunaGauge!.floodStageIsLive).toBe(false);
+      expect(yamunaGauge!.dischargeIsLive).toBe(false); // Modeled runoff, not an in-situ Doppler sensor
+      expect(yamunaGauge!.isLive).toBe(false); // Station does not have real-time in-situ physical telemetry
+      expect(['reference_baseline', 'simulated']).toContain(yamunaGauge!.waterLevelStatus);
+
+      // Tributary stations are strictly simulated
+      const hindonGauge = gauges.find(g => g.stationId === 'CWC-HIND-02');
+      expect(hindonGauge).toBeDefined();
+      expect(hindonGauge!.isLive).toBe(false);
+      expect(hindonGauge!.dischargeIsLive).toBe(false);
+      expect(hindonGauge!.waterLevelIsLive).toBe(false);
+      expect(hindonGauge!.telemetryType).toBe('simulated');
+    });
+
+    it('4. Expired or stale information is identified', async () => {
+      const cache = new ExternalDataCache<{ value: string }>(20, 80);
+      cache.set('test-key', { value: 'telemetry_sample' });
+
+      // Before TTL expiration: fresh
+      const fresh = cache.get('test-key');
+      expect(fresh).not.toBeNull();
+      expect(fresh?.isStale).toBe(false);
+
+      // Wait past TTL expiration (20ms) but within stale grace window (80ms)
+      await new Promise(r => setTimeout(r, 30));
+      const stale = cache.get('test-key');
+      expect(stale).not.toBeNull();
+      expect(stale?.isStale).toBe(true);
+      expect(stale?.data.value).toBe('telemetry_sample');
+
+      // Verify weather report schema includes boolean isStale indicator
+      const weather = await openMeteoWeather.getWeather(28.61, 77.20);
+      expect(typeof weather.isStale).toBe('boolean');
+    });
+
+    it('5. Source attribution is accurate across all telemetry streams', async () => {
+      const gauges = await hydrologyAndHazard.getRiverGauges();
+      const yamuna = gauges.find(g => g.stationId === 'CWC-YAM-01')!;
+
+      if (yamuna.isModeled) {
+        expect(yamuna.source).toContain('Copernicus GloFAS');
+        expect(yamuna.sourceAttribution).toContain('Copernicus');
+        expect(yamuna.sourceAttribution).toContain('Central Water Commission');
+      } else {
+        expect(yamuna.source).toContain('Central Water Commission');
+        expect(yamuna.source).toContain('Simulated');
+      }
+
+      const warnings = await hydrologyAndHazard.getExternalHazardWarnings();
+      for (const w of warnings) {
+        expect(w.source).toContain('Simulation');
+        expect(w.sourceAttribution).toContain('Scenario for Exercise & Training');
+      }
+
+      const weather = await openMeteoWeather.getWeather(28.61, 77.20);
+      expect(weather.sourceAttribution).toContain('Open-Meteo');
     });
   });
 });

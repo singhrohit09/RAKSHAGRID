@@ -42,6 +42,8 @@ export interface NormalizedWeatherReport {
 
 export type FloodStage = 'normal' | 'watch' | 'warning' | 'severe' | 'inundation';
 
+export type TelemetryType = 'live' | 'live_modeled' | 'simulated' | 'cached' | 'unavailable';
+
 export interface RiverGaugeReport {
   stationId: string;
   riverName: string;
@@ -56,7 +58,20 @@ export interface RiverGaugeReport {
   source: string;
   sourceAttribution: string;
   updatedAt: string;
-  isLive: boolean;
+  isLive: boolean; // Direct physical IoT sensor streaming indicator (false if no direct sensor)
+  // Granular telemetry truthfulness & provenance breakdown:
+  telemetryType: TelemetryType;
+  dischargeStatus: 'live_modeled' | 'simulated';
+  dischargeIsLive: boolean; // false (modeled numerical runoff forecast, not physical Doppler flow meter)
+  waterLevelStatus: 'reference_baseline' | 'simulated';
+  waterLevelIsLive: boolean; // ALWAYS false - static baseline / simulated mark
+  floodStageStatus?: 'estimated_from_baseline' | 'simulated';
+  floodStageIsLive: boolean; // ALWAYS false - not a live observation
+  trendIsLive: boolean; // ALWAYS false - simulated / baseline trend
+  isModeled: boolean; // true if GloFAS runoff model is available
+  isSimulated: boolean; // true if fallback baseline
+  modelRunTimestamp?: string | null;
+  sensorObservationTimestamp?: string | null;
 }
 
 export interface ExternalHazardWarning {
@@ -71,7 +86,12 @@ export interface ExternalHazardWarning {
   expiresAt: string;
   issuingAgency: string;
   source: string;
-  isLive: boolean;
+  sourceAttribution?: string;
+  isLive: boolean; // STRICTLY false for synthetic exercise/demo records
+  isSimulated: boolean; // true
+  telemetryType: TelemetryType; // 'simulated'
+  verificationStatus: 'simulated_drill' | 'verified_official' | 'unverified';
+  simulationNotice?: string;
 }
 
 export interface ProviderHealthStatus {
@@ -79,10 +99,12 @@ export interface ProviderHealthStatus {
   serviceType: 'weather' | 'hydrology' | 'hazards';
   status: 'operational' | 'degraded' | 'cached' | 'offline' | 'simulated';
   isLive: boolean;
+  telemetryType?: TelemetryType;
   lastSuccess: string | null;
   lastError: string | null;
   latencyMs: number | null;
   requestsCount: number;
   errorsCount: number;
   cachedEntriesCount: number;
+  sourceAttribution?: string;
 }

@@ -37,6 +37,8 @@ export interface NormalizedWeatherReport {
 
 export type FloodStage = 'normal' | 'watch' | 'warning' | 'severe' | 'inundation';
 
+export type TelemetryType = 'live' | 'live_modeled' | 'simulated' | 'cached' | 'unavailable';
+
 export interface RiverGaugeReport {
   stationId: string;
   riverName: string;
@@ -52,6 +54,19 @@ export interface RiverGaugeReport {
   sourceAttribution: string;
   updatedAt: string;
   isLive: boolean;
+  // Granular telemetry truthfulness & provenance breakdown:
+  telemetryType: TelemetryType;
+  dischargeStatus: 'live_modeled' | 'simulated';
+  dischargeIsLive: boolean;
+  waterLevelStatus: 'reference_baseline' | 'simulated';
+  waterLevelIsLive: boolean;
+  floodStageStatus?: 'estimated_from_baseline' | 'simulated';
+  floodStageIsLive: boolean;
+  trendIsLive: boolean;
+  isModeled: boolean;
+  isSimulated: boolean;
+  modelRunTimestamp?: string | null;
+  sensorObservationTimestamp?: string | null;
 }
 
 export interface ExternalHazardWarning {
@@ -66,7 +81,12 @@ export interface ExternalHazardWarning {
   expiresAt: string;
   issuingAgency: string;
   source: string;
+  sourceAttribution?: string;
   isLive: boolean;
+  isSimulated: boolean;
+  telemetryType: TelemetryType;
+  verificationStatus: 'simulated_drill' | 'verified_official' | 'unverified';
+  simulationNotice?: string;
 }
 
 export interface ProviderHealthStatus {
@@ -74,12 +94,14 @@ export interface ProviderHealthStatus {
   serviceType: 'weather' | 'hydrology' | 'hazards';
   status: 'operational' | 'degraded' | 'cached' | 'offline' | 'simulated';
   isLive: boolean;
+  telemetryType?: TelemetryType;
   lastSuccess: string | null;
   lastError: string | null;
   latencyMs: number | null;
   requestsCount: number;
   errorsCount: number;
   cachedEntriesCount: number;
+  sourceAttribution?: string;
 }
 
 export interface SystemHealthResponse {

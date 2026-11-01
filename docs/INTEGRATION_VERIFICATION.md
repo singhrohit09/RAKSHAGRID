@@ -25,25 +25,42 @@ This document details the functional verification, integration testing, error ha
 
 ## 2. River Gauge Hydrology & Flood Stage Telemetry
 
-### 2.1 Architecture & Implementation
+### 2.1 Architecture & Provenance Separation
 - **Provider**: `HydrologyAndHazardProvider` in `server/services/external/hydrologyProvider.ts`.
 - **Endpoint**: `GET /api/external/river-gauges`
-- **Telemetry Metrics**: Real-time river discharge rate ($m^3/s$), water level relative to datum ($m$), danger level threshold ($m$), flood stage classification (`normal`, `watch`, `warning`, `severe`, `inundation`), and flow trend (`rising`, `steady`, `falling`).
+- **Telemetry Breakdown & Strict Provenance Separation**:
+  - **Live Modeled Runoff Discharge ($m^3/s$)**: Queried in real-time from the **Copernicus Emergency Management Service (GloFAS)** via Open-Meteo Flood API for primary catchment points (e.g. Yamuna Basin at Old Railway Bridge, Delhi).
+  - **Reference Baseline Water Elevation ($m$)**: Historic physical benchmark water levels (205.33m warning/danger thresholds) are strictly labeled `waterLevelStatus: 'reference_baseline'` and `waterLevelIsLive: false`.
+  - **Direct Physical IoT Distinction**: Because direct physical CWC acoustic Doppler gauges are not publicly streaming, station `isLive` is truthfully reported as `false`, distinguishing numerical runoff models from in-situ physical telemetry.
+  - **Regional Tributary Gauges**: Hindon Barrage (`CWC-HIND-02`) and Najafgarh Regulator (`CWC-NAJAF-03`) are explicitly flagged `telemetryType: 'simulated'`, `isLive: false`, `isModeled: false`, `isSimulated: true`.
 
-### 2.2 Telemetry Truthfulness & Labeling
-- River telemetry adapters report both adapter operational status and data source provenance.
-- In environments where live telemetry from CWC telemetry stations is simulated, every payload contains:
-  ```json
-  {
-    "source": "Central Water Commission Telemetry Gauge Network (Simulated)",
-    "isLive": false
-  }
-  ```
-  The platform strictly distinguishes real upstream telemetry from simulated flood models.
+### 2.2 Telemetry Truthfulness & UI Status Classification
+RakshaGrid implements a 5-tier strict telemetry classification system across backend APIs and UI widgets:
+1. `LIVE`: Direct physical sensor observation (e.g. Open-Meteo live weather telemetry).
+2. `LIVE MODELLED`: Live numerical hydrological forecast/model (e.g. Copernicus GloFAS river discharge).
+3. `SIMULATED`: Deterministic reference baseline, synthetic exercise drill, or unmonitored station.
+4. `CACHED`: Stale or grace-period cached telemetry whose refresh window has elapsed.
+5. `UNAVAILABLE`: Offline, failed fetch, or unreachable upstream provider.
 
 ---
 
-## 3. Multi-Channel Notification & Deduplication System
+## 3. External Hazard Warning Truthfulness & Scenario Isolation
+
+### 3.1 Exercise Drill vs. Official Bulletins
+- **Endpoint**: `GET /api/external/hazards`
+- Hardcoded or demonstration scenario alerts are **NEVER** labeled `isLive: true`.
+- Every generated warning includes:
+  - `isLive: false`
+  - `isSimulated: true`
+  - `telemetryType: 'simulated'`
+  - `verificationStatus: 'simulated_drill'`
+  - `simulationNotice: 'EXERCISE / SIMULATION ONLY — Not an active real-world government emergency bulletin'`
+  - Issuing agencies explicitly append `[Simulation Exercise]`.
+  - Source attribution explicitly states `RakshaGrid Multi-Hazard Exercise Simulation Feed (Simulated Demonstration)`.
+
+---
+
+## 4. Multi-Channel Notification & Deduplication System
 
 ### 3.1 Multi-Channel Dispatch
 RakshaGrid routes emergency broadcasts through 3 distinct delivery channels:

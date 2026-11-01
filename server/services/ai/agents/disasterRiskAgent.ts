@@ -64,13 +64,13 @@ export class DisasterRiskAgent {
     let riverGauges: any[] = [];
     try {
       riverGauges = await hydrologyAndHazard.getRiverGauges();
-      const hasLiveGauge = riverGauges.some(g => g.isLive);
+      const hasModeledGauge = riverGauges.some(g => g.isLive || g.telemetryType === 'live_modeled' || g.isModeled);
       dataSources.push({
-        source: hasLiveGauge ? 'Open-Meteo GloFAS & CWC Telemetry' : 'Central Water Commission (CWC) Monitored Baseline (Simulated)',
-        sourceAttribution: 'Central Water Commission / GloFAS Model',
+        source: hasModeledGauge ? 'Copernicus GloFAS Hydrological Model & CWC Baseline' : 'Central Water Commission (CWC) Monitored Baseline (Simulated)',
+        sourceAttribution: 'Central Water Commission (Reference Baseline) / Copernicus GloFAS (Runoff Model)',
         timestamp: riverGauges[0]?.updatedAt || nowIso,
-        isLive: hasLiveGauge,
-        isSimulated: !hasLiveGauge,
+        isLive: false,
+        isSimulated: !hasModeledGauge,
         isCached: false,
         coverageArea: 'Yamuna & Hindon River Catchment Basins'
       });
@@ -236,7 +236,7 @@ Generate a structured regional disaster risk assessment.`;
     if (highGauges.length > 0) {
       const g = highGauges[0];
       baseScore += 25;
-      const isSimulatedTag = g.isLive ? '' : ' (Simulated Model)';
+      const isSimulatedTag = g.telemetryType === 'live_modeled' ? ' (GloFAS Runoff Model)' : ' (Simulated Baseline)';
       contributingFactors.push({
         factor: `River Gauge Surge${isSimulatedTag}`,
         weight: 0.25,
@@ -344,7 +344,7 @@ Generate a structured regional disaster risk assessment.`;
     // Calculate confidence based on data completeness
     let confidence = 92;
     if (isDegraded) confidence -= 25;
-    if (gauges.some(g => !g.isLive)) confidence -= 8; // Minor deduction for modeled hydrology
+    if (gauges.some(g => !g.isLive && g.telemetryType !== 'live_modeled')) confidence -= 8; // Deduction for purely simulated hydrology
 
     return {
       overallRiskLevel: riskLevel,

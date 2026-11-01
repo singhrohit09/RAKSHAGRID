@@ -9,12 +9,107 @@ export class HydrologyAndHazardProvider {
   private lastSuccess: string | null = null;
   private lastError: string | null = null;
   private lastLatencyMs: number | null = null;
-  private lastDataIsLive = false;
+  private lastDataIsModeled = false;
+
+  /**
+   * Generates deterministic simulated baseline reports for regional monitoring stations.
+   * Explicitly labeled as simulated baseline data with isLive: false.
+   */
+  public getSimulatedFallbackGauges(): RiverGaugeReport[] {
+    const now = new Date().toISOString();
+    return [
+      {
+        stationId: 'CWC-YAM-01',
+        riverName: 'Yamuna River',
+        locationName: 'Old Railway Bridge (Loha Pul), Delhi',
+        latitude: 28.6625,
+        longitude: 77.2361,
+        dischargeM3s: 345.2,
+        waterLevelMeters: 205.33,
+        dangerLevelMeters: 205.33,
+        floodStage: 'warning',
+        trend: 'rising',
+        source: 'Central Water Commission (CWC) Monitored Baseline (Simulated)',
+        sourceAttribution: 'Central Water Commission Historical Benchmark (Offline Demonstration)',
+        updatedAt: now,
+        isLive: false,
+        telemetryType: 'simulated',
+        dischargeStatus: 'simulated',
+        dischargeIsLive: false,
+        waterLevelStatus: 'simulated',
+        waterLevelIsLive: false,
+        floodStageStatus: 'simulated',
+        floodStageIsLive: false,
+        trendIsLive: false,
+        isModeled: false,
+        isSimulated: true,
+        modelRunTimestamp: null,
+        sensorObservationTimestamp: null
+      },
+      {
+        stationId: 'CWC-HIND-02',
+        riverName: 'Hindon River',
+        locationName: 'Ghaziabad Barrage Station',
+        latitude: 28.6720,
+        longitude: 77.4120,
+        dischargeM3s: 112.5,
+        waterLevelMeters: 198.80,
+        dangerLevelMeters: 201.00,
+        floodStage: 'watch',
+        trend: 'steady',
+        source: 'Central Water Commission (CWC) Monitored Baseline (Simulated)',
+        sourceAttribution: 'State Irrigation & Flood Control Dept Baseline Model',
+        updatedAt: now,
+        isLive: false,
+        telemetryType: 'simulated',
+        dischargeStatus: 'simulated',
+        dischargeIsLive: false,
+        waterLevelStatus: 'simulated',
+        waterLevelIsLive: false,
+        floodStageStatus: 'simulated',
+        floodStageIsLive: false,
+        trendIsLive: false,
+        isModeled: false,
+        isSimulated: true,
+        modelRunTimestamp: null,
+        sensorObservationTimestamp: null
+      },
+      {
+        stationId: 'CWC-NAJAF-03',
+        riverName: 'Najafgarh Basin Channel',
+        locationName: 'Kakrola Regulator Station',
+        latitude: 28.6145,
+        longitude: 77.0320,
+        dischargeM3s: 58.4,
+        waterLevelMeters: 210.15,
+        dangerLevelMeters: 212.00,
+        floodStage: 'normal',
+        trend: 'falling',
+        source: 'Delhi Jal Board Hydrological Station Baseline (Simulated)',
+        sourceAttribution: 'Delhi Jal Board & Flood Control Baseline Model',
+        updatedAt: now,
+        isLive: false,
+        telemetryType: 'simulated',
+        dischargeStatus: 'simulated',
+        dischargeIsLive: false,
+        waterLevelStatus: 'simulated',
+        waterLevelIsLive: false,
+        floodStageStatus: 'simulated',
+        floodStageIsLive: false,
+        trendIsLive: false,
+        isModeled: false,
+        isSimulated: true,
+        modelRunTimestamp: null,
+        sensorObservationTimestamp: null
+      }
+    ];
+  }
 
   /**
    * Retrieves operational river gauge telemetry.
-   * If live hydrological feed is configured via CWC_API_URL or OPEN_METEO_FLOOD_API, connects to it;
-   * otherwise normalizes certified regional monitoring stations with live indicators.
+   * Clearly separates live modeled river discharge (Copernicus GloFAS via Open-Meteo)
+   * from static reference baselines (CWC water level marks & danger thresholds).
+   * Fallback hydrology measurements are never reported as live.
    */
   public async getRiverGauges(): Promise<RiverGaugeReport[]> {
     const cacheKey = 'cwc:river_gauges';
@@ -29,7 +124,6 @@ export class HydrologyAndHazardProvider {
 
     try {
       const floodApiUrl = process.env.FLOOD_API_URL || 'https://flood-api.open-meteo.com/v1/flood';
-      // If external flood API is available, query primary Delhi Yamuna catchment point
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 4000);
 
@@ -39,7 +133,8 @@ export class HydrologyAndHazardProvider {
       url.searchParams.set('daily', 'river_discharge');
 
       let liveDischarge = 345.2; // default reference m3/s
-      let isLive = false;
+      let isModeled = false;
+      let modelTimestamp: string | null = null;
 
       try {
         const response = await fetch(url.toString(), {
@@ -52,14 +147,15 @@ export class HydrologyAndHazardProvider {
           const data = (await response.json()) as any;
           if (data && data.daily && Array.isArray(data.daily.river_discharge) && data.daily.river_discharge.length > 0) {
             liveDischarge = Number(data.daily.river_discharge[0]) || liveDischarge;
-            isLive = true;
+            isModeled = true;
+            modelTimestamp = (data.daily.time && data.daily.time[0]) ? `${data.daily.time[0]}T00:00:00.000Z` : now;
           }
         }
       } catch {
         // Fall back gracefully to monitored baseline station readings
       }
 
-      this.lastDataIsLive = isLive;
+      this.lastDataIsModeled = isModeled;
 
       const gauges: RiverGaugeReport[] = [
         {
@@ -73,10 +169,26 @@ export class HydrologyAndHazardProvider {
           dangerLevelMeters: 205.33,
           floodStage: 'warning',
           trend: 'rising',
-          source: isLive ? 'Open-Meteo GloFAS Hydrological Model & CWC Telemetry' : 'Central Water Commission (CWC) Monitored Baseline (Simulated)',
-          sourceAttribution: 'Central Water Commission / Copernicus GloFAS',
+          source: isModeled 
+            ? 'Copernicus GloFAS Hydrological Model (Runoff) & CWC Baseline (Elevation)' 
+            : 'Central Water Commission (CWC) Monitored Baseline (Simulated)',
+          sourceAttribution: isModeled
+            ? 'Copernicus Emergency Management Service (GloFAS via Open-Meteo) / Central Water Commission Historical Gauge Reference'
+            : 'Central Water Commission Baseline Model (Offline Demonstration)',
           updatedAt: now,
-          isLive
+          isLive: false, // Station has no live physical in-situ IoT stream; discharge is modeled forecast
+          telemetryType: isModeled ? 'live_modeled' : 'simulated',
+          dischargeStatus: isModeled ? 'live_modeled' : 'simulated',
+          dischargeIsLive: false, // Modeled numerical runoff forecast, not in-situ Doppler telemetry
+          waterLevelStatus: isModeled ? 'reference_baseline' : 'simulated',
+          waterLevelIsLive: false, // Reference historical benchmark, never claimed as live observation
+          floodStageStatus: isModeled ? 'estimated_from_baseline' : 'simulated',
+          floodStageIsLive: false,
+          trendIsLive: false,
+          isModeled,
+          isSimulated: !isModeled,
+          modelRunTimestamp: modelTimestamp,
+          sensorObservationTimestamp: null
         },
         {
           stationId: 'CWC-HIND-02',
@@ -90,9 +202,21 @@ export class HydrologyAndHazardProvider {
           floodStage: 'watch',
           trend: 'steady',
           source: 'Central Water Commission (CWC) Monitored Baseline (Simulated)',
-          sourceAttribution: 'State Irrigation & Flood Control Dept (Model)',
+          sourceAttribution: 'State Irrigation & Flood Control Dept Baseline Model',
           updatedAt: now,
-          isLive: false
+          isLive: false,
+          telemetryType: 'simulated',
+          dischargeStatus: 'simulated',
+          dischargeIsLive: false,
+          waterLevelStatus: 'simulated',
+          waterLevelIsLive: false,
+          floodStageStatus: 'simulated',
+          floodStageIsLive: false,
+          trendIsLive: false,
+          isModeled: false,
+          isSimulated: true,
+          modelRunTimestamp: null,
+          sensorObservationTimestamp: null
         },
         {
           stationId: 'CWC-NAJAF-03',
@@ -106,9 +230,21 @@ export class HydrologyAndHazardProvider {
           floodStage: 'normal',
           trend: 'falling',
           source: 'Delhi Jal Board Hydrological Station Baseline (Simulated)',
-          sourceAttribution: 'Delhi Jal Board & Flood Control (Model)',
+          sourceAttribution: 'Delhi Jal Board & Flood Control Baseline Model',
           updatedAt: now,
-          isLive: false
+          isLive: false,
+          telemetryType: 'simulated',
+          dischargeStatus: 'simulated',
+          dischargeIsLive: false,
+          waterLevelStatus: 'simulated',
+          waterLevelIsLive: false,
+          floodStageStatus: 'simulated',
+          floodStageIsLive: false,
+          trendIsLive: false,
+          isModeled: false,
+          isSimulated: true,
+          modelRunTimestamp: null,
+          sensorObservationTimestamp: null
         }
       ];
 
@@ -125,7 +261,9 @@ export class HydrologyAndHazardProvider {
   }
 
   /**
-   * Retrieves active external weather warnings from meteorological agencies.
+   * Retrieves active external hazard warnings for drill and response exercises.
+   * Strictly marked as simulated exercise data (isLive: false, verificationStatus: 'simulated_drill').
+   * Never fabricates active government bulletins or real-world emergency directives.
    */
   public async getExternalHazardWarnings(): Promise<ExternalHazardWarning[]> {
     const cacheKey = 'met:hazard_warnings';
@@ -143,29 +281,39 @@ export class HydrologyAndHazardProvider {
         id: 'WARN-MET-2026-089',
         hazardType: 'heavy_rain',
         severity: 'warning',
-        headline: 'Orange Warning: Intense Precipitation and Inundation in Low-Lying NCR Basins',
-        description: 'Isolated heavy to very heavy rainfall expected (65mm - 115mm in 24 hours). Flash flooding in river plains and waterlogging in low-lying transit corridors likely.',
+        headline: 'Demonstration Drill Advisory: Intense Precipitation in Low-Lying NCR Basins (Simulated)',
+        description: 'Simulated exercise scenario: heavy rainfall (65mm - 115mm in 24h) modeled across NCR transit corridors for disaster preparedness drill.',
         affectedRegion: 'Delhi NCT, Noida, Gurugram Metropolitan Region',
         coordinates: [28.6139, 77.2090],
         issuedAt,
         expiresAt,
-        issuingAgency: 'Regional Meteorological Centre (IMD New Delhi)',
-        source: 'India Meteorological Department (IMD) / WMO Regional Bulletin',
-        isLive: true
+        issuingAgency: 'Regional Meteorological Centre (IMD New Delhi) [Simulation Exercise]',
+        source: 'RakshaGrid Multi-Hazard Exercise Simulation Feed (Simulated Demonstration)',
+        sourceAttribution: 'IMD / CWC Baseline Meteorological Scenario for Exercise & Training',
+        isLive: false,
+        isSimulated: true,
+        telemetryType: 'simulated',
+        verificationStatus: 'simulated_drill',
+        simulationNotice: 'EXERCISE / SIMULATION ONLY — Not an active real-world government emergency bulletin'
       },
       {
         id: 'WARN-MET-2026-090',
         hazardType: 'flood',
         severity: 'watch',
-        headline: 'Yamuna Flood Stage Advisory: Upstream Discharge from Hathnikund Barrage',
-        description: 'Water discharge exceeding 1,20,000 cusecs from Hathnikund Barrage. Peak water level at Old Railway Bridge expected to cross warning mark within 18 hours.',
+        headline: 'Demonstration Drill Advisory: Yamuna Floodplain Upstream Inflow (Simulated)',
+        description: 'Simulated exercise scenario: water discharge exceeding 1,20,000 cusecs modeled from Hathnikund Barrage for flood response testing.',
         affectedRegion: 'Yamuna Floodplain Zone O (Kashmere Gate to Okhla Barrage)',
         coordinates: [28.6625, 77.2361],
         issuedAt,
         expiresAt,
-        issuingAgency: 'Central Water Commission (CWC) Flood Forecasting Division',
-        source: 'Central Water Commission National Flood Bulletin',
-        isLive: true
+        issuingAgency: 'Central Water Commission (CWC) Flood Forecasting Division [Simulation Exercise]',
+        source: 'RakshaGrid Multi-Hazard Exercise Simulation Feed (Simulated Demonstration)',
+        sourceAttribution: 'Central Water Commission Flood Forecasting Model Scenario for Exercise & Training',
+        isLive: false,
+        isSimulated: true,
+        telemetryType: 'simulated',
+        verificationStatus: 'simulated_drill',
+        simulationNotice: 'EXERCISE / SIMULATION ONLY — Not an active real-world government emergency bulletin'
       }
     ];
 
@@ -173,12 +321,19 @@ export class HydrologyAndHazardProvider {
     return warnings;
   }
 
+  /**
+   * Clears telemetry and hazard caches for testing and state reset.
+   */
+  public clearCache(): void {
+    this.gaugeCache.clear();
+    this.hazardCache.clear();
+  }
+
   public getHealth(): ProviderHealthStatus {
     const stats = this.gaugeCache.getStats();
-    // Distinguish software adapter execution status from genuine external telemetry sensor availability
     const status: ProviderHealthStatus['status'] = this.errorsCount > 0 
       ? 'degraded' 
-      : this.lastDataIsLive 
+      : this.lastDataIsModeled 
       ? 'operational' 
       : 'simulated';
 
@@ -186,13 +341,15 @@ export class HydrologyAndHazardProvider {
       providerName: 'Central Hydrological & Flood Telemetry Engine',
       serviceType: 'hydrology',
       status,
-      isLive: this.lastDataIsLive,
+      isLive: false, // In-situ physical IoT sensors are not connected; discharge uses Copernicus GloFAS numerical forecast model
+      telemetryType: this.lastDataIsModeled ? 'live_modeled' : 'simulated',
       lastSuccess: this.lastSuccess,
       lastError: this.lastError,
       latencyMs: this.lastLatencyMs,
       requestsCount: this.requestsCount,
       errorsCount: this.errorsCount,
-      cachedEntriesCount: stats.size
+      cachedEntriesCount: stats.size,
+      sourceAttribution: 'Copernicus GloFAS Hydrological Model & Central Water Commission Baseline'
     };
   }
 }
