@@ -185,3 +185,5 @@ export interface AuditEvent {
   severity: 'info' | 'warning' | 'critical';
   ipAddress: string;
 }
+
+export * from './ai';

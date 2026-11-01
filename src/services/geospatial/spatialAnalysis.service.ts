@@ -61,6 +61,13 @@ export const VERIFIED_HAZARD_ZONES: HazardZone[] = [
   },
 ];
 
+export function calculateDistanceKm(
+  p1: { lat: number; lng: number },
+  p2: { lat: number; lng: number }
+): number {
+  return SpatialAnalysisService.calculateDistanceKm(p1.lat, p1.lng, p2.lat, p2.lng);
+}
+
 export const SpatialAnalysisService = {
   /**
    * Calculates geodesic distance between two points in kilometers

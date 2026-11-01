@@ -22,6 +22,7 @@ import { AnalyticsPage } from './pages/AnalyticsPage';
 import { AlertsPage } from './pages/AlertsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { AuditLogPage } from './pages/AuditLogPage';
+import { AIIntelligencePage } from './pages/AIIntelligencePage';
 
 function MainApp() {
   const { user, isAuthenticated } = useAuth();
@@ -233,6 +234,7 @@ function MainApp() {
     '/dashboard',
     '/incidents',
     '/map',
+    '/ai-intelligence',
     '/teams',
     '/shelters',
     '/resources',
@@ -305,6 +307,25 @@ function MainApp() {
           teams={teams}
           onNavigateToIncident={(id) => navigateTo(`/incidents?id=${id}`)}
           onNavigateToTeam={(id) => navigateTo(`/teams?id=${id}`)}
+        />
+      )}
+
+      {currentRoute === '/ai-intelligence' && (
+        <AIIntelligencePage
+          incidents={incidents}
+          teams={teams}
+          shelters={shelters}
+          resources={resources}
+          tasks={tasks}
+          alerts={alerts}
+          auditLogs={auditLogs}
+          onUpdateIncident={handleUpdateIncident}
+          onBroadcastAlert={handleCreateAlert}
+          onAddAuditLog={(action, entityType, entityId, details) => {
+            DataService.logCustomEvent(action, entityType, entityId, details, user || undefined);
+            setAuditLogs(DataService.getAuditLogs());
+          }}
+          onNavigate={navigateTo}
         />
       )}
 

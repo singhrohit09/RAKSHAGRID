@@ -439,6 +439,22 @@ export const DataService = {
     return newEvent;
   },
 
+  logCustomEvent(action: string, entityType: any, entityId: string, details: string, currentUser?: User): AuditEvent {
+    return this.logAudit({
+      actor: {
+        id: currentUser?.id || 'SYS-AI-NODE',
+        name: currentUser?.name || 'Chief Intelligence Orchestrator',
+        role: currentUser?.role || 'incident_commander',
+        agency: currentUser?.agency || 'NDMA EOC',
+      },
+      action,
+      entityType: entityType as any,
+      entityId,
+      details,
+      severity: 'info',
+    });
+  },
+
   // Reset to factory demo data
   resetAllDemoData(): void {
     setStored(STORAGE_KEYS.INCIDENTS, INITIAL_INCIDENTS);
