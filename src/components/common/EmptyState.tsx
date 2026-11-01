@@ -1,42 +1,50 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import React from 'react';
-import { LucideIcon, Inbox } from 'lucide-react';
-import { Button } from './Button';
+import { LucideIcon, ShieldAlert } from 'lucide-react';
 
 interface EmptyStateProps {
+  icon?: LucideIcon;
   title: string;
   description: string;
-  icon?: LucideIcon;
   actionLabel?: string;
   onAction?: () => void;
-  actionRestricted?: boolean;
+  className?: string;
 }
 
 export const EmptyState: React.FC<EmptyStateProps> = ({
+  icon: Icon = ShieldAlert,
   title,
   description,
-  icon: Icon = Inbox,
   actionLabel,
   onAction,
-  actionRestricted = false
+  className = '',
 }) => {
   return (
-    <div className="flex flex-col items-center justify-center p-12 text-center border border-dashed border-border rounded-lg bg-panel-card/40 my-4">
-      <div className="p-3 bg-panel-subtle rounded-full text-primary-dim mb-3 border border-border">
+    <div
+      className={`w-full py-12 px-6 flex flex-col items-center justify-center text-center bg-[#12171e] border border-slate-800 rounded ${className}`}
+    >
+      <div className="p-3 bg-slate-900 border border-slate-800 rounded text-slate-400 mb-3">
         <Icon className="w-6 h-6" />
       </div>
-      <h4 className="text-sm font-semibold text-primary mb-1">{title}</h4>
-      <p className="text-xs text-primary-muted max-w-sm mb-4 leading-relaxed">{description}</p>
+      <h4 className="text-sm font-semibold text-slate-200 tracking-tight">
+        {title}
+      </h4>
+      <p className="mt-1 max-w-sm text-xs text-slate-400 leading-relaxed">
+        {description}
+      </p>
       {actionLabel && onAction && (
-        <Button
-          size="sm"
-          variant="secondary"
+        <button
+          type="button"
           onClick={onAction}
-          restricted={actionRestricted}
+          className="mt-4 px-4 py-1.5 text-xs font-semibold rounded bg-amber-500 hover:bg-amber-400 text-slate-950 transition-colors shadow-sm"
         >
           {actionLabel}
-        </Button>
+        </button>
       )}
     </div>
   );
 };
-

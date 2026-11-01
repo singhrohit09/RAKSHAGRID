@@ -1,598 +1,464 @@
-import React, { useState } from 'react';
-import { useRaksha } from '../context/RakshaContext';
-import { 
-  Flame, 
-  Users, 
-  Home, 
-  Boxes, 
-  KanbanSquare, 
-  AlertTriangle, 
-  Plus, 
-  ShieldAlert, 
-  ExternalLink,
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import React, { useState, useMemo } from 'react';
+import {
+  AlertOctagon,
+  Users,
+  Home,
+  Box,
+  CheckSquare,
+  AlertTriangle,
   ArrowRight,
-  CloudRain,
-  Wind,
-  Droplets,
+  Filter,
   RefreshCw,
-  Activity,
   Layers,
-  CheckCircle2
+  Activity,
+  Check,
 } from 'lucide-react';
-import { StatCard } from '../components/common/StatCard';
-import { SeverityBadge, StatusBadge, TelemetryBadge } from '../components/common/Badge';
-import { Button } from '../components/common/Button';
-import { AlertBanner } from '../components/common/AlertBanner';
-import { formatRelativeTime, formatNumber } from '../utils/formatters';
-import { hasPermission } from '../utils/permissions';
-import { Link, useNavigate } from 'react-router-dom';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  Tooltip, 
-  ResponsiveContainer, 
-  Cell, 
-  PieChart, 
-  Pie 
+import {
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
 } from 'recharts';
+import { Incident, Team, Shelter, Resource, Task, Alert, AuditEvent } from '../types';
+import { MetricCard } from '../components/common/MetricCard';
+import { SeverityBadge } from '../components/common/SeverityBadge';
+import { StatusBadge } from '../components/common/StatusBadge';
+import { ResponsivePageHeader } from '../components/common/ResponsivePageHeader';
+import { FilterBar } from '../components/common/FilterBar';
 
-export const DashboardPage: React.FC = () => {
-  const { 
-    incidents, 
-    teams, 
-    shelters, 
-    resources, 
-    tasks, 
-    alerts, 
-    settings, 
-    activePersonaId,
-    weatherReport,
-    riverGauges,
-    geofences,
-    spatialReport,
-    systemHealth,
-    refreshWeather
-  } = useRaksha();
+interface DashboardPageProps {
+  incidents: Incident[];
+  teams: Team[];
+  shelters: Shelter[];
+  resources: Resource[];
+  tasks: Task[];
+  alerts: Alert[];
+  auditLogs: AuditEvent[];
+  onNavigate: (route: string) => void;
+  onAcknowledgeAlert: (id: string) => void;
+  onRefreshData?: () => void;
+}
 
-  const navigate = useNavigate();
-  const [isRefreshing, setIsRefreshing] = useState(false);
+export const DashboardPage: React.FC<DashboardPageProps> = ({
+  incidents,
+  teams,
+  shelters,
+  resources,
+  tasks,
+  alerts,
+  auditLogs,
+  onNavigate,
+  onAcknowledgeAlert,
+  onRefreshData,
+}) => {
+  // Filters
+  const [selectedSeverity, setSelectedSeverity] = useState('all');
+  const [selectedStatus, setSelectedStatus] = useState('all');
+  const [selectedRegion, setSelectedRegion] = useState('all');
+  const [dateRange, setDateRange] = useState<'24h' | '7d' | '30d'>('24h');
 
-  // Dynamic Metrics Derived From Real Store Records
-  const activeIncidents = incidents.filter(i => i.status === 'Active' || i.status === 'Reported');
-  const criticalIncidents = incidents.filter(i => i.severity === 'Critical' && i.status !== 'Closed');
-  const availableTeams = teams.filter(t => t.status === 'Available');
-  const deployedTeams = teams.filter(t => t.status === 'Deployed');
-  
-  const totalShelterCapacity = shelters.reduce((acc, s) => acc + s.capacity, 0);
-  const totalShelterOccupancy = shelters.reduce((acc, s) => acc + s.currentOccupancy, 0);
-  const shelterUtilizationRate = totalShelterCapacity > 0 ? Math.round((totalShelterOccupancy / totalShelterCapacity) * 100) : 0;
+  // Filtered incidents
+  const filteredIncidents = useMemo(() => {
+    const timestamps = incidents.map((i) => new Date(i.reportedTime).getTime()).filter((t) => !isNaN(t));
+    const maxTime = timestamps.length > 0 ? Math.max(...timestamps) : Date.now();
 
-  const lowStockResources = resources.filter(r => r.status === 'Low Stock' || r.status === 'Critical' || r.status === 'Depleted');
-  const openTasks = tasks.filter(t => t.status !== 'Completed');
-  const overdueTasks = tasks.filter(t => t.status !== 'Completed' && new Date(t.dueDate).getTime() < Date.now());
+    const rangeMs =
+      dateRange === '24h'
+        ? 24 * 60 * 60 * 1000
+        : dateRange === '7d'
+        ? 7 * 24 * 60 * 60 * 1000
+        : 30 * 24 * 60 * 60 * 1000;
 
-  // Severity Distribution Data
-  const severityCounts = {
-    Critical: incidents.filter(i => i.severity === 'Critical').length,
-    High: incidents.filter(i => i.severity === 'High').length,
-    Moderate: incidents.filter(i => i.severity === 'Moderate').length,
-    Low: incidents.filter(i => i.severity === 'Low').length
-  };
+    return incidents.filter((inc) => {
+      const incTime = new Date(inc.reportedTime).getTime();
+      if (!isNaN(incTime) && maxTime - incTime > rangeMs) return false;
 
-  const severityChartData = [
-    { name: 'Critical', value: severityCounts.Critical, color: '#dc2626' },
-    { name: 'High', value: severityCounts.High, color: '#d97706' },
-    { name: 'Moderate', value: severityCounts.Moderate, color: '#0284c7' },
-    { name: 'Low', value: severityCounts.Low, color: '#059669' }
-  ].filter(d => d.value > 0);
+      if (selectedSeverity !== 'all' && inc.severity !== selectedSeverity) return false;
+      if (selectedStatus !== 'all' && inc.status !== selectedStatus) return false;
+      if (selectedRegion !== 'all' && !inc.region.toLowerCase().includes(selectedRegion.toLowerCase())) return false;
+      return true;
+    });
+  }, [incidents, selectedSeverity, selectedStatus, selectedRegion, dateRange]);
 
-  // Status Distribution Data
-  const statusCounts = [
-    { status: 'Reported', count: incidents.filter(i => i.status === 'Reported').length },
-    { status: 'Verified', count: incidents.filter(i => i.status === 'Verified').length },
-    { status: 'Active', count: incidents.filter(i => i.status === 'Active').length },
-    { status: 'Contained', count: incidents.filter(i => i.status === 'Contained').length },
-    { status: 'Resolved', count: incidents.filter(i => i.status === 'Resolved').length },
-    { status: 'Closed', count: incidents.filter(i => i.status === 'Closed').length },
-  ];
+  // Operational Calculations
+  const totalIncidents = incidents.length;
+  const activeEmergencies = incidents.filter((i) => i.status === 'active').length;
+  const criticalCount = incidents.filter((i) => i.severity === 'critical' && i.status !== 'resolved').length;
+  const availableTeams = teams.filter((t) => t.status === 'available').length;
+  const deployedTeams = teams.filter((t) => t.status === 'deployed').length;
+  const openShelters = shelters.filter((s) => s.status === 'open').length;
+  const totalShelterCap = shelters.reduce((acc, s) => acc + s.capacity, 0);
+  const totalShelterOcc = shelters.reduce((acc, s) => acc + s.currentOccupancy, 0);
+  const pendingTasks = tasks.filter((t) => t.status !== 'resolved').length;
 
-  const handleRefreshTelemetry = async () => {
-    setIsRefreshing(true);
-    try {
-      await refreshWeather();
-    } finally {
-      setTimeout(() => setIsRefreshing(false), 600);
-    }
-  };
+  // Severity Distribution for Pie Chart
+  const severityDistribution = useMemo(() => {
+    const counts = { critical: 0, high: 0, medium: 0, low: 0 };
+    filteredIncidents.forEach((i) => {
+      if (counts[i.severity] !== undefined) {
+        counts[i.severity]++;
+      }
+    });
+    return [
+      { name: 'Critical', value: counts.critical, color: '#f43f5e', id: 'critical' },
+      { name: 'High', value: counts.high, color: '#f59e0b', id: 'high' },
+      { name: 'Medium', value: counts.medium, color: '#38bdf8', id: 'medium' },
+      { name: 'Low', value: counts.low, color: '#10b981', id: 'low' },
+    ].filter((item) => item.value > 0);
+  }, [filteredIncidents]);
 
-  // Permissions check
-  const canCreateIncident = hasPermission(activePersonaId, 'create_incidents');
-  const canAssignTask = hasPermission(activePersonaId, 'assign_tasks');
-  const canCreateAlert = hasPermission(activePersonaId, 'create_alerts');
+  // Disaster Type Distribution for Bar Chart
+  const disasterTypeDistribution = useMemo(() => {
+    const types: Record<string, number> = {};
+    filteredIncidents.forEach((i) => {
+      const typeKey = i.disasterType.toUpperCase();
+      types[typeKey] = (types[typeKey] || 0) + 1;
+    });
+    return Object.keys(types).map((key) => ({
+      name: key,
+      count: types[key],
+    }));
+  }, [filteredIncidents]);
 
   return (
-    <div className="space-y-5 animate-in fade-in duration-150">
-      {/* Page Title & Operational Status Bar */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 pb-3 border-b border-border">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-extrabold text-primary tracking-wide">
-              OPERATIONAL COMMAND OVERVIEW
-            </h1>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emergency/15 text-emergency border border-emergency/40 uppercase font-bold tracking-widest animate-pulse">
-              LIVE EXERCISE
+    <div className="space-y-6">
+      {/* Page Header */}
+      <ResponsivePageHeader
+        title="Emergency Operations Command"
+        kicker="Incident Management Node 01"
+        description="Unified real-time disaster intelligence, tactical field deployment, and life-safety coordination."
+        metadata={
+          <div className="flex items-center gap-2 font-mono text-[11px] text-slate-400">
+            <span className="inline-flex items-center gap-1.5 text-emerald-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <span>Telemetry Synchronized</span>
             </span>
+            <span aria-hidden="true">·</span>
+            <span>Local Time: {new Date().toLocaleTimeString()}</span>
+            <span aria-hidden="true">·</span>
+            <span className="text-amber-400 font-semibold">[DEMO ENVIRONMENT]</span>
           </div>
-          <p className="text-xs text-primary-muted mt-0.5">
-            {settings.operationsCenterName} • Sector: {settings.operatingRegion}
-          </p>
-        </div>
-
-        {/* Quick Action Buttons */}
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            size="sm"
-            variant="danger"
-            icon={Plus}
-            onClick={() => navigate('/incidents')}
-            restricted={!canCreateIncident}
-            restrictedReason="Creating incidents requires Administrator or Incident Commander role."
-          >
-            Create Incident
-          </Button>
-          <Button
-            size="sm"
-            variant="secondary"
-            icon={KanbanSquare}
-            onClick={() => navigate('/tasks')}
-            restricted={!canAssignTask}
-            restrictedReason="Task assignment is restricted for this persona."
-          >
-            Assign Task
-          </Button>
-          <Button
-            size="sm"
-            variant="warning"
-            icon={AlertTriangle}
-            onClick={() => navigate('/alerts')}
-            restricted={!canCreateAlert}
-            restrictedReason="Drafting emergency alerts requires Commander or Administrator role."
-          >
-            Draft Alert
-          </Button>
-        </div>
-      </div>
-
-      {/* Critical Incidents Warning Banner if any */}
-      {criticalIncidents.length > 0 && (
-        <AlertBanner
-          type="emergency"
-          title={`PRIORITY ESCALATION: ${criticalIncidents.length} Critical Incident${criticalIncidents.length > 1 ? 's' : ''} Active`}
-          action={
-            <Link to="/incidents" className="text-xs font-bold text-emergency hover:underline flex items-center gap-1">
-              View Critical <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          }
-        >
-          {criticalIncidents.map(i => `${i.id}: ${i.title}`).join(' • ')}
-        </AlertBanner>
-      )}
-
-      {/* Primary KPI Grid (Directly Derived from Live Store Records) */}
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
-        <StatCard
-          title="Active Incidents"
-          value={activeIncidents.length}
-          subtitle={`${criticalIncidents.length} critical, ${incidents.length} total`}
-          icon={Flame}
-          variant={criticalIncidents.length > 0 ? 'emergency' : 'default'}
-          badgeText={`${incidents.length} TOTAL`}
-          onClick={() => navigate('/incidents')}
-        />
-        <StatCard
-          title="Critical Severity"
-          value={criticalIncidents.length}
-          subtitle="Immediate response required"
-          icon={ShieldAlert}
-          variant="emergency"
-          onClick={() => navigate('/incidents')}
-        />
-        <StatCard
-          title="Response Teams"
-          value={`${availableTeams.length} / ${teams.length}`}
-          subtitle={`${deployedTeams.length} deployed on field`}
-          icon={Users}
-          variant="info"
-          badgeText={`${availableTeams.length} READY`}
-          onClick={() => navigate('/teams')}
-        />
-        <StatCard
-          title="Shelter Capacity"
-          value={`${shelterUtilizationRate}%`}
-          subtitle={`${formatNumber(totalShelterOccupancy)} / ${formatNumber(totalShelterCapacity)} persons`}
-          icon={Home}
-          variant={shelterUtilizationRate > 85 ? 'hazard' : 'safe'}
-          badgeText={`${shelters.length} SHELTERS`}
-          onClick={() => navigate('/shelters')}
-        />
-        <StatCard
-          title="Low Stock Items"
-          value={lowStockResources.length}
-          subtitle={lowStockResources.length > 0 ? 'Replenishment needed' : 'Supplies sufficient'}
-          icon={Boxes}
-          variant={lowStockResources.length > 0 ? 'hazard' : 'safe'}
-          badgeText={`${resources.length} ITEMS`}
-          onClick={() => navigate('/resources')}
-        />
-        <StatCard
-          title="Open Tasks"
-          value={openTasks.length}
-          subtitle={overdueTasks.length > 0 ? `${overdueTasks.length} overdue tasks` : 'All tasks on schedule'}
-          icon={KanbanSquare}
-          variant={overdueTasks.length > 0 ? 'hazard' : 'default'}
-          badgeText={`${overdueTasks.length} OVERDUE`}
-          onClick={() => navigate('/tasks')}
-        />
-      </div>
-
-      {/* Phase 3 Environmental & GIS Intelligence Hub */}
-      <div className="bg-panel border border-border rounded-lg p-4 shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-3 border-b border-border mb-3">
-          <div className="flex items-center gap-2">
-            <Activity className="w-4 h-4 text-operational-cyan" />
-            <h2 className="text-xs font-bold uppercase tracking-wider text-primary">
-              Live Environmental Telemetry & GIS Spatial Intelligence
-            </h2>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-operational-cyan/15 text-operational-cyan border border-operational-cyan/30 font-bold">
-              PHASE 3
-            </span>
-          </div>
-
+        }
+        actions={
           <div className="flex items-center gap-2">
             <button
-              onClick={handleRefreshTelemetry}
-              disabled={isRefreshing}
-              className="text-xs text-primary-muted hover:text-primary flex items-center gap-1.5 px-2.5 py-1 rounded bg-charcoal border border-border transition-colors"
+              type="button"
+              onClick={onRefreshData}
+              aria-label="Refresh telemetry data"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-slate-900 border border-slate-800 hover:bg-slate-850 text-slate-300 text-xs font-mono transition-colors"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-operational-cyan' : ''}`} />
-              <span>{isRefreshing ? 'Syncing...' : 'Sync Telemetry'}</span>
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Sync</span>
             </button>
-            <Link
-              to="/map"
-              className="text-xs font-semibold text-operational-cyan hover:underline flex items-center gap-1"
+            <button
+              type="button"
+              onClick={() => onNavigate('/map')}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded bg-slate-800 hover:bg-slate-750 text-slate-100 text-xs font-mono font-medium border border-slate-700 transition-colors"
             >
-              Open Situation Map &rarr;
-            </Link>
+              <Layers className="w-3.5 h-3.5 text-sky-400" />
+              <span>Situational Map</span>
+            </button>
           </div>
+        }
+      />
+
+      {/* Operational Filter Strip */}
+      <div className="p-3 bg-[#12171e] border border-slate-800 rounded flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Filter className="w-3.5 h-3.5 text-slate-500" />
+          <FilterBar
+            label="Severity"
+            options={[
+              { id: 'all', label: 'All Severities' },
+              { id: 'critical', label: 'Critical' },
+              { id: 'high', label: 'High' },
+              { id: 'medium', label: 'Medium' },
+            ]}
+            selectedId={selectedSeverity}
+            onSelect={setSelectedSeverity}
+          />
+
+          <FilterBar
+            label="Status"
+            options={[
+              { id: 'all', label: 'All Statuses' },
+              { id: 'active', label: 'Active' },
+              { id: 'investigating', label: 'Investigating' },
+              { id: 'contained', label: 'Contained' },
+            ]}
+            selectedId={selectedStatus}
+            onSelect={setSelectedStatus}
+          />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Weather Widget */}
-          <div className="p-3 bg-charcoal rounded border border-border flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-mono text-primary-dim uppercase tracking-wider flex items-center gap-1">
-                  <CloudRain className="w-3.5 h-3.5 text-operational-cyan" />
-                  Meteorological Feed
-                </span>
-                <TelemetryBadge 
-                  status={!weatherReport ? 'unavailable' : weatherReport.isStale ? 'cached' : weatherReport.isLive ? 'live' : 'simulated'} 
-                  label={!weatherReport ? 'UNAVAILABLE' : weatherReport.isStale ? 'CACHED' : weatherReport.isLive ? 'LIVE (Open-Meteo)' : 'SIMULATED'}
-                />
-              </div>
-
-              {weatherReport ? (
-                <div>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-2xl font-extrabold text-primary font-mono">
-                      {weatherReport.temperatureC.toFixed(1)}°C
-                    </span>
-                    <span className="text-xs text-primary-muted capitalize">
-                      {weatherReport.weatherDescription}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-2 mt-2 pt-2 border-t border-border/50 text-[10px] font-mono text-primary-muted">
-                    <div>
-                      <span className="text-primary-dim block flex items-center gap-0.5">
-                        <Wind className="w-3 h-3 text-primary-dim" /> WIND:
-                      </span>
-                      <span className="text-primary font-semibold">{weatherReport.windSpeedKmh.toFixed(0)} km/h</span>
-                    </div>
-                    <div>
-                      <span className="text-primary-dim block">RAIN:</span>
-                      <span className="text-primary font-semibold">{weatherReport.precipitationMm} mm</span>
-                    </div>
-                    <div>
-                      <span className="text-primary-dim block">HUMIDITY:</span>
-                      <span className="text-primary font-semibold">{weatherReport.relativeHumidity}%</span>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-xs text-primary-dim">Connecting to weather feed...</div>
-              )}
-            </div>
-
-            <div className="text-[9px] font-mono text-primary-dim mt-2 truncate">
-              Attribution: {weatherReport?.sourceAttribution || 'Open-Meteo Weather API'}
-            </div>
-          </div>
-
-          {/* Hydrological Telemetry Widget */}
-          <div className="p-3 bg-charcoal rounded border border-border flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-mono text-primary-dim uppercase tracking-wider flex items-center gap-1">
-                  <Droplets className="w-3.5 h-3.5 text-blue-400" />
-                  Hydrology & River Gauges
-                </span>
-                <TelemetryBadge 
-                  status={riverGauges.some(g => g.telemetryType === 'live_modeled' || g.dischargeStatus === 'live_modeled') ? 'live_modeled' : 'simulated'}
-                  label={riverGauges.some(g => g.telemetryType === 'live_modeled' || g.dischargeStatus === 'live_modeled') ? 'LIVE MODELLED' : 'SIMULATED'}
-                />
-              </div>
-
-              {riverGauges.length > 0 ? (
-                <div className="space-y-1.5">
-                  {riverGauges.slice(0, 2).map((gauge) => (
-                    <div key={gauge.stationId} className="p-1.5 bg-panel/60 rounded border border-border text-[11px] space-y-1">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1 truncate max-w-[150px]">
-                          <span className="font-bold text-primary truncate">{gauge.riverName}</span>
-                          <span className={`text-[8px] font-mono px-1 py-0 rounded font-bold uppercase ${
-                            gauge.telemetryType === 'live_modeled' ? 'bg-operational-cyan/20 text-operational-cyan' : 'bg-hazard/20 text-hazard'
-                          }`}>
-                            {gauge.telemetryType === 'live_modeled' ? 'MODEL' : 'SIM'}
-                          </span>
-                        </div>
-                        <span className={`text-[9px] font-mono px-1 py-0.5 rounded font-bold uppercase ${
-                          gauge.floodStage === 'warning' || gauge.floodStage === 'severe' || gauge.floodStage === 'inundation'
-                            ? 'bg-emergency/20 text-emergency'
-                            : 'bg-safe/20 text-safe'
-                        }`}>
-                          {gauge.floodStage}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between text-[10px] font-mono text-primary-dim">
-                        <span>
-                          Discharge: <strong className="text-primary">{gauge.dischargeM3s} m³/s</strong>
-                          <span className="ml-1 text-[8px] px-1 py-0 rounded bg-operational-cyan/15 text-operational-cyan font-semibold">
-                            {gauge.dischargeStatus === 'live_modeled' ? 'GloFAS' : 'SIM'}
-                          </span>
-                        </span>
-                        <span>{gauge.trend}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-[10px] font-mono text-primary-dim">
-                        <span>
-                          Level: <strong className="text-primary">{gauge.waterLevelMeters}m</strong> (Danger: {gauge.dangerLevelMeters}m)
-                          <span className="ml-1 text-[8px] px-1 py-0 rounded bg-hazard/15 text-hazard font-semibold">
-                            BASELINE
-                          </span>
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-xs text-primary-dim">Awaiting hydrology telemetry...</div>
-              )}
-            </div>
-
-            <div className="text-[9px] font-mono text-primary-dim mt-2">
-              Source: Copernicus GloFAS (Discharge) & CWC Benchmark Elevation
-            </div>
-          </div>
-
-          {/* Spatial Geofences & Infrastructure Health */}
-          <div className="p-3 bg-charcoal rounded border border-border flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-mono text-primary-dim uppercase tracking-wider flex items-center gap-1">
-                  <Layers className="w-3.5 h-3.5 text-orange-400" />
-                  Spatial Risk Zones & Health
-                </span>
-                <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400 font-bold uppercase">
-                  {geofences.length} Geofences
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
-                <div className="p-2 bg-panel/60 rounded border border-border">
-                  <span className="text-primary-dim block text-[10px]">CONTAINED INCIDENTS:</span>
-                  <span className="text-base font-extrabold text-emergency">
-                    {spatialReport?.evaluations.reduce((acc, e) => acc + e.incidentCount, 0) ?? 0}
-                  </span>
-                </div>
-                <div className="p-2 bg-panel/60 rounded border border-border">
-                  <span className="text-primary-dim block text-[10px]">DB / API HEALTH:</span>
-                  <span className="text-xs font-bold text-safe flex items-center gap-1 mt-1">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-safe" />
-                    <span>{systemHealth?.status.toUpperCase() || 'HEALTHY'}</span>
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="text-[9px] font-mono text-primary-dim mt-2 flex items-center justify-between">
-              <span>Ray-Casting GIS Engine Active</span>
-              <span className="text-safe">Latency: ~{systemHealth?.latencyMs || 2}ms</span>
-            </div>
-          </div>
+        <div className="flex items-center gap-1.5 shrink-0 self-end md:self-auto">
+          <span className="text-[11px] font-mono text-slate-500 uppercase">Window:</span>
+          {(['24h', '7d', '30d'] as const).map((period) => (
+            <button
+              key={period}
+              type="button"
+              onClick={() => setDateRange(period)}
+              className={`px-2 py-0.5 text-xs font-mono rounded ${
+                dateRange === period
+                  ? 'bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              {period}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Operational Charts & Status Breakdown */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Incident Status Bar Breakdown */}
-        <div className="bg-panel border border-border rounded-lg p-4 flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-primary">
-              Incident Status Distribution
+      {/* Top Metric Cards Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+        <MetricCard
+          label="Total Incidents"
+          value={totalIncidents}
+          subtext="Recorded events"
+          icon={AlertOctagon}
+          onClick={() => onNavigate('/incidents')}
+        />
+        <MetricCard
+          label="Active Emergencies"
+          value={activeEmergencies}
+          subtext="Ongoing operations"
+          variant="critical"
+          icon={Activity}
+          onClick={() => onNavigate('/incidents?status=active')}
+        />
+        <MetricCard
+          label="Critical Threats"
+          value={criticalCount}
+          subtext="Severity level 1"
+          variant="critical"
+          icon={AlertTriangle}
+          onClick={() => onNavigate('/incidents?severity=critical')}
+        />
+        <MetricCard
+          label="Teams Available"
+          value={`${availableTeams} / ${teams.length}`}
+          subtext={`${deployedTeams} deployed on scene`}
+          variant="success"
+          icon={Users}
+          onClick={() => onNavigate('/teams')}
+        />
+        <MetricCard
+          label="Shelters Open"
+          value={`${openShelters} / ${shelters.length}`}
+          subtext={`${Math.round((totalShelterOcc / (totalShelterCap || 1)) * 100)}% capacity`}
+          variant="info"
+          icon={Home}
+          onClick={() => onNavigate('/shelters')}
+        />
+        <MetricCard
+          label="Stock Status"
+          value={`${resources.filter((r) => r.status === 'stocked').length} / ${resources.length}`}
+          subtext="Depots supplied"
+          variant="default"
+          icon={Box}
+          onClick={() => onNavigate('/resources')}
+        />
+        <MetricCard
+          label="Pending Tasks"
+          value={pendingTasks}
+          subtext="Field dispatch queue"
+          variant="warning"
+          icon={CheckSquare}
+          onClick={() => onNavigate('/tasks')}
+        />
+      </div>
+
+      {/* Primary Analytics & Visualizations Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Severity Distribution Donut */}
+        <div className="p-4 bg-[#12171e] border border-slate-800 rounded flex flex-col">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
+            <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-200">
+              Severity Distribution
             </h3>
-            <span className="text-[10px] font-mono text-primary-dim">LIVE DATA</span>
+            <span className="text-[10px] font-mono text-slate-500">[DEMO DATA]</span>
           </div>
 
-          <div className="h-44 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={statusCounts} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-                <XAxis dataKey="status" stroke="#656d76" fontSize={10} tickLine={false} />
-                <YAxis stroke="#656d76" fontSize={10} allowDecimals={false} tickLine={false} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#161b22', borderColor: '#30363d', fontSize: '11px', color: '#f0f3f6' }}
-                  cursor={{ fill: '#21262d' }}
-                />
-                <Bar dataKey="count" fill="#d97706" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-          <p className="text-[10px] text-primary-dim mt-2 text-right">
-            Updates automatically with incident status transitions
-          </p>
-        </div>
-
-        {/* Severity Distribution Donut Chart */}
-        <div className="bg-panel border border-border rounded-lg p-4 flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-primary">
-              Incident Severity Breakdown
-            </h3>
-            <span className="text-[10px] font-mono text-primary-dim">{incidents.length} TOTAL</span>
-          </div>
-
-          <div className="h-44 w-full flex items-center justify-center">
-            {severityChartData.length > 0 ? (
+          <div className="h-56 w-full flex items-center justify-center">
+            {severityDistribution.length === 0 ? (
+              <div className="text-xs font-mono text-slate-500">No matching incident records</div>
+            ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={severityChartData}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={36}
-                    outerRadius={64}
+                    data={severityDistribution}
+                    innerRadius={45}
+                    outerRadius={75}
                     paddingAngle={3}
+                    dataKey="value"
+                    onClick={(data: unknown) => {
+                      const item = data as { id?: string } | undefined;
+                      if (item && item.id) {
+                        onNavigate(`/incidents?severity=${item.id}`);
+                      }
+                    }}
+                    cursor="pointer"
                   >
-                    {severityChartData.map((entry, index) => (
+                    {severityDistribution.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
                   <Tooltip
-                    contentStyle={{ backgroundColor: '#161b22', borderColor: '#30363d', fontSize: '11px', color: '#f0f3f6' }}
+                    contentStyle={{
+                      backgroundColor: '#161c24',
+                      borderColor: '#334155',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      fontFamily: 'monospace',
+                    }}
                   />
                 </PieChart>
               </ResponsiveContainer>
-            ) : (
-              <div className="text-xs text-primary-dim">No incident records found.</div>
             )}
           </div>
 
-          <div className="grid grid-cols-4 gap-1 text-center pt-2 border-t border-border/60">
-            {severityChartData.map(s => (
-              <div key={s.name}>
-                <span className="text-[10px] font-mono text-primary-dim block">{s.name}</span>
-                <span className="text-xs font-bold font-mono" style={{ color: s.color }}>{s.value}</span>
-              </div>
+          <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-850">
+            {severityDistribution.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => onNavigate(`/incidents?severity=${item.id}`)}
+                className="flex items-center justify-between p-1.5 rounded hover:bg-slate-850 text-left transition-colors text-xs font-mono"
+              >
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                  <span className="text-slate-300">{item.name}</span>
+                </div>
+                <span className="text-slate-100 font-bold tabular-nums">{item.value}</span>
+              </button>
             ))}
           </div>
         </div>
 
-        {/* Regional Emergency Overview */}
-        <div className="bg-panel border border-border rounded-lg p-4 flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-primary">
-              Regional Situation Briefing
+        {/* Hazard Types Bar Chart */}
+        <div className="p-4 bg-[#12171e] border border-slate-800 rounded flex flex-col lg:col-span-2">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
+            <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-200">
+              Active Hazard Profiles
             </h3>
-            <span className="text-[10px] font-mono text-safe bg-safe/10 border border-safe/30 px-1.5 py-0.5 rounded">
-              EOC MONITORED
-            </span>
+            <span className="text-xs font-mono text-slate-400">Total: {filteredIncidents.length} Events</span>
           </div>
 
-          <div className="space-y-2.5 text-xs">
-            <div className="p-2.5 bg-panel-subtle rounded border border-border">
-              <span className="text-[10px] font-mono text-primary-dim block uppercase">Primary Threat Vector</span>
-              <p className="text-primary font-semibold mt-0.5">
-                Yamuna River Inundation & Hazardous Vapor Plume
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
-              <div className="p-2 bg-charcoal rounded border border-border">
-                <span className="text-primary-dim block">AFFECTED POP.:</span>
-                <span className="text-primary font-bold">
-                  {formatNumber(incidents.reduce((acc, i) => acc + i.affectedPopulation, 0))}
-                </span>
-              </div>
-              <div className="p-2 bg-charcoal rounded border border-border">
-                <span className="text-primary-dim block">ACTIVE ALERTS:</span>
-                <span className="text-hazard font-bold">
-                  {alerts.filter(a => a.status === 'Approved for Demo').length} Demo Warnings
-                </span>
-              </div>
-            </div>
-
-            <p className="text-[11px] text-primary-muted leading-relaxed">
-              Coordinated relief efforts underway across Sector 4. Evacuation shelters SHL-NORTH-01 and SHL-EAST-02 are operating near peak capacity.
-            </p>
+          <div className="h-56 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={disasterTypeDistribution} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
+                <XAxis
+                  dataKey="name"
+                  tick={{ fill: '#94a3b8', fontSize: 10, fontFamily: 'monospace' }}
+                  angle={-15}
+                  textAnchor="end"
+                />
+                <YAxis tick={{ fill: '#94a3b8', fontSize: 10, fontFamily: 'monospace' }} allowDecimals={false} />
+                <Tooltip
+                  cursor={{ fill: 'rgba(255,255,255,0.03)' }}
+                  contentStyle={{
+                    backgroundColor: '#161c24',
+                    borderColor: '#334155',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    fontFamily: 'monospace',
+                  }}
+                />
+                <Bar
+                  dataKey="count"
+                  fill="#d97706"
+                  radius={[3, 3, 0, 0]}
+                  onClick={(data: unknown) => {
+                    const item = data as { name?: string } | undefined;
+                    if (item && item.name) {
+                      onNavigate(`/incidents?type=${item.name.toLowerCase()}`);
+                    }
+                  }}
+                  cursor="pointer"
+                />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
 
-          <Link
-            to="/map"
-            className="mt-3 w-full inline-flex items-center justify-center gap-1.5 py-1.5 rounded bg-panel-elevated hover:bg-panel-subtle border border-border text-xs font-semibold text-primary transition-colors"
-          >
-            Open Operational Map <ExternalLink className="w-3.5 h-3.5" />
-          </Link>
+          <div className="flex items-center justify-between pt-2 border-t border-slate-850 text-xs font-mono text-slate-500">
+            <span>Click any bar to drill down into corresponding incident logs</span>
+            <button
+              onClick={() => onNavigate('/analytics')}
+              className="text-amber-400 hover:text-amber-300 font-medium transition-colors"
+            >
+              Open Full Intelligence →
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Bottom Grid: Recent Incidents & Demo Alert Status */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {/* 2-Column Operational Feeds: Recent Incidents & Tactical Alerts */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Incidents Table */}
-        <div className="bg-panel border border-border rounded-lg overflow-hidden">
-          <div className="p-3.5 border-b border-border bg-panel-card flex items-center justify-between">
+        <div className="p-4 bg-[#12171e] border border-slate-800 rounded lg:col-span-2 flex flex-col">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
             <div className="flex items-center gap-2">
-              <Flame className="w-4 h-4 text-emergency" />
-              <h3 className="text-xs font-bold text-primary uppercase tracking-wider">
-                Recent Incidents ({incidents.length})
+              <AlertOctagon className="w-4 h-4 text-amber-500" />
+              <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-200">
+                Recent Incident Log
               </h3>
             </div>
-            <Link to="/incidents" className="text-xs text-primary-muted hover:text-primary">
-              View all &rarr;
-            </Link>
+            <button
+              onClick={() => onNavigate('/incidents')}
+              className="text-xs font-mono text-amber-400 hover:text-amber-300 inline-flex items-center gap-1 transition-colors"
+            >
+              <span>View All ({incidents.length})</span>
+              <ArrowRight className="w-3 h-3" />
+            </button>
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-panel-subtle text-[10px] font-mono text-primary-dim uppercase border-b border-border">
-                <tr>
-                  <th className="p-2.5">ID & Title</th>
-                  <th className="p-2.5">Severity</th>
-                  <th className="p-2.5">Status</th>
-                  <th className="p-2.5">Reported</th>
+            <table className="w-full text-left text-xs font-mono">
+              <thead>
+                <tr className="text-slate-500 border-b border-slate-850 pb-2">
+                  <th className="py-2 px-2">ID</th>
+                  <th className="py-2 px-2">Incident Title</th>
+                  <th className="py-2 px-2">Severity</th>
+                  <th className="py-2 px-2">Location</th>
+                  <th className="py-2 px-2">Status</th>
+                  <th className="py-2 px-2 text-right">Reported</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border/40 font-mono">
-                {incidents.slice(0, 5).map((inc) => (
+              <tbody className="divide-y divide-slate-850/60">
+                {filteredIncidents.slice(0, 5).map((inc) => (
                   <tr
                     key={inc.id}
-                    onClick={() => navigate('/incidents')}
-                    className="hover:bg-panel-elevated cursor-pointer transition-colors"
+                    onClick={() => onNavigate(`/incidents?id=${inc.id}`)}
+                    className="hover:bg-slate-850/50 cursor-pointer transition-colors"
                   >
-                    <td className="p-2.5">
-                      <div className="font-bold text-primary font-sans">{inc.title}</div>
-                      <div className="text-[10px] text-primary-dim">{inc.id} • {inc.locationName}</div>
+                    <td className="py-2.5 px-2 text-amber-400 font-semibold whitespace-nowrap">
+                      {inc.id}
                     </td>
-                    <td className="p-2.5">
-                      <SeverityBadge severity={inc.severity} />
+                    <td className="py-2.5 px-2 text-slate-200 font-sans font-medium max-w-[200px] truncate">
+                      {inc.title}
                     </td>
-                    <td className="p-2.5">
-                      <StatusBadge status={inc.status} />
+                    <td className="py-2.5 px-2 whitespace-nowrap">
+                      <SeverityBadge severity={inc.severity} size="sm" />
                     </td>
-                    <td className="p-2.5 text-primary-dim text-[11px]">
-                      {formatRelativeTime(inc.reportedAt)}
+                    <td className="py-2.5 px-2 text-slate-400 max-w-[150px] truncate">
+                      {inc.location}
+                    </td>
+                    <td className="py-2.5 px-2 whitespace-nowrap">
+                      <StatusBadge status={inc.status} size="sm" />
+                    </td>
+                    <td className="py-2.5 px-2 text-right text-slate-500 whitespace-nowrap tabular-nums">
+                      {new Date(inc.reportedTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </td>
                   </tr>
                 ))}
@@ -601,50 +467,95 @@ export const DashboardPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Recent Emergency Alerts & CAP Status */}
-        <div className="bg-panel border border-border rounded-lg overflow-hidden">
-          <div className="p-3.5 border-b border-border bg-panel-card flex items-center justify-between">
+        {/* Latest High-Priority Alerts */}
+        <div className="p-4 bg-[#12171e] border border-slate-800 rounded flex flex-col">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
             <div className="flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-hazard" />
-              <h3 className="text-xs font-bold text-primary uppercase tracking-wider">
-                Emergency Alerts ({alerts.length})
+              <AlertTriangle className="w-4 h-4 text-rose-500" />
+              <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-200">
+                Active Tactical Alerts
               </h3>
             </div>
-            <Link to="/alerts" className="text-xs text-primary-muted hover:text-primary">
-              Manage &rarr;
-            </Link>
+            <button
+              onClick={() => onNavigate('/alerts')}
+              className="text-xs font-mono text-amber-400 hover:text-amber-300 transition-colors"
+            >
+              Broadcast Center →
+            </button>
           </div>
 
-          <div className="divide-y divide-border/40">
-            {alerts.length === 0 ? (
-              <div className="p-6 text-center text-xs text-primary-dim">
-                No alerts currently drafted or approved.
-              </div>
-            ) : (
-              alerts.slice(0, 4).map((alt) => (
-                <div
-                  key={alt.id}
-                  onClick={() => navigate('/alerts')}
-                  className="p-3 hover:bg-panel-elevated cursor-pointer transition-colors"
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded font-bold bg-panel-subtle text-primary border border-border">
-                      {alt.type.toUpperCase()}
-                    </span>
-                    <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${
-                      alt.status === 'Approved for Demo' 
-                        ? 'bg-emergency/15 text-emergency border border-emergency/30' 
-                        : 'bg-panel-subtle text-primary-muted border border-border'
-                    }`}>
-                      {alt.status}
-                    </span>
-                  </div>
-                  <h4 className="text-xs font-bold text-primary">{alt.title}</h4>
-                  <p className="text-[11px] text-primary-muted line-clamp-1 mt-0.5">{alt.body}</p>
+          <div className="space-y-3 flex-1 overflow-y-auto max-h-[300px]">
+            {alerts.slice(0, 3).map((alert) => (
+              <div
+                key={alert.id}
+                className="p-3 rounded border border-slate-800 bg-slate-900/80 space-y-2 text-xs"
+              >
+                <div className="flex items-center justify-between">
+                  <SeverityBadge severity={alert.severity} size="sm" />
+                  <span className="text-[10px] font-mono text-slate-500">
+                    {new Date(alert.issuedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
                 </div>
-              ))
-            )}
+                <h4 className="font-semibold text-slate-100 text-xs leading-snug">
+                  {alert.title}
+                </h4>
+                <p className="text-[11px] text-slate-400 line-clamp-2">
+                  {alert.message}
+                </p>
+                <div className="pt-2 border-t border-slate-850 flex items-center justify-between text-[11px] font-mono">
+                  <span className="text-slate-500 truncate max-w-[140px]">{alert.targetRegion}</span>
+                  {!alert.acknowledgedByCommander ? (
+                    <button
+                      type="button"
+                      onClick={() => onAcknowledgeAlert(alert.id)}
+                      className="inline-flex items-center gap-1 text-emerald-400 hover:text-emerald-300 transition-colors"
+                    >
+                      <Check className="w-3 h-3" />
+                      <span>Acknowledge</span>
+                    </button>
+                  ) : (
+                    <span className="text-slate-500">✓ Acknowledged</span>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
+        </div>
+      </div>
+
+      {/* Recent Operational Audit Activity Feed */}
+      <div className="p-4 bg-[#12171e] border border-slate-800 rounded">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
+          <div className="flex items-center gap-2">
+            <Activity className="w-4 h-4 text-emerald-500" />
+            <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-200">
+              Response Command Audit Trail
+            </h3>
+          </div>
+          <button
+            onClick={() => onNavigate('/audit-log')}
+            className="text-xs font-mono text-amber-400 hover:text-amber-300 transition-colors"
+          >
+            Full Audit Stream ({auditLogs.length}) →
+          </button>
+        </div>
+
+        <div className="divide-y divide-slate-850/60 font-mono text-xs">
+          {auditLogs.slice(0, 4).map((log) => (
+            <div key={log.id} className="py-2.5 flex items-start justify-between gap-3">
+              <div className="flex items-start gap-2.5 min-w-0">
+                <span className="text-amber-500/80 font-semibold shrink-0">[{log.action}]</span>
+                <span className="text-slate-300 truncate font-sans text-xs">{log.details}</span>
+              </div>
+              <div className="flex items-center gap-3 text-slate-500 text-[11px] shrink-0">
+                <span>{log.actor.name}</span>
+                <span>·</span>
+                <span className="tabular-nums">
+                  {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                </span>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>

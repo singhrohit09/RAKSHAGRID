@@ -1,0 +1,6 @@
+{
+  "name": "RakshaGrid - Disaster Intelligence & Coordinated Response",
+  "description": "Professional disaster intelligence and emergency response platform for coordinated disaster operations, incident triage, shelter management, and field resource dispatch.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,323 +1,340 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import React, { useState } from 'react';
-import { useRaksha } from '../context/RakshaContext';
-import { 
-  Settings as SettingsIcon, 
-  RotateCcw, 
-  Save, 
-  MapPin, 
-  Bell, 
-  Clock, 
-  Radio, 
-  Check, 
-  Database
+import {
+  Settings,
+  Shield,
+  RotateCcw,
+  CheckCircle,
+  AlertTriangle,
+  Lock,
+  Layers,
+  Database,
+  Cloud,
 } from 'lucide-react';
-import { Button } from '../components/common/Button';
+import { useAuth } from '../context/AuthContext';
+import { Role } from '../types';
+import { ResponsivePageHeader } from '../components/common/ResponsivePageHeader';
 import { ConfirmDialog } from '../components/common/ConfirmDialog';
-import { hasPermission, getPermissionRestrictionMessage } from '../utils/permissions';
 
-export const SettingsPage: React.FC = () => {
-  const { settings, updateSettings, resetDemoData, activePersonaId } = useRaksha();
+interface SettingsPageProps {
+  onResetDemoData: () => void;
+}
 
-  const [formState, setFormState] = useState({ ...settings });
-  const [saveSuccess, setSaveSuccess] = useState(false);
-  const [isResetOpen, setIsResetOpen] = useState(false);
-
-  const canChangeSettings = hasPermission(activePersonaId, 'change_settings');
-  const canResetData = hasPermission(activePersonaId, 'reset_demo_data');
+export const SettingsPage: React.FC<SettingsPageProps> = ({ onResetDemoData }) => {
+  const { user, role, permissions } = useAuth();
+  const [telemetryInterval, setTelemetryInterval] = useState('15s');
+  const [offlineSyncEnabled, setOfflineSyncEnabled] = useState(true);
+  const [soundAlerts, setSoundAlerts] = useState(true);
+  const [confirmResetOpen, setConfirmResetOpen] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    updateSettings(formState);
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 2500);
+    if (!permissions.canManageSettings) return;
+    setIsSaved(true);
+    setTimeout(() => setIsSaved(false), 2500);
   };
 
+  const rolesMatrix: { role: Role; label: string; perms: Record<string, boolean> }[] = [
+    {
+      role: 'administrator',
+      label: 'Administrator',
+      perms: {
+        'Report Incidents': true,
+        'Edit Incidents': true,
+        'Delete Records': true,
+        'Broadcast Warnings': true,
+        'Dispatch Forces': true,
+        'Allocate Resources': true,
+        'Manage Shelters': true,
+        'System Settings': true,
+        'Audit Inspection': true,
+      },
+    },
+    {
+      role: 'incident_commander',
+      label: 'Incident Commander',
+      perms: {
+        'Report Incidents': true,
+        'Edit Incidents': true,
+        'Delete Records': false,
+        'Broadcast Warnings': true,
+        'Dispatch Forces': true,
+        'Allocate Resources': true,
+        'Manage Shelters': true,
+        'System Settings': false,
+        'Audit Inspection': true,
+      },
+    },
+    {
+      role: 'field_responder',
+      label: 'Field Responder',
+      perms: {
+        'Report Incidents': true,
+        'Edit Incidents': true,
+        'Delete Records': false,
+        'Broadcast Warnings': false,
+        'Dispatch Forces': false,
+        'Allocate Resources': false,
+        'Manage Shelters': false,
+        'System Settings': false,
+        'Audit Inspection': false,
+      },
+    },
+    {
+      role: 'logistics_officer',
+      label: 'Logistics Officer',
+      perms: {
+        'Report Incidents': false,
+        'Edit Incidents': false,
+        'Delete Records': false,
+        'Broadcast Warnings': false,
+        'Dispatch Forces': false,
+        'Allocate Resources': true,
+        'Manage Shelters': true,
+        'System Settings': false,
+        'Audit Inspection': false,
+      },
+    },
+    {
+      role: 'read_only_analyst',
+      label: 'Read-Only Analyst',
+      perms: {
+        'Report Incidents': false,
+        'Edit Incidents': false,
+        'Delete Records': false,
+        'Broadcast Warnings': false,
+        'Dispatch Forces': false,
+        'Allocate Resources': false,
+        'Manage Shelters': false,
+        'System Settings': false,
+        'Audit Inspection': false,
+      },
+    },
+  ];
+
   return (
-    <div className="space-y-5 animate-in fade-in duration-150 max-w-4xl">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-border">
-        <div>
-          <div className="flex items-center gap-2">
-            <SettingsIcon className="w-5 h-5 text-primary-muted" />
-            <h1 className="text-xl font-extrabold text-primary tracking-wide">
-              SYSTEM CONFIGURATION & OPERATIONAL PREFERENCES
-            </h1>
+      <ResponsivePageHeader
+        title="Agency Configuration & Operational Security"
+        kicker="System Administration Node"
+        description="Operational cadence configurations, telemetry polling frequencies, offline storage sync, and role access control matrix."
+        metadata={
+          <div className="flex items-center gap-2 font-mono text-[11px] text-slate-400">
+            <span>Terminal Version: Phase 1 Operational Foundation</span>
+            <span>·</span>
+            <span className="text-amber-400 font-semibold">Local Storage Mode</span>
           </div>
-          <p className="text-xs text-primary-muted mt-0.5">
-            Configure regional jurisdiction, operational time display, default map views, and simulated feeds.
-          </p>
-        </div>
+        }
+      />
 
-        {saveSuccess && (
-          <span className="text-xs font-mono text-safe bg-safe/10 border border-safe/30 px-2.5 py-1 rounded flex items-center gap-1.5 animate-in fade-in">
-            <Check className="w-4 h-4" /> Preferences Saved
-          </span>
-        )}
-      </div>
-
-      <form onSubmit={handleSave} className="space-y-5">
-        {/* Section 1: Application Identity */}
-        <div className="bg-panel border border-border rounded-lg p-4 space-y-3">
-          <div className="flex items-center gap-2 pb-2 border-b border-border text-xs font-bold uppercase tracking-wider text-primary">
-            <Radio className="w-4 h-4 text-hazard" />
-            Operational Center & Jurisdiction
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-            <div>
-              <label className="font-semibold text-primary block mb-1">Emergency Operations Center (EOC) Name</label>
-              <input
-                type="text"
-                value={formState.operationsCenterName}
-                onChange={(e) => setFormState({ ...formState, operationsCenterName: e.target.value })}
-                className="w-full bg-charcoal border border-border rounded px-3 py-2 text-primary focus:outline-none"
-              />
-            </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column: Settings Configuration */}
+        <div className="lg:col-span-2 space-y-6">
+          <form onSubmit={handleSave} className="p-5 bg-[#12171e] border border-slate-800 rounded space-y-4">
+            {!permissions.canManageSettings && (
+              <div className="p-2.5 rounded bg-amber-950/30 border border-amber-800/60 text-xs font-mono text-amber-300 flex items-center gap-2">
+                <Lock className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>Read-Only Configuration: Modifying operational telemetry cadence and executing data resets requires Administrator role.</span>
+              </div>
+            )}
+            <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-200 pb-2 border-b border-slate-850">
+              Terminal Runtime Parameters
+            </h3>
 
             <div>
-              <label className="font-semibold text-primary block mb-1">Designated District / Sector</label>
-              <input
-                type="text"
-                value={formState.operatingRegion}
-                onChange={(e) => setFormState({ ...formState, operatingRegion: e.target.value })}
-                className="w-full bg-charcoal border border-border rounded px-3 py-2 text-primary focus:outline-none"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Section 2: Display & Time Formatting */}
-        <div className="bg-panel border border-border rounded-lg p-4 space-y-3">
-          <div className="flex items-center gap-2 pb-2 border-b border-border text-xs font-bold uppercase tracking-wider text-primary">
-            <Clock className="w-4 h-4 text-operational-cyan" />
-            Operational Time & Format
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-            <div>
-              <label className="font-semibold text-primary block mb-1">Time Zone Specification</label>
+              <label className="block text-xs font-mono uppercase text-slate-300 mb-1">
+                Telemetry Synchronization Cadence:
+              </label>
               <select
-                value={formState.timeZone}
-                onChange={(e) => setFormState({ ...formState, timeZone: e.target.value })}
-                className="w-full bg-charcoal border border-border rounded px-3 py-2 text-primary focus:outline-none"
+                disabled={!permissions.canManageSettings}
+                value={telemetryInterval}
+                onChange={(e) => setTelemetryInterval(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded text-xs font-mono text-slate-100 focus:outline-none focus:border-amber-500/80 disabled:opacity-50"
               >
-                <option value="Asia/Kolkata (IST)">Asia/Kolkata (IST • UTC+05:30)</option>
-                <option value="UTC">UTC (Universal Coordinated Time)</option>
+                <option value="5s">Real-Time Polling (Every 5 seconds - High Battery)</option>
+                <option value="15s">Standard Tactical Polling (Every 15 seconds - Recommended)</option>
+                <option value="60s">Battery-Saver Emergency Mode (Every 60 seconds)</option>
               </select>
-            </div>
-
-            <div>
-              <label className="font-semibold text-primary block mb-1">Military 24-Hour Time Format</label>
-              <div className="flex items-center gap-4 mt-2">
-                <label className="flex items-center gap-2 cursor-pointer text-primary">
-                  <input
-                    type="radio"
-                    name="use24Hour"
-                    checked={formState.use24HourFormat}
-                    onChange={() => setFormState({ ...formState, use24HourFormat: true })}
-                    className="text-primary"
-                  />
-                  <span>24-Hour (14:30:00)</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer text-primary">
-                  <input
-                    type="radio"
-                    name="use24Hour"
-                    checked={!formState.use24HourFormat}
-                    onChange={() => setFormState({ ...formState, use24HourFormat: false })}
-                    className="text-primary"
-                  />
-                  <span>12-Hour AM/PM</span>
-                </label>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Section 3: Default Map View */}
-        <div className="bg-panel border border-border rounded-lg p-4 space-y-3">
-          <div className="flex items-center gap-2 pb-2 border-b border-border text-xs font-bold uppercase tracking-wider text-primary">
-            <MapPin className="w-4 h-4 text-safe" />
-            Default Map View & Staging Coordinates
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-            <div>
-              <label className="font-semibold text-primary block mb-1">Default Center Latitude</label>
-              <input
-                type="number"
-                step="any"
-                value={formState.mapDefaultLat}
-                onChange={(e) => setFormState({ ...formState, mapDefaultLat: parseFloat(e.target.value) || 28.6139 })}
-                className="w-full bg-charcoal border border-border rounded px-3 py-2 font-mono text-primary focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="font-semibold text-primary block mb-1">Default Center Longitude</label>
-              <input
-                type="number"
-                step="any"
-                value={formState.mapDefaultLng}
-                onChange={(e) => setFormState({ ...formState, mapDefaultLng: parseFloat(e.target.value) || 77.2090 })}
-                className="w-full bg-charcoal border border-border rounded px-3 py-2 font-mono text-primary focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="font-semibold text-primary block mb-1">Default Zoom Level</label>
-              <input
-                type="number"
-                min="5"
-                max="18"
-                value={formState.mapDefaultZoom}
-                onChange={(e) => setFormState({ ...formState, mapDefaultZoom: parseInt(e.target.value) || 12 })}
-                className="w-full bg-charcoal border border-border rounded px-3 py-2 font-mono text-primary focus:outline-none"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Section 4: Notification Preferences */}
-        <div className="bg-panel border border-border rounded-lg p-4 space-y-3">
-          <div className="flex items-center gap-2 pb-2 border-b border-border text-xs font-bold uppercase tracking-wider text-primary">
-            <Bell className="w-4 h-4 text-hazard" />
-            In-App Notification Preferences
-          </div>
-
-          <div className="space-y-2 text-xs">
-            <label className="flex items-center gap-2 cursor-pointer text-primary">
-              <input
-                type="checkbox"
-                checked={formState.demoNotificationsEnabled}
-                onChange={(e) => setFormState({ ...formState, demoNotificationsEnabled: e.target.checked })}
-                className="rounded border-border text-emergency"
-              />
-              <span>Enable In-App Notification Center Toasts</span>
-            </label>
-
-            <label className="flex items-center gap-2 cursor-pointer text-primary">
-              <input
-                type="checkbox"
-                checked={formState.soundAlertsEnabled}
-                onChange={(e) => setFormState({ ...formState, soundAlertsEnabled: e.target.checked })}
-                className="rounded border-border text-emergency"
-              />
-              <span>Enable Operational Audio Alert Chimes (Simulated)</span>
-            </label>
-          </div>
-        </div>
-
-        {/* Section 5: Integration Feeds Monitor (Clear Phase 1 Simulated Status) */}
-        <div className="bg-panel border border-border rounded-lg p-4 space-y-3">
-          <div className="flex items-center justify-between pb-2 border-b border-border text-xs font-bold uppercase tracking-wider text-primary">
-            <span className="flex items-center gap-2">
-              <Radio className="w-4 h-4 text-operational-cyan" />
-              External Service Feeds Status
-            </span>
-            <span className="text-[10px] font-mono text-hazard">PHASE 1 SIMULATED</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
-            <div className="p-2.5 bg-charcoal rounded border border-border flex items-center justify-between">
-              <div>
-                <span className="text-primary font-bold block">IMD Doppler Weather Radar Feed</span>
-                <span className="text-[10px] text-primary-dim">Precipitation & cyclone tracking</span>
-              </div>
-              <span className="text-[10px] px-2 py-0.5 rounded bg-safe/15 text-safe border border-safe/30">
-                SIMULATED
-              </span>
-            </div>
-
-            <div className="p-2.5 bg-charcoal rounded border border-border flex items-center justify-between">
-              <div>
-                <span className="text-primary font-bold block">National Seismological Network</span>
-                <span className="text-[10px] text-primary-dim">Richter magnitude telemetry</span>
-              </div>
-              <span className="text-[10px] px-2 py-0.5 rounded bg-safe/15 text-safe border border-safe/30">
-                SIMULATED
-              </span>
-            </div>
-
-            <div className="p-2.5 bg-charcoal rounded border border-border flex items-center justify-between">
-              <div>
-                <span className="text-primary font-bold block">Municipal Siren Gateway</span>
-                <span className="text-[10px] text-primary-dim">Acoustic emergency sirens</span>
-              </div>
-              <span className="text-[10px] px-2 py-0.5 rounded bg-hazard/15 text-hazard border border-hazard/30">
-                OFFLINE IN DEMO
-              </span>
-            </div>
-
-            <div className="p-2.5 bg-charcoal rounded border border-border flex items-center justify-between">
-              <div>
-                <span className="text-primary font-bold block">CAP Telecommunication Gateway</span>
-                <span className="text-[10px] text-primary-dim">Cell Broadcast & SMS routing</span>
-              </div>
-              <span className="text-[10px] px-2 py-0.5 rounded bg-hazard/15 text-hazard border border-hazard/30">
-                OFFLINE IN DEMO
-              </span>
-            </div>
-          </div>
-          <p className="text-[10px] text-primary-dim">
-            *External gateways will be attached in Phase 3 after production security authorization.
-          </p>
-        </div>
-
-        {/* Section 6: Data Reset & Purge */}
-        <div className="bg-panel border border-border rounded-lg p-4 space-y-3">
-          <div className="flex items-center justify-between pb-2 border-b border-border text-xs font-bold uppercase tracking-wider text-emergency">
-            <span className="flex items-center gap-2">
-              <Database className="w-4 h-4 text-emergency" />
-              Demo Data Management & Factory Reset
-            </span>
-          </div>
-
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs">
-            <div>
-              <p className="text-primary font-semibold">Restore Baseline Disaster Scenario</p>
-              <p className="text-primary-muted text-[11px] mt-0.5">
-                Resets all incidents, teams, shelters, resources, tasks, and audit logs back to the default Indraprashtha Sector 4 scenario.
+              <p className="mt-1 text-[11px] text-slate-500">
+                Determines situational map and alert stream re-query frequency.
               </p>
             </div>
 
-            <Button
-              type="button"
-              variant="danger"
-              size="sm"
-              icon={RotateCcw}
-              onClick={() => setIsResetOpen(true)}
-              restricted={!canResetData}
-              restrictedReason={getPermissionRestrictionMessage(activePersonaId, 'reset_demo_data')}
-            >
-              Reset All Demo Data
-            </Button>
+            <div className="pt-2 border-t border-slate-850 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-medium text-slate-200">Local Offline Resilient Caching</div>
+                  <div className="text-[11px] text-slate-500">
+                    Cache active incident and shelter records in IndexedDB/LocalStorage for network dropouts.
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  disabled={!permissions.canManageSettings}
+                  onClick={() => setOfflineSyncEnabled(!offlineSyncEnabled)}
+                  className={`w-11 h-6 rounded-full transition-colors relative disabled:opacity-50 ${
+                    offlineSyncEnabled ? 'bg-amber-500' : 'bg-slate-800'
+                  }`}
+                >
+                  <span
+                    className={`absolute top-1 left-1 bg-slate-950 w-4 h-4 rounded-full transition-transform ${
+                      offlineSyncEnabled ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-medium text-slate-200">Acoustic Warning Sirens</div>
+                  <div className="text-[11px] text-slate-500">
+                    Play synthesized alert chime when new Critical / Emergency CAP warning is received.
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  disabled={!permissions.canManageSettings}
+                  onClick={() => setSoundAlerts(!soundAlerts)}
+                  className={`w-11 h-6 rounded-full transition-colors relative disabled:opacity-50 ${
+                    soundAlerts ? 'bg-amber-500' : 'bg-slate-800'
+                  }`}
+                >
+                  <span
+                    className={`absolute top-1 left-1 bg-slate-950 w-4 h-4 rounded-full transition-transform ${
+                      soundAlerts ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-slate-850 flex items-center justify-between">
+              {isSaved ? (
+                <span className="text-xs font-mono text-emerald-400 flex items-center gap-1">
+                  <CheckCircle className="w-3.5 h-3.5" />
+                  <span>Preferences Saved to Local Terminal</span>
+                </span>
+              ) : (
+                <span />
+              )}
+              <button
+                type="submit"
+                disabled={!permissions.canManageSettings}
+                className="px-4 py-1.5 text-xs font-mono font-bold rounded bg-amber-500 hover:bg-amber-400 text-slate-950 transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Save Preferences
+              </button>
+            </div>
+          </form>
+
+          {/* Role-Based Access Control (RBAC) Matrix Reference */}
+          <div className="p-5 bg-[#12171e] border border-slate-800 rounded space-y-3">
+            <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-200 pb-2 border-b border-slate-850 flex items-center justify-between">
+              <span>Operational Role-Based Access Control (RBAC) Matrix</span>
+              <span className="text-[10px] text-amber-400">Current Role: {role.toUpperCase()}</span>
+            </h3>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs font-mono">
+                <thead>
+                  <tr className="border-b border-slate-850 text-slate-400 text-[11px]">
+                    <th className="py-2 px-2">Operational Role</th>
+                    <th className="py-2 px-2 text-center">Incidents</th>
+                    <th className="py-2 px-2 text-center">Delete</th>
+                    <th className="py-2 px-2 text-center">Broadcast</th>
+                    <th className="py-2 px-2 text-center">Forces</th>
+                    <th className="py-2 px-2 text-center">Supplies</th>
+                    <th className="py-2 px-2 text-center">Audit</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-850/60">
+                  {rolesMatrix.map((r) => {
+                    const isCurrent = r.role === role;
+                    return (
+                      <tr key={r.role} className={isCurrent ? 'bg-amber-500/10' : ''}>
+                        <td className="py-2 px-2 font-medium text-slate-200">
+                          {r.label} {isCurrent && <span className="text-amber-400 font-bold">(Active)</span>}
+                        </td>
+                        <td className="py-2 px-2 text-center">
+                          {r.perms['Report Incidents'] ? '✓' : '—'}
+                        </td>
+                        <td className="py-2 px-2 text-center">
+                          {r.perms['Delete Records'] ? '✓' : '—'}
+                        </td>
+                        <td className="py-2 px-2 text-center">
+                          {r.perms['Broadcast Warnings'] ? '✓' : '—'}
+                        </td>
+                        <td className="py-2 px-2 text-center">
+                          {r.perms['Dispatch Forces'] ? '✓' : '—'}
+                        </td>
+                        <td className="py-2 px-2 text-center">
+                          {r.perms['Allocate Resources'] ? '✓' : '—'}
+                        </td>
+                        <td className="py-2 px-2 text-center">
+                          {r.perms['Audit Inspection'] ? '✓' : '—'}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
-        {/* Save Bar */}
-        <div className="flex items-center justify-end gap-3 pt-2">
-          <Button
-            type="submit"
-            variant="primary"
-            icon={Save}
-            restricted={!canChangeSettings}
-            restrictedReason={getPermissionRestrictionMessage(activePersonaId, 'change_settings')}
-          >
-            Save Operational Preferences
-          </Button>
-        </div>
-      </form>
+        {/* Right Column: Phase 1 Sandbox & Demo Reset */}
+        <div className="space-y-6">
+          <div className="p-4 rounded border border-amber-800/60 bg-amber-950/20 text-xs font-mono space-y-2">
+            <div className="flex items-center gap-2 text-amber-400 font-bold">
+              <Database className="w-4 h-4" />
+              <span>Phase 1 Sandbox Architecture</span>
+            </div>
+            <p className="text-slate-300 leading-relaxed">
+              This terminal operates in verified Phase 1 Development Mode. All additions (incidents, dispatch updates, alerts, tasks) are held in resilient localStorage and survive page reloads.
+            </p>
+            <div className="pt-2 border-t border-amber-900/40 text-[11px] text-amber-400">
+              Phase 2 Roadmap: PostgreSQL relational persistence via Cloud SQL and multi-agency cloud synchronization.
+            </div>
+          </div>
 
-      {/* Reset Confirmation */}
+          <div className="p-4 rounded border border-rose-900/50 bg-[#161012] space-y-2.5">
+            <div className="flex items-center gap-2 text-rose-400 font-mono font-bold text-xs">
+              <RotateCcw className="w-4 h-4" />
+              <span>Factory Demo Reset</span>
+            </div>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Restore initial disaster scenario data (Cyclone Ambar, Cuttack flooding, Kalimpong landslide, and pre-seeded response assets).
+            </p>
+            <button
+              type="button"
+              disabled={!permissions.canManageSettings}
+              onClick={() => setConfirmResetOpen(true)}
+              className="w-full mt-2 py-2 text-xs font-mono font-bold rounded bg-rose-950/80 hover:bg-rose-900 border border-rose-800 text-rose-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Reset All Demo Data
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Confirm Reset Dialog */}
       <ConfirmDialog
-        isOpen={isResetOpen}
-        onClose={() => setIsResetOpen(false)}
-        onConfirm={resetDemoData}
-        title="Confirm Factory Reset of Demo Records?"
-        message="This will overwrite local changes across all modules and restore initial prototype fixtures."
-        confirmLabel="Reset All Records"
-        variant="danger"
+        isOpen={confirmResetOpen}
+        title="Reset Demo Dataset"
+        message="This will restore all incidents, teams, shelters, tasks, resources, and alerts back to the original baseline scenario. All custom test entries will be cleared."
+        confirmLabel="Reset to Initial Baseline"
+        isDestructive
+        onConfirm={() => {
+          onResetDemoData();
+          setConfirmResetOpen(false);
+        }}
+        onCancel={() => setConfirmResetOpen(false)}
       />
     </div>
   );

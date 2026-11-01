@@ -1,357 +1,162 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import React, { useState, useMemo } from 'react';
-import { useRaksha } from '../context/RakshaContext';
-import { ResourceItem, ResourceCategory } from '../types/resource';
-import { 
-  Boxes, 
-  Search, 
-  Plus, 
-  Edit3, 
-  Trash2, 
-  ArrowUpRight, 
-  ArrowDownLeft
-} from 'lucide-react';
-import { Button } from '../components/common/Button';
-import { Modal } from '../components/common/Modal';
-import { ConfirmDialog } from '../components/common/ConfirmDialog';
-import { hasPermission, getPermissionRestrictionMessage } from '../utils/permissions';
-import { formatNumber } from '../utils/formatters';
+import { Box, Send, MapPin, CheckCircle, AlertTriangle, ArrowRight, Layers } from 'lucide-react';
+import { Resource, ResourceCategory, Team } from '../types';
+import { useAuth } from '../context/AuthContext';
+import { ResponsivePageHeader } from '../components/common/ResponsivePageHeader';
+import { StatusBadge } from '../components/common/StatusBadge';
+import { SearchBar } from '../components/common/SearchBar';
+import { FilterBar } from '../components/common/FilterBar';
 
-export const ResourcesPage: React.FC = () => {
-  const { 
-    resources, 
-    activePersonaId, 
-    addResource, 
-    updateResource, 
-    allocateResource, 
-    releaseResource, 
-    deleteResource 
-  } = useRaksha();
+interface ResourcesPageProps {
+  resources: Resource[];
+  teams: Team[];
+  onAllocateResource: (resourceId: string, quantity: number, teamName: string) => void;
+}
 
+export const ResourcesPage: React.FC<ResourcesPageProps> = ({
+  resources,
+  teams,
+  onAllocateResource,
+}) => {
+  const { permissions } = useAuth();
   const [search, setSearch] = useState('');
-  const [filterCategory, setFilterCategory] = useState<string>('all');
-  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
 
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [editingResource, setEditingResource] = useState<ResourceItem | null>(null);
-  const [allocatingResource, setAllocatingResource] = useState<ResourceItem | null>(null);
-  const [releasingResource, setReleasingResource] = useState<ResourceItem | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-
-  // Allocation & Release Input State
-  const [actionAmount, setActionAmount] = useState<number>(10);
-  const [actionNote, setActionNote] = useState<string>('');
-  const [actionError, setActionError] = useState<string | null>(null);
-
-  // Form State
-  const [formData, setFormData] = useState({
-    name: '',
-    category: 'food_water' as ResourceCategory,
-    quantityAvailable: 1000,
-    quantityAllocated: 0,
-    unit: 'units',
-    storageLocation: 'Central Supply Depot',
-    minThreshold: 200
-  });
-
-  const canManage = hasPermission(activePersonaId, 'manage_resources');
+  // Allocation modal
+  const [allocatingItem, setAllocatingItem] = useState<Resource | null>(null);
+  const [dispatchQty, setDispatchQty] = useState<number>(1);
+  const [selectedTeamName, setSelectedTeamName] = useState<string>(teams[0]?.name || '');
 
   const filteredResources = useMemo(() => {
     return resources.filter((r) => {
-      const matchSearch = 
-        r.name.toLowerCase().includes(search.toLowerCase()) ||
-        r.storageLocation.toLowerCase().includes(search.toLowerCase()) ||
-        r.id.toLowerCase().includes(search.toLowerCase());
-
-      const matchCategory = filterCategory === 'all' || r.category === filterCategory;
-      const matchStatus = filterStatus === 'all' || r.status === filterStatus;
-
-      return matchSearch && matchCategory && matchStatus;
+      if (search) {
+        const q = search.toLowerCase();
+        const matches =
+          r.name.toLowerCase().includes(q) ||
+          r.id.toLowerCase().includes(q) ||
+          r.storageLocation.toLowerCase().includes(q) ||
+          r.category.toLowerCase().includes(q);
+        if (!matches) return false;
+      }
+      if (categoryFilter !== 'all' && r.category !== categoryFilter) return false;
+      return true;
     });
-  }, [resources, search, filterCategory, filterStatus]);
+  }, [resources, search, categoryFilter]);
 
-  const handleOpenCreate = () => {
-    setFormData({
-      name: '',
-      category: 'food_water',
-      quantityAvailable: 500,
-      quantityAllocated: 0,
-      unit: 'kits',
-      storageLocation: 'Central Supply Depot',
-      minThreshold: 100
-    });
-    setIsCreateOpen(true);
-  };
-
-  const handleOpenEdit = (r: ResourceItem) => {
-    setEditingResource(r);
-    setFormData({
-      name: r.name,
-      category: r.category,
-      quantityAvailable: r.quantityAvailable,
-      quantityAllocated: r.quantityAllocated,
-      unit: r.unit,
-      storageLocation: r.storageLocation,
-      minThreshold: r.minThreshold
-    });
-  };
-
-  const handleSaveCreate = (e: React.FormEvent) => {
+  const handleAllocateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name.trim()) return;
-
-    addResource({
-      name: formData.name.trim(),
-      category: formData.category,
-      quantityAvailable: Number(formData.quantityAvailable) || 0,
-      quantityAllocated: Number(formData.quantityAllocated) || 0,
-      unit: formData.unit.trim() || 'units',
-      storageLocation: formData.storageLocation.trim() || 'Depot',
-      minThreshold: Number(formData.minThreshold) || 50
-    });
-
-    setIsCreateOpen(false);
-  };
-
-  const handleSaveEdit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingResource || !formData.name.trim()) return;
-
-    updateResource(editingResource.id, {
-      name: formData.name.trim(),
-      category: formData.category,
-      quantityAvailable: Number(formData.quantityAvailable),
-      unit: formData.unit.trim(),
-      storageLocation: formData.storageLocation.trim(),
-      minThreshold: Number(formData.minThreshold)
-    });
-
-    setEditingResource(null);
-  };
-
-  const handleOpenAllocate = (r: ResourceItem) => {
-    setAllocatingResource(r);
-    setActionAmount(Math.min(r.quantityAvailable, 10));
-    setActionNote('');
-    setActionError(null);
-  };
-
-  const handleOpenRelease = (r: ResourceItem) => {
-    setReleasingResource(r);
-    setActionAmount(Math.min(r.quantityAllocated, 10));
-    setActionNote('');
-    setActionError(null);
-  };
-
-  const handleExecuteAllocation = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!allocatingResource) return;
-
-    const res = allocateResource(allocatingResource.id, actionAmount, actionNote);
-    if (!res.success) {
-      setActionError(res.error || 'Allocation failed.');
-      return;
-    }
-    setAllocatingResource(null);
-  };
-
-  const handleExecuteRelease = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!releasingResource) return;
-
-    const res = releaseResource(releasingResource.id, actionAmount, actionNote);
-    if (!res.success) {
-      setActionError(res.error || 'Release failed.');
-      return;
-    }
-    setReleasingResource(null);
-  };
-
-  const categoryLabels: Record<ResourceCategory, string> = {
-    food_water: 'Food & Potable Water',
-    medical: 'Medical Supplies',
-    rescue_gear: 'Rescue Equipment',
-    vehicles: 'Vehicles & Transport',
-    temporary_shelter: 'Temporary Shelter',
-    communication: 'Comms Equipment',
-    protective_equipment: 'Protective Equipment (PPE)'
+    if (!allocatingItem) return;
+    onAllocateResource(allocatingItem.id, dispatchQty, selectedTeamName);
+    setAllocatingItem(null);
   };
 
   return (
-    <div className="space-y-4 animate-in fade-in duration-150">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-border">
-        <div>
-          <div className="flex items-center gap-2">
-            <Boxes className="w-5 h-5 text-hazard" />
-            <h1 className="text-xl font-extrabold text-primary tracking-wide">
-              RESOURCE INVENTORY & RELIEF LOGISTICS
-            </h1>
-            <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-panel-subtle border border-border text-primary-muted">
-              {resources.length} STOCK ITEMS
+      <ResponsivePageHeader
+        title="Disaster Logistics & Relief Stockpile"
+        kicker="Material & Supply Supply Chain"
+        description="Strategic relief inventories, life-support asset allocation, field water purification, and trauma equipment dispatch."
+        metadata={
+          <div className="flex items-center gap-2 font-mono text-[11px] text-slate-400">
+            <span>Total Catalogued Assets: {resources.length} SKUs</span>
+            <span>·</span>
+            <span className="text-emerald-400 font-semibold">
+              Stocked: {resources.filter((r) => r.status === 'stocked').length}
             </span>
           </div>
-          <p className="text-xs text-primary-muted mt-0.5">
-            Monitor disaster reserves, allocate relief assets, and prevent supply depletion.
-          </p>
-        </div>
+        }
+      />
 
-        <Button
-          variant="primary"
-          size="sm"
-          icon={Plus}
-          onClick={handleOpenCreate}
-          restricted={!canManage}
-          restrictedReason={getPermissionRestrictionMessage(activePersonaId, 'manage_resources')}
-        >
-          Add Inventory Item
-        </Button>
+      {/* Filter and Search */}
+      <div className="p-3.5 bg-[#12171e] border border-slate-800 rounded flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <SearchBar
+          value={search}
+          onChange={setSearch}
+          placeholder="Search inventory, equipment, depot location..."
+          className="flex-1 max-w-md"
+        />
+
+        <FilterBar
+          label="Category"
+          options={[
+            { id: 'all', label: 'All Items' },
+            { id: 'rescue', label: 'Rescue' },
+            { id: 'medical', label: 'Medical' },
+            { id: 'equipment', label: 'Heavy Gear' },
+            { id: 'provisions', label: 'Food Rations' },
+            { id: 'power_water', label: 'Power & Water' },
+          ]}
+          selectedId={categoryFilter}
+          onSelect={setCategoryFilter}
+        />
       </div>
 
-      {/* Toolbar */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 p-3 bg-panel border border-border rounded-lg text-xs">
-        <div className="sm:col-span-2 relative">
-          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-primary-dim" />
-          <input
-            type="text"
-            placeholder="Search by resource name, depot location, or ID..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-charcoal border border-border rounded pl-8 pr-3 py-1.5 text-xs text-primary placeholder:text-primary-dim focus:outline-none"
-          />
-        </div>
-
-        <div>
-          <select
-            value={filterCategory}
-            onChange={(e) => setFilterCategory(e.target.value)}
-            className="w-full bg-charcoal border border-border rounded px-2.5 py-1.5 text-xs text-primary focus:outline-none"
-          >
-            <option value="all">All Categories</option>
-            <option value="food_water">Food & Water</option>
-            <option value="medical">Medical Supplies</option>
-            <option value="rescue_gear">Rescue Equipment</option>
-            <option value="vehicles">Vehicles</option>
-            <option value="temporary_shelter">Temporary Shelter</option>
-            <option value="communication">Communications</option>
-            <option value="protective_equipment">Protective Equipment</option>
-          </select>
-        </div>
-
-        <div>
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="w-full bg-charcoal border border-border rounded px-2.5 py-1.5 text-xs text-primary focus:outline-none"
-          >
-            <option value="all">All Stock Levels</option>
-            <option value="Sufficient">Sufficient</option>
-            <option value="Low Stock">Low Stock</option>
-            <option value="Critical">Critical</option>
-            <option value="Depleted">Depleted (0 available)</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Inventory Table */}
-      <div className="bg-panel border border-border rounded-lg overflow-hidden">
+      {/* Resources Table / Grid */}
+      <div className="border border-slate-800 rounded bg-[#12171e] overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-panel-card text-[10px] font-mono text-primary-dim uppercase border-b border-border tracking-wider">
-              <tr>
-                <th className="p-3">Resource Item</th>
-                <th className="p-3">Category</th>
-                <th className="p-3">Available</th>
-                <th className="p-3">Allocated</th>
-                <th className="p-3">Storage Location</th>
-                <th className="p-3">Status</th>
-                <th className="p-3 text-right">Inventory Actions</th>
+          <table className="w-full text-left text-xs font-mono">
+            <thead>
+              <tr className="bg-[#0d1117] border-b border-slate-800 text-slate-400 tracking-wider uppercase text-[11px]">
+                <th className="py-3 px-3.5">SKU ID</th>
+                <th className="py-3 px-3.5">Asset Name</th>
+                <th className="py-3 px-3.5">Category</th>
+                <th className="py-3 px-3.5">Available / Total</th>
+                <th className="py-3 px-3.5">Storage Depot</th>
+                <th className="py-3 px-3.5">Assigned Target</th>
+                <th className="py-3 px-3.5">Status</th>
+                {permissions.canAllocateResources && <th className="py-3 px-3.5 text-right">Action</th>}
               </tr>
             </thead>
-            <tbody className="divide-y divide-border/40 font-mono">
+            <tbody className="divide-y divide-slate-850">
               {filteredResources.map((item) => {
-                const statusStyles = {
-                  Sufficient: 'bg-safe/15 text-safe border-safe/30',
-                  'Low Stock': 'bg-hazard/15 text-hazard border-hazard/30',
-                  Critical: 'bg-emergency/15 text-emergency border-emergency/30',
-                  Depleted: 'bg-emergency/25 text-emergency border-emergency/50 font-bold'
-                };
-
+                const isLow = item.availableQuantity === 0;
                 return (
-                  <tr key={item.id} className="hover:bg-panel-elevated transition-colors">
-                    <td className="p-3 font-sans">
-                      <div className="font-bold text-primary text-xs">{item.name}</div>
-                      <div className="text-[10px] font-mono text-primary-dim">{item.id}</div>
+                  <tr key={item.id} className="hover:bg-slate-850/40 transition-colors">
+                    <td className="py-3 px-3.5 font-bold text-amber-400 whitespace-nowrap">
+                      {item.id}
                     </td>
-
-                    <td className="p-3 font-sans text-primary-muted text-[11px]">
-                      {categoryLabels[item.category]}
+                    <td className="py-3 px-3.5 font-sans font-medium text-slate-100 max-w-[220px]">
+                      {item.name}
                     </td>
-
-                    <td className="p-3">
-                      <span className="font-bold text-primary text-sm">{formatNumber(item.quantityAvailable)}</span>{' '}
-                      <span className="text-[10px] text-primary-dim font-sans">{item.unit}</span>
+                    <td className="py-3 px-3.5 uppercase text-slate-400">
+                      {item.category.replace('_', ' & ')}
                     </td>
-
-                    <td className="p-3">
-                      <span className="font-bold text-operational-cyan">{formatNumber(item.quantityAllocated)}</span>{' '}
-                      <span className="text-[10px] text-primary-dim font-sans">{item.unit}</span>
+                    <td className="py-3 px-3.5 tabular-nums">
+                      <span className={`font-bold ${isLow ? 'text-rose-400' : 'text-slate-100'}`}>
+                        {item.availableQuantity}
+                      </span>{' '}
+                      / {item.totalQuantity} <span className="text-slate-500">{item.unit}</span>
                     </td>
-
-                    <td className="p-3 font-sans text-primary-muted text-[11px]">
+                    <td className="py-3 px-3.5 text-slate-400 max-w-[180px] truncate">
                       {item.storageLocation}
                     </td>
-
-                    <td className="p-3">
-                      <span className={`text-[10px] font-mono px-2 py-0.5 rounded border uppercase tracking-wider ${statusStyles[item.status]}`}>
-                        {item.status}
-                      </span>
+                    <td className="py-3 px-3.5 text-slate-300 max-w-[180px] truncate">
+                      {item.assignedToTeamName || 'General Reserve'}
                     </td>
-
-                    <td className="p-3 text-right font-sans">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleOpenAllocate(item)}
-                          disabled={item.quantityAvailable <= 0}
-                          restricted={!canManage}
-                          title="Allocate quantity to active relief task"
-                          className="text-[11px] px-2 py-1"
-                        >
-                          <ArrowUpRight className="w-3 h-3 text-hazard mr-1" /> Allocate
-                        </Button>
-
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleOpenRelease(item)}
-                          disabled={item.quantityAllocated <= 0}
-                          restricted={!canManage}
-                          title="Return allocated quantity to available depot stock"
-                          className="text-[11px] px-2 py-1"
-                        >
-                          <ArrowDownLeft className="w-3 h-3 text-safe mr-1" /> Release
-                        </Button>
-
-                        <button
-                          onClick={() => handleOpenEdit(item)}
-                          disabled={!canManage}
-                          className="p-1 rounded text-primary-muted hover:text-primary hover:bg-panel-subtle ml-1"
-                          title="Edit resource parameters"
-                        >
-                          <Edit3 className="w-3.5 h-3.5" />
-                        </button>
-
-                        <button
-                          onClick={() => setDeletingId(item.id)}
-                          disabled={!canManage}
-                          className="p-1 rounded text-primary-muted hover:text-emergency hover:bg-emergency/10"
-                          title="Remove item"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
+                    <td className="py-3 px-3.5 whitespace-nowrap">
+                      <StatusBadge status={item.status} size="sm" />
                     </td>
+                    {permissions.canAllocateResources && (
+                      <td className="py-3 px-3.5 text-right whitespace-nowrap">
+                        <button
+                          type="button"
+                          disabled={item.availableQuantity === 0}
+                          onClick={() => {
+                            setAllocatingItem(item);
+                            setDispatchQty(Math.min(item.availableQuantity, 5));
+                          }}
+                          className="px-2.5 py-1 text-xs font-mono font-medium rounded bg-amber-500/20 text-amber-300 hover:bg-amber-500 hover:text-slate-950 transition-colors disabled:opacity-30 disabled:hover:bg-amber-500/20 disabled:hover:text-amber-300"
+                        >
+                          Dispatch Stock
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 );
               })}
@@ -360,294 +165,76 @@ export const ResourcesPage: React.FC = () => {
         </div>
       </div>
 
-      {/* ALLOCATE MODAL */}
-      <Modal
-        isOpen={allocatingResource !== null}
-        onClose={() => setAllocatingResource(null)}
-        title={`Allocate Inventory: ${allocatingResource?.name}`}
-        subtitle={`Available: ${allocatingResource?.quantityAvailable} ${allocatingResource?.unit}`}
-        maxWidth="md"
-      >
-        <form onSubmit={handleExecuteAllocation} className="space-y-4 text-xs">
-          <div>
-            <label className="font-semibold text-primary block mb-1">
-              Quantity to Allocate ({allocatingResource?.unit})
-            </label>
-            <input
-              type="number"
-              min="1"
-              max={allocatingResource?.quantityAvailable}
-              value={actionAmount}
-              onChange={(e) => {
-                setActionAmount(parseInt(e.target.value) || 1);
-                setActionError(null);
-              }}
-              className="w-full bg-charcoal border border-border rounded px-3 py-2 font-mono text-base text-primary focus:outline-none"
-              required
-            />
-            <p className="text-[10px] text-primary-dim mt-1 font-mono">
-              *System validates allocations to strictly prevent negative inventory.
-            </p>
-          </div>
+      {/* Allocate Stock Modal */}
+      {allocatingItem && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="w-full max-w-md bg-[#161c24] border border-slate-750 rounded shadow-2xl p-5 text-slate-200">
+            <h3 className="text-sm font-mono font-bold uppercase tracking-wider text-slate-100 mb-1">
+              Dispatch Resource: {allocatingItem.id}
+            </h3>
+            <p className="text-xs text-slate-300 mb-3 font-semibold">{allocatingItem.name}</p>
 
-          <div>
-            <label className="font-semibold text-primary block mb-1">
-              Dispatch Destination / Mission Note
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. Dispatched to Shelter SHL-NORTH-01 via Convoy 5"
-              value={actionNote}
-              onChange={(e) => setActionNote(e.target.value)}
-              className="w-full bg-charcoal border border-border rounded px-3 py-2 text-primary focus:outline-none"
-            />
-          </div>
-
-          {actionError && (
-            <p className="text-emergency text-[11px] font-medium">{actionError}</p>
-          )}
-
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
-            <Button size="sm" variant="outline" type="button" onClick={() => setAllocatingResource(null)}>
-              Cancel
-            </Button>
-            <Button size="sm" variant="warning" type="submit">
-              Confirm Allocation
-            </Button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* RELEASE MODAL */}
-      <Modal
-        isOpen={releasingResource !== null}
-        onClose={() => setReleasingResource(null)}
-        title={`Release Inventory: ${releasingResource?.name}`}
-        subtitle={`Currently Allocated: ${releasingResource?.quantityAllocated} ${releasingResource?.unit}`}
-        maxWidth="md"
-      >
-        <form onSubmit={handleExecuteRelease} className="space-y-4 text-xs">
-          <div>
-            <label className="font-semibold text-primary block mb-1">
-              Quantity to Return to Available Stock ({releasingResource?.unit})
-            </label>
-            <input
-              type="number"
-              min="1"
-              max={releasingResource?.quantityAllocated}
-              value={actionAmount}
-              onChange={(e) => {
-                setActionAmount(parseInt(e.target.value) || 1);
-                setActionError(null);
-              }}
-              className="w-full bg-charcoal border border-border rounded px-3 py-2 font-mono text-base text-primary focus:outline-none"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="font-semibold text-primary block mb-1">
-              Release Reason / Mission Note
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. Unused units returned from Sector 4 staging post"
-              value={actionNote}
-              onChange={(e) => setActionNote(e.target.value)}
-              className="w-full bg-charcoal border border-border rounded px-3 py-2 text-primary focus:outline-none"
-            />
-          </div>
-
-          {actionError && (
-            <p className="text-emergency text-[11px] font-medium">{actionError}</p>
-          )}
-
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
-            <Button size="sm" variant="outline" type="button" onClick={() => setReleasingResource(null)}>
-              Cancel
-            </Button>
-            <Button size="sm" variant="safe" type="submit">
-              Return to Stock
-            </Button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* CREATE MODAL */}
-      <Modal
-        isOpen={isCreateOpen}
-        onClose={() => setIsCreateOpen(false)}
-        title="Add Inventory Item"
-        subtitle="Register relief supplies, medical stockpiles, or emergency equipment."
-        maxWidth="lg"
-      >
-        <form onSubmit={handleSaveCreate} className="space-y-3 text-xs">
-          <div>
-            <label className="font-semibold text-primary block mb-1">Item Name</label>
-            <input
-              type="text"
-              placeholder="e.g. Field Surgical Trauma Kits"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full bg-charcoal border border-border rounded px-3 py-2 text-primary focus:outline-none"
-              required
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="font-semibold text-primary block mb-1">Category</label>
-              <select
-                value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value as ResourceCategory })}
-                className="w-full bg-charcoal border border-border rounded px-3 py-2 text-primary focus:outline-none"
-              >
-                <option value="food_water">Food & Water</option>
-                <option value="medical">Medical Supplies</option>
-                <option value="rescue_gear">Rescue Equipment</option>
-                <option value="vehicles">Vehicles</option>
-                <option value="temporary_shelter">Temporary Shelter</option>
-                <option value="communication">Communications</option>
-                <option value="protective_equipment">Protective Equipment</option>
-              </select>
+            <div className="p-2.5 rounded bg-slate-900 border border-slate-850 mb-4 font-mono text-xs">
+              <span className="text-slate-400">Available in Reserve:</span>{' '}
+              <span className="font-bold text-amber-400">{allocatingItem.availableQuantity}</span> {allocatingItem.unit}
             </div>
 
-            <div>
-              <label className="font-semibold text-primary block mb-1">Unit of Measurement</label>
-              <input
-                type="text"
-                placeholder="kits, jerrycans, boxes, vehicles"
-                value={formData.unit}
-                onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                className="w-full bg-charcoal border border-border rounded px-3 py-2 text-primary focus:outline-none"
-              />
-            </div>
+            <form onSubmit={handleAllocateSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-mono uppercase text-slate-300 mb-1">
+                  Dispatch Quantity ({allocatingItem.unit}):
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={allocatingItem.availableQuantity}
+                  value={dispatchQty}
+                  onChange={(e) => setDispatchQty(parseInt(e.target.value, 10) || 1)}
+                  className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded text-xs font-mono text-slate-100 focus:outline-none focus:border-amber-500/80"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-mono uppercase text-slate-300 mb-1">
+                  Recipient Team / Station:
+                </label>
+                <select
+                  value={selectedTeamName}
+                  onChange={(e) => setSelectedTeamName(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded text-xs text-slate-100 font-mono focus:outline-none focus:border-amber-500/80"
+                >
+                  {teams.map((t) => (
+                    <option key={t.id} value={t.name}>
+                      {t.name} ({t.specialization})
+                    </option>
+                  ))}
+                  <option value="District Emergency Staging Depot">District Emergency Staging Depot</option>
+                </select>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setAllocatingItem(null)}
+                  className="px-3.5 py-1.5 text-xs font-mono text-slate-400 hover:text-slate-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 text-xs font-mono font-bold rounded bg-amber-500 hover:bg-amber-400 text-slate-950 transition-colors"
+                >
+                  Authorize Stock Movement
+                </button>
+              </div>
+            </form>
           </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="font-semibold text-primary block mb-1">Initial Quantity Available</label>
-              <input
-                type="number"
-                min="0"
-                value={formData.quantityAvailable}
-                onChange={(e) => setFormData({ ...formData, quantityAvailable: parseInt(e.target.value) || 0 })}
-                className="w-full bg-charcoal border border-border rounded px-3 py-2 font-mono text-primary focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="font-semibold text-primary block mb-1">Low Stock Warning Threshold</label>
-              <input
-                type="number"
-                min="1"
-                value={formData.minThreshold}
-                onChange={(e) => setFormData({ ...formData, minThreshold: parseInt(e.target.value) || 1 })}
-                className="w-full bg-charcoal border border-border rounded px-3 py-2 font-mono text-primary focus:outline-none"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="font-semibold text-primary block mb-1">Storage Warehouse / Depot Location</label>
-            <input
-              type="text"
-              placeholder="e.g. Central Relief Depot Bay 3"
-              value={formData.storageLocation}
-              onChange={(e) => setFormData({ ...formData, storageLocation: e.target.value })}
-              className="w-full bg-charcoal border border-border rounded px-3 py-2 text-primary focus:outline-none"
-            />
-          </div>
-
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
-            <Button size="sm" variant="outline" type="button" onClick={() => setIsCreateOpen(false)}>
-              Cancel
-            </Button>
-            <Button size="sm" variant="primary" type="submit">
-              Register Item
-            </Button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* EDIT MODAL */}
-      <Modal
-        isOpen={editingResource !== null}
-        onClose={() => setEditingResource(null)}
-        title={`Edit Item: ${editingResource?.name}`}
-      >
-        <form onSubmit={handleSaveEdit} className="space-y-3 text-xs">
-          <div>
-            <label className="font-semibold text-primary block mb-1">Item Name</label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full bg-charcoal border border-border rounded px-3 py-2 text-primary focus:outline-none"
-              required
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="font-semibold text-primary block mb-1">Available Quantity</label>
-              <input
-                type="number"
-                min="0"
-                value={formData.quantityAvailable}
-                onChange={(e) => setFormData({ ...formData, quantityAvailable: parseInt(e.target.value) || 0 })}
-                className="w-full bg-charcoal border border-border rounded px-3 py-2 font-mono text-primary focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="font-semibold text-primary block mb-1">Low Stock Threshold</label>
-              <input
-                type="number"
-                min="1"
-                value={formData.minThreshold}
-                onChange={(e) => setFormData({ ...formData, minThreshold: parseInt(e.target.value) || 1 })}
-                className="w-full bg-charcoal border border-border rounded px-3 py-2 font-mono text-primary focus:outline-none"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="font-semibold text-primary block mb-1">Storage Location</label>
-            <input
-              type="text"
-              value={formData.storageLocation}
-              onChange={(e) => setFormData({ ...formData, storageLocation: e.target.value })}
-              className="w-full bg-charcoal border border-border rounded px-3 py-2 text-primary focus:outline-none"
-            />
-          </div>
-
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
-            <Button size="sm" variant="outline" type="button" onClick={() => setEditingResource(null)}>
-              Cancel
-            </Button>
-            <Button size="sm" variant="primary" type="submit">
-              Update Resource
-            </Button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* DELETE DIALOG */}
-      <ConfirmDialog
-        isOpen={deletingId !== null}
-        onClose={() => setDeletingId(null)}
-        onConfirm={() => {
-          if (deletingId) {
-            deleteResource(deletingId);
-            setDeletingId(null);
-          }
-        }}
-        title="Remove Resource Item?"
-        message="This item and its recorded quantity metrics will be deleted from the operational inventory ledger."
-        confirmLabel="Remove Item"
-        variant="danger"
-      />
+        </div>
+      )}
     </div>
   );
 };

@@ -1,248 +1,109 @@
-# RakshaGrid — Disaster Intelligence and Coordinated Response Platform
+# RakshaGrid - Disaster Intelligence & Coordinated Response
 
-> **"Disaster Intelligence. Coordinated Response. Safer Communities."**
-
-[![GitHub Repository](https://img.shields.io/badge/GitHub-singhrohit09%2FRAKSHAGRID-red.svg)](https://github.com/singhrohit09/RAKSHAGRID)
-[![Phase](https://img.shields.io/badge/Phase-5%20Finalization%20%26%20Production%20Deployment%20Complete-emerald.svg)]()
-[![TypeScript](https://img.shields.io/badge/TypeScript-Strict%205.6-blue.svg)]()
-[![React](https://img.shields.io/badge/React-18.3-cyan.svg)]()
-[![Express](https://img.shields.io/badge/Express-5.3-yellow.svg)]()
-[![Database](https://img.shields.io/badge/Database-SQLite%20(WAL)%20%7C%20PostgreSQL-orange.svg)]()
-[![Tests](https://img.shields.io/badge/Vitest-132%20Passed%20(100%25)-brightgreen.svg)]()
+> **Disaster Intelligence. Coordinated Response. Safer Communities.**  
+> Built for **AGENTCRAFT 2026** · **Phase 1: Foundation Release**  
+> GitHub Repository: [https://github.com/singhrohit09/RAKSHAGRID.git](https://github.com/singhrohit09/RAKSHAGRID.git)
 
 ---
 
-## 1. Problem Statement
+## 1. Overview & Vision
 
-Natural disasters and extreme emergencies — including riverine flooding, flash inundations, severe cyclones, earthquakes, landslides, industrial chemical fires, and structural collapses — place catastrophic stress on civil response infrastructures.
-
-Emergency Operations Centers (EOCs), district administrations, and disaster response forces (NDRF/SDRF) frequently face:
-- **Fragmented Situational Awareness**: Information scattered across ad-hoc phone calls, field radios, paper logs, and disparate spreadsheets.
-- **Disconnected External Data**: Weather radar, hydrological river telemetry, and seismic alerts siloed in separate government agency websites.
-- **Resource Bottlenecks & Depletion**: Relief items (water rations, trauma medical supplies, inflatable boats) allocated without real-time inventory visibility or concurrency safety.
-- **Shelter Overcrowding**: Evacuation centers exceeding safe capacities without traceable justification or overflow routing.
-- **Delayed Public Warning Workflows**: Incoherent alert drafting and review bottlenecks during crucial evacuation windows.
+**RakshaGrid** is an emergency operations platform engineered for real-world disaster management authorities (NDRF, SDMA, DDMA, international humanitarian coordination nodes). Designed with operational clarity rather than decorative fluff, RakshaGrid equips emergency incident commanders, field responders, logistics officers, and planners with live tactical situational intelligence during acute crises (cyclones, monsoonal flash floods, hillside landslides, industrial HazMat breaches, and earthquakes).
 
 ---
 
-## 2. Project Objectives
+## 2. Phase 1 Implemented Scope
 
-**RakshaGrid** is designed to provide unified emergency operations intelligence and coordination:
-1. **Consolidated Incident Registry & Escalation**: Log, triage, track, escalate, and update disaster incidents with validated coordinate telemetry, priorities, and audit timelines.
-2. **GIS Spatial Geofencing Engine**: Dynamic polygon ray-casting and Haversine circle containment evaluator identifying high-risk disaster perimeters and affected operational assets.
-3. **External Meteorological & Hydrological Telemetry**: Live Open-Meteo weather integration with WMO code translation, flood gauges, and cached fallbacks.
-4. **Multichannel Notification Infrastructure**: In-App, Webhook, and telecommunications alert dispatch with sliding-window deduplication and audit tracking.
-5. **Response Unit Coordination**: Maintain rosters of field search-and-rescue, medical, and fire battalions with automated deployment lifecycle tracking.
-6. **Capacity-Aware Shelter Management**: Monitor evacuation center headcounts with strict capacity safeguards and recorded administrative override justifications.
-7. **Relief Inventory Control**: Concurrency-safe atomic resource allocations preventing negative inventory.
+In **Phase 1**, we have built the foundational full-stack architecture, design system, operational components, and data layer:
 
----
+| Domain Area | Implemented Features in Phase 1 | Status |
+| :--- | :--- | :--- |
+| **Authentication & RBAC** | Role-Based Access Control with 5 distinct personas (Administrator, Incident Commander, Field Responder, Logistics Officer, Read-Only Analyst); transparent Development Mode badge; custom sign-in and agency registration; session isolation. | **Complete** |
+| **Emergency Operations Command** | KPI metric cards (Total incidents, Active emergencies, Critical threats, Available forces, Shelters open, Pending tasks); Recharts severity donut and hazard distribution bar chart; recent incident timeline; latest tactical alerts; live response audit stream. | **Complete** |
+| **Incident Operations Registry** | List and detail layouts; client-side filtering by severity, status, hazard type, and region; dynamic keyword search; pagination; priority scoring; full CRUD modal for reporting and updating incidents with GPS coordinate validation. | **Complete** |
+| **Geospatial Situational Grid** | Situational grid map with WGS84 coordinate projections, hazard epicenter radius visualization, shelter pins, team locations, multi-layer switches (Incidents, Shelters, Teams, 50km Threat Radius), and pin inspector panel. | **Complete** |
+| **Response Teams Directory** | Directory of specialized disaster units (Search & Rescue, Medical, HazMat, Water Rescue, Evacuation, Air-Drop Logistics); deployment readiness indicators; equipment rosters; interactive dispatch workflow. | **Complete** |
+| **Evacuation Shelters Hub** | Capacity gauge meters, real-time occupancy headcounts, bed availability, life-support supply ratings (Adequate, Moderate, Critical), humanitarian amenities checklists, and quick occupancy update modal. | **Complete** |
+| **Relief Supply Inventory** | Strategic inventory (Inflatable rescue boats, dewatering pumps, trauma kits, rations, chemical ensembles, micro-inverters); status tracking; stock dispatch workflow to responder units. | **Complete** |
+| **Tactical Dispatch Board** | Kanban-style workflow (Triage & Staging, En Route, On Scene, Completed); priority indicators; task issuance modal; one-click status transitions; alternative list view. | **Complete** |
+| **Operations Analytics** | Recharts quantitative dashboards: response latency vs SLA targets, vulnerable populations by region, shelter occupancy distributions, and relief stock burn rates. | **Complete** |
+| **Alerts & Warning Node** | OASIS Common Alerting Protocol (CAP v1.2) broadcast center; multi-channel dissemination toggles (Cell Broadcast CB-4370, Acoustic Siren, Mass SMS, FM Radio); commander acknowledgment flow. | **Complete** |
+| **System Settings & RBAC** | Telemetry polling cadence adjustment (5s, 15s, 60s), offline resilient caching preferences, acoustic chime toggles, role permission matrix reference table, and Factory Demo Reset. | **Complete** |
+| **Compliance & Audit Trail** | Non-repudiation audit ledger logging every operational transaction (incident creation, dispatch, alert broadcast, status modification) with actor identity, timestamp, IP, and CSV / JSON export. | **Complete** |
+| **Public Emergency Portal** | Public-facing emergency bulletin on `/` with active civil warnings, verified helplines (1078, 112, 1070), citizen safety guidelines, and responder terminal launch. | **Complete** |
 
-## 3. Architecture & Multi-Agent AI System (Phase 4)
+### Honestly Deferred to Later Phases (Phase 2 - Phase 5)
 
-Phase 4 transforms RakshaGrid into an explainable **multi-agent AI disaster intelligence and response coordination platform**:
-
-```
-+-----------------------------------------------------------------------------------------------+
-|                       Browser User Interface (React 18 & TypeScript)                          |
-|  - Operations Dashboard & Incident Registry        - Leaflet GIS Map & Environmental HUD      |
-|  - AI Disaster Intelligence Center                 - Human-in-the-Loop Approval Queue         |
-|  - Disaster Simulation Lab                         - Audit Logs & Execution History           |
-+-----------------------------------------------------------------------------------------------+
-                                               |
-                                               v
-+-----------------------------------------------------------------------------------------------+
-|                        Express 5 Backend API & Modular Services (Port 5000)                   |
-|  /api/auth       /api/incidents    /api/teams      /api/shelters   /api/resources             |
-|  /api/tasks      /api/alerts       /api/audit      /api/external   /api/geofences             |
-|  /api/ai/risk    /api/ai/incidents /api/ai/resources /api/ai/coordinator /api/ai/simulation   |
-+-----------------------------------------------------------------------------------------------+
-                                               |
-                                               v
-+-----------------------------------------------------------------------------------------------+
-|                                  MULTI-AGENT AI ORCHESTRATOR                                  |
-|  - Agent 1: Disaster Risk Intelligence Agent (Multi-hazard risk score & exposure)             |
-|  - Agent 2: Incident Intelligence & Prioritization Agent (Dynamic P1-P4 triage ranking)      |
-|  - Agent 3: Smart Resource Allocation Agent (Haversine proximity & inventory matching)        |
-|  - Agent 4: AI Emergency Response Coordinator (NLP intent parsing & 3-phase action plan)      |
-|  - Agent 5: Disaster Simulation Agent (Isolated sandbox stress-testing & strategy comparison) |
-+-----------------------------------------------------------------------------------------------+
-                                               |
-                                               v
-+-----------------------------------------------------------------------------------------------+
-|                       AI Provider Abstraction & Deterministic Fallback                        |
-|  - External LLM: Google Gemini 1.5 Flash / OpenAI (Backend-only keys, timeout & retries)      |
-|  - Fallback Engine: Deterministic Analytical Heuristics (Zero credentials, always available)  |
-|  - Human Approval Gate: Recommendations staged as 'pending' prior to atomic execution         |
-+-----------------------------------------------------------------------------------------------+
-                                               |
-                                               v
-+-----------------------------------------------------------------------------------------------+
-| Dual-Adapter Relational Database Layer (PostgreSQL || SQLite 3 WAL Mode)                       |
-| 16 Normalized Relational Tables:                                                              |
-| users, teams, shelters, resources, inventory_movements, incidents, incident_timeline,         |
-| tasks, alerts, audit_events, password_reset_tokens, geofences, notification_deliveries,        |
-| ai_agent_executions, ai_recommendations, ai_simulation_records                                |
-+-----------------------------------------------------------------------------------------------+
-```
+- **Phase 2**: Relational PostgreSQL database integration (via Cloud SQL/Drizzle ORM) replacing resilient localStorage; production multi-agency OAuth/JWT authentication server; WebSocket real-time subscription synchronization.
+- **Phase 3**: Automated satellite SAR/weather raster overlays and predictive flood inundation depth mapping.
+- **Phase 4**: Offline peer-to-peer mesh synchronization for field responders with zero cellular connectivity.
+- **Phase 5**: AI-assisted situational reports synthesis, automated CAP XML feed distribution, and drone telemetry ingest.
 
 ---
 
-## 4. Live vs. Simulated Integration Status
+## 3. Technology Stack
 
-RakshaGrid maintains absolute transparency regarding live external data versus simulated local fallbacks:
-
-| Component / Subsystem | Integration Status | Data Source / Technology | Production Operational Notes |
-|---|---|---|---|
-| **Meteorological Weather Telemetry** | **LIVE** | Open-Meteo WMO Forecast API (`https://api.open-meteo.com/v1/forecast`) | Real temperature, humidity, wind speed, precipitation, and WMO severity classification with 10-minute in-memory caching and stale-while-revalidate. Falls back to offline baseline gracefully if network fails. |
-| **Hydrological River Gauges** | **HYBRID / SIMULATED** | Central Water Commission & GloFAS Models | Provides calibrated stage thresholds (normal, watch, warning, severe, inundation) and discharge telemetry (`m³/s`) for regional rivers. Live CWC telemetry gateway ready for sensor credentials. |
-| **GIS Geofencing Engine** | **LIVE / REAL** | In-Engine Ray-Casting & Haversine Spherical Calculation | Server-side mathematical containment engine evaluates exact point-in-polygon coordinates and radial circles against incidents, shelters, and field units. |
-| **Relational Database** | **LIVE / REAL** | PostgreSQL (`pg`) or SQLite 3 (`better-sqlite3` WAL) | Dual-adapter client with ACID transactions, strict foreign keys, and 13 normalized tables. |
-| **Multichannel Dispatcher** | **LIVE / SIMULATED** | In-App (Live), Webhooks (Live), Cellular SMS (Simulated) | Dispatches real in-app alerts and outgoing HTTP webhooks; cellular SMS adapter logs transmission payloads to `notification_deliveries` ledger. |
+- **Framework**: React 19 + TypeScript + Vite 8
+- **Styling**: Tailwind CSS v4 (Deep charcoal `#0d1117`, warm off-white, muted forest green, amber, restrained crimson)
+- **Visualizations**: Recharts (Pie, Bar, Layout charts with interactive drilldown)
+- **Icons**: Lucide React
+- **Typography**: Plus Jakarta Sans & JetBrains Mono (`tabular-nums` for all telemetry)
 
 ---
 
-## 5. Security Architecture & Administrator Provisioning
+## 4. Local Setup & Execution Guide
 
-RakshaGrid strictly adheres to production security hardening standards:
-- **No Hardcoded or Published Credentials**: All published default passwords have been removed from source and documentation.
-- **Secure Administrator Provisioning**:
-  - Run the dedicated one-time provisioning script to bootstrap the first administrator:
-    ```bash
-    npm run server:bootstrap-admin
-    ```
-  - Alternatively, configure `INITIAL_ADMIN_PASSWORD` in your secure production environment.
-- **Cryptographic Secret Generation**:
-  - Production deployments require a 256-bit cryptographically random secret for signing JWTs:
-    ```bash
-    npm run generate-secret
-    ```
-- **Privilege Escalation Defense**: Public user registration (`/api/auth/register`) strictly assigns standard responder permissions and actively rejects attempts to claim `admin` or `commander` roles (HTTP 403 Forbidden). Administrator role promotion is restricted to verified administrators (`PUT /api/auth/users/:id/role`).
-- **Rate Limiting & CSRF Protection**:
-  - Sliding-window rate limiters defend against brute-force attacks on login (10 requests/min) and password reset (5 requests/15 min).
-  - CSRF origin and custom header verification (`X-Requested-With`, `X-Raksha-CSRF`) protect state-changing mutation requests authenticated via cookies.
-- **Application-Level Operational Audit Trail**:
-  - Automatically logs mutations across all domains with actor callsign, IP, action, entity type, and sanitized payload in `audit_events`.
+### Prerequisites
+- Node.js `v20.x` or higher
+- npm `v10.x` or higher
+- Modern Chromium or WebKit browser
 
----
+### Quickstart Commands
 
-## 6. Installation & Quick Start
-
-### 1. Clone the repository
 ```bash
+# 1. Clone the repository
 git clone https://github.com/singhrohit09/RAKSHAGRID.git
 cd RAKSHAGRID
-```
 
-### 2. Install dependencies
-```bash
+# 2. Install dependencies
 npm install
-```
 
-### 3. Environment configuration
-```bash
+# 3. Copy environment configuration
 cp .env.example .env
-```
 
-### 4. Seed database baseline
-```bash
-npm run server:seed
-```
+# 4. Verify TypeScript linting and type checking
+npm run lint
 
-### 5. Start backend API server (Port 5000)
-```bash
-npm run server
-```
+# 5. Build for production verification
+npm run build
 
-### 6. Start frontend development server (Port 3000)
-In a separate terminal:
-```bash
+# 6. Launch development command node
 npm run dev
 ```
-Open [http://localhost:3000](http://localhost:3000) in your browser. The Vite dev server proxies all `/api` requests to `http://localhost:5000`.
+
+The application runs on `http://localhost:3000`.
 
 ---
 
-## 7. Verification & Testing
+## 5. Pre-Configured Operational Personas (Phase 1 Dev Mode)
 
-### Run Full Automated Test Suite (132 Tests Passing across 10 Test Suites)
-```bash
-npm test
-```
-*Current test coverage includes:*
-- `server/tests/e2eWorkflows.test.ts` (22 tests) — Comprehensive end-to-end operational workflows (Workflows A through F).
-- `server/tests/aiAgents.test.ts` (17 tests) — 5 AI agents, fallback heuristics, provenance, and isolated sandbox execution.
-- `server/tests/security.test.ts` (17 tests) — Secret enforcement, admin bootstrap, rate limiting, CSRF, privilege escalation.
-- `server/tests/api.test.ts` (18 tests) — Full REST endpoint CRUD, authentication, RBAC, inventory safety, shelter capacity.
-- `server/tests/geofence.test.ts` (12 tests) — Ray-casting point-in-polygon math, circle Haversine distance, containment evaluator, REST API.
-- `server/tests/external.test.ts` (12 tests) — Open-Meteo weather client, WMO code parser, TTL cache, SWR, river gauges, REST API.
-- `server/tests/coordination.test.ts` (5 tests) — Incident escalation, team assignment state machine, shelter overflow tracking, concurrency safety.
-- `server/tests/notifications.test.ts` (8 tests) — Multi-channel dispatcher, deduplication cache, webhook delivery, audit ledger.
-- `src/tests/businessRules.test.ts` (13 tests) — Client domain validation and business constraints.
-- `src/tests/domainOperations.test.ts` (8 tests) — CSV formatting, date calculations, search utilities.
+To test role-based access control and operational permissions, switch personas anytime via the top-right profile dropdown or the `/login` portal:
 
-### TypeScript Strict Type Checking (Frontend & Backend)
-```bash
-npm run lint
-```
-Checks strict type safety across both frontend (`tsconfig.json`) and server (`tsconfig.server.json`).
-
-### Production Build & Code-Splitting Verification
-```bash
-npm run build
-```
-Compiles and generates optimized production distribution in `dist/` with route-level code splitting and manual vendor chunks (all chunks < 400 kB).
-
-### Docker Containerized Deployment
-```bash
-# Build and run complete platform with PostgreSQL 16
-docker compose up -d --build
-
-# Inspect container health
-curl -s http://localhost:5000/api/system/health | jq .
-```
+1. **Incident Commander**: Col. Rajesh Verma (`r.verma@ndrf.gov.in`)
+   - *Permissions*: Issue CAP alerts, dispatch response teams, triage incidents, review audit logs.
+2. **Administrator**: Kavita Sharma (`kavita.sharma@sdma.gov.in`)
+   - *Permissions*: Full operational access, delete records, modify system configurations, manage personnel.
+3. **Field Responder**: Inspector Amit Kumar (`amit.kumar@sdrf.gov.in`)
+   - *Permissions*: Log on-scene incidents, update tactical tasks, report casualty counts.
+4. **Logistics Officer**: Pooja Nair (`p.nair@redcross.org.in`)
+   - *Permissions*: Dispatch relief stockpiles, manage shelter headcounts, track resource burn rates.
+5. **Read-Only Analyst**: Dr. Sunita Rao (`s.rao@imd.res.in`)
+   - *Permissions*: Geospatial and analytics observation without write privileges.
 
 ---
 
-## 8. Documentation & Operational Reference
+## 6. Audit & Test Verification Report
 
-- [Final System Architecture](docs/FINAL_ARCHITECTURE.md) — Comprehensive technical architecture, AI system, and security design.
-- [Production Deployment Guide](docs/DEPLOYMENT_GUIDE.md) — Unified Render/Railway container, Vercel frontend, and Docker Compose setup.
-- [Hackathon & Presentation Guide](docs/HACKATHON_DEMO_GUIDE.md) — 3 high-impact demonstration scenarios, presenter walkthroughs, and Q&A answers.
-- [Monitoring & Operations Manual](docs/MONITORING_AND_OPERATIONS.md) — Synthetic health monitoring, metrics, and incident runbooks.
-- [Production Security Architecture](docs/PRODUCTION_SECURITY.md) — Zero-trust access controls, rate limiting, and secret management.
-- [Database Operations & Reliability](docs/DATABASE_OPERATIONS.md) — PostgreSQL connection pooling, migrations, backup, and restore.
-- [Integration Verification Audit](docs/INTEGRATION_VERIFICATION.md) — Telemetry providers, GIS engine, and notification deduplication.
-- [Phase 5 Verification Report](docs/PHASE_5_VERIFICATION_REPORT.md) — Independent verification audit and quality gate sign-off.
-- [Development Milestone Log](docs/DEVELOPMENT_LOG.md) — Complete commit-by-commit milestone log.
-
----
-
-## 9. Git Repository & Contribution Rules
-
-The **ONLY** authorized repository destination for this project is:
-**https://github.com/singhrohit09/RAKSHAGRID.git**
-
-### Mandatory Git Workflow:
-```bash
-# Verify remote destination
-git remote -v
-
-# Check status
-git status
-
-# Stage verified changes
-git add <files>
-
-# Create descriptive milestone commit
-git commit -m "feat(module): description"
-
-# Push to main branch
-git push origin main
-```
-
----
-
-## License
-
-This project is open-source under the MIT License for educational and disaster resilience research purposes.
+- **Type Check (`tsc --noEmit`)**: **PASSED** (0 errors)
+- **Vite Production Build (`npm run build`)**: **PASSED** (Output in `/dist`)
+- **Accessibility & Anti-Slop Audit**: Single elevation depth, unboxed metadata with `·` separators, tabular figures for all data columns, zero non-functional controls, zero broken images.

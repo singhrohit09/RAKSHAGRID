@@ -1,1027 +1,808 @@
-import React, { useState, useMemo } from 'react';
-import { useRaksha } from '../context/RakshaContext';
-import { Incident, IncidentSeverity, IncidentStatus, IncidentPriority, DisasterCategory, IncidentSource } from '../types/incident';
-import { 
-  Flame, 
-  Search, 
-  Plus, 
-  Edit3, 
-  Trash2, 
-  Eye, 
-  ArrowUpDown
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import React, { useState, useMemo, useEffect } from 'react';
+import {
+  Plus,
+  Filter,
+  MapPin,
+  Clock,
+  Users,
+  AlertTriangle,
+  Edit2,
+  Trash2,
+  X,
+  CheckCircle2,
+  Share2,
 } from 'lucide-react';
-import { SeverityBadge, StatusBadge, PriorityBadge } from '../components/common/Badge';
-import { Button } from '../components/common/Button';
-import { Modal } from '../components/common/Modal';
+import { Incident, DisasterType, SeverityLevel, IncidentStatus, Team } from '../types';
+import { useAuth } from '../context/AuthContext';
+import { ResponsivePageHeader } from '../components/common/ResponsivePageHeader';
+import { SeverityBadge } from '../components/common/SeverityBadge';
+import { StatusBadge } from '../components/common/StatusBadge';
+import { DataTable, Column } from '../components/common/DataTable';
+import { SearchBar } from '../components/common/SearchBar';
+import { FilterBar } from '../components/common/FilterBar';
 import { ConfirmDialog } from '../components/common/ConfirmDialog';
-import { formatCoordinates, formatDateTime, formatRelativeTime, formatCategory } from '../utils/formatters';
-import { validateIncidentForm } from '../utils/validators';
-import { hasPermission, getPermissionRestrictionMessage } from '../utils/permissions';
+import { FormField } from '../components/common/FormField';
 
-export const IncidentsPage: React.FC = () => {
-  const { 
-    incidents, 
-    teams, 
-    activePersonaId, 
-    addIncident, 
-    updateIncident, 
-    deleteIncident 
-  } = useRaksha();
+interface IncidentsPageProps {
+  incidents: Incident[];
+  teams: Team[];
+  selectedIncidentId?: string | null;
+  initialAction?: string | null;
+  initialSeverity?: string | null;
+  initialStatus?: string | null;
+  initialType?: string | null;
+  onCreateIncident: (data: Omit<Incident, 'id' | 'reportedTime' | 'lastUpdated'>) => Incident;
+  onUpdateIncident: (id: string, updates: Partial<Incident>) => void;
+  onDeleteIncident: (id: string) => void;
+  onNavigateToMap: () => void;
+}
 
-  // Search, Filters & Sorting
-  const [search, setSearch] = useState('');
-  const [filterSeverity, setFilterSeverity] = useState<string>('all');
-  const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [filterCategory, setFilterCategory] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<'reportedAt' | 'priority' | 'severity'>('reportedAt');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+export const IncidentsPage: React.FC<IncidentsPageProps> = ({
+  incidents,
+  teams,
+  selectedIncidentId,
+  initialAction,
+  initialSeverity,
+  initialStatus,
+  initialType,
+  onCreateIncident,
+  onUpdateIncident,
+  onDeleteIncident,
+  onNavigateToMap,
+}) => {
+  const { user, permissions } = useAuth();
 
-  // Modals & Drawers
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [editingIncident, setEditingIncident] = useState<Incident | null>(null);
-  const [viewingIncident, setViewingIncident] = useState<Incident | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  // Search & Filter state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [severityFilter, setSeverityFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [disasterTypeFilter, setDisasterTypeFilter] = useState('all');
+
+  // Modal / Drawer states
+  const [activeIncident, setActiveIncident] = useState<Incident | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
   // Form State
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    category: 'flood' as DisasterCategory,
-    severity: 'High' as IncidentSeverity,
-    status: 'Reported' as IncidentStatus,
-    priority: 'P2' as IncidentPriority,
-    locationName: '',
-    latitude: 28.6139,
-    longitude: 77.2090,
+    disasterType: 'flood' as DisasterType,
+    severity: 'high' as SeverityLevel,
+    location: '',
+    region: 'Eastern Command Zone',
+    lat: '20.4625',
+    lng: '85.8828',
+    status: 'active' as IncidentStatus,
+    affectedPopulation: '1000',
     assignedTeamId: '',
-    affectedPopulation: 0,
-    casualties: 0,
-    source: 'Manual Report' as IncidentSource,
-    estimatedRadiusMeters: 1000
+    tags: 'Emergency Response, Water Clearance',
   });
-
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
-  // Timeline note input for viewing drawer
-  const [newTimelineNote, setNewTimelineNote] = useState('');
+  // Sync selectedIncidentId, initialAction, or filter query params
+  useEffect(() => {
+    if (selectedIncidentId) {
+      const match = incidents.find((i) => i.id === selectedIncidentId);
+      if (match) setActiveIncident(match);
+    }
+    if (initialAction === 'create' && permissions.canCreateIncident) {
+      openCreateModal();
+    }
+    if (initialSeverity) {
+      setSeverityFilter(initialSeverity);
+    }
+    if (initialStatus) {
+      setStatusFilter(initialStatus);
+    }
+    if (initialType) {
+      setDisasterTypeFilter(initialType.toLowerCase());
+    }
+  }, [selectedIncidentId, initialAction, initialSeverity, initialStatus, initialType, incidents, permissions.canCreateIncident]);
 
-  // Permissions
-  const canCreate = hasPermission(activePersonaId, 'create_incidents');
-  const canEdit = hasPermission(activePersonaId, 'edit_incidents');
-  const canDelete = hasPermission(activePersonaId, 'delete_incidents');
-  const canClose = hasPermission(activePersonaId, 'close_incidents');
-
-  // Filtered & Sorted Incidents
+  // Filtered dataset
   const filteredIncidents = useMemo(() => {
     return incidents.filter((inc) => {
-      const matchSearch = 
-        inc.title.toLowerCase().includes(search.toLowerCase()) ||
-        inc.id.toLowerCase().includes(search.toLowerCase()) ||
-        inc.locationName.toLowerCase().includes(search.toLowerCase());
-
-      const matchSeverity = filterSeverity === 'all' || inc.severity === filterSeverity;
-      const matchStatus = filterStatus === 'all' || inc.status === filterStatus;
-      const matchCategory = filterCategory === 'all' || inc.category === filterCategory;
-
-      return matchSearch && matchSeverity && matchStatus && matchCategory;
-    }).sort((a, b) => {
-      let comp = 0;
-      if (sortBy === 'reportedAt') {
-        comp = new Date(a.reportedAt).getTime() - new Date(b.reportedAt).getTime();
-      } else if (sortBy === 'priority') {
-        const order = { P1: 1, P2: 2, P3: 3, P4: 4 };
-        comp = order[a.priority] - order[b.priority];
-      } else if (sortBy === 'severity') {
-        const order = { Critical: 1, High: 2, Moderate: 3, Low: 4 };
-        comp = order[a.severity] - order[b.severity];
+      // Query filter
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        const matchesQ =
+          inc.title.toLowerCase().includes(q) ||
+          inc.id.toLowerCase().includes(q) ||
+          inc.location.toLowerCase().includes(q) ||
+          inc.region.toLowerCase().includes(q) ||
+          inc.disasterType.toLowerCase().includes(q);
+        if (!matchesQ) return false;
       }
-      return sortOrder === 'desc' ? -comp : comp;
-    });
-  }, [incidents, search, filterSeverity, filterStatus, filterCategory, sortBy, sortOrder]);
 
-  const handleOpenCreate = () => {
-    setFormData({
-      title: '',
-      description: '',
-      category: 'flood',
-      severity: 'High',
-      status: 'Reported',
-      priority: 'P2',
-      locationName: '',
-      latitude: 28.6139,
-      longitude: 77.2090,
-      assignedTeamId: '',
-      affectedPopulation: 0,
-      casualties: 0,
-      source: 'Manual Report',
-      estimatedRadiusMeters: 1000
+      // Severity filter
+      if (severityFilter !== 'all' && inc.severity !== severityFilter) return false;
+
+      // Status filter
+      if (statusFilter !== 'all' && inc.status !== statusFilter) return false;
+
+      // Type filter
+      if (disasterTypeFilter !== 'all' && inc.disasterType !== disasterTypeFilter) return false;
+
+      return true;
     });
+  }, [incidents, searchQuery, severityFilter, statusFilter, disasterTypeFilter]);
+
+  // Form Validation & Submit
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const errors: Record<string, string> = {};
+
+    if (!formData.title.trim()) errors.title = 'Incident title is mandatory.';
+    if (!formData.location.trim()) errors.location = 'Specific location is required.';
+    if (!formData.description.trim()) errors.description = 'Incident description is required.';
+
+    const latNum = parseFloat(formData.lat);
+    const lngNum = parseFloat(formData.lng);
+    if (isNaN(latNum) || latNum < -90 || latNum > 90) errors.lat = 'Valid latitude required (-90 to +90).';
+    if (isNaN(lngNum) || lngNum < -180 || lngNum > 180) errors.lng = 'Valid longitude required (-180 to +180).';
+
+    const pop = parseInt(formData.affectedPopulation, 10);
+    if (isNaN(pop) || pop < 0) errors.affectedPopulation = 'Affected population must be a positive integer.';
+
+    if (!isEditing && !permissions.canCreateIncident) {
+      errors.title = 'Unauthorized: Current operational role cannot record new incidents.';
+    }
+    if (isEditing && !permissions.canEditIncident) {
+      errors.title = 'Unauthorized: Current operational role cannot modify incident records.';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+
     setFormErrors({});
-    setIsCreateOpen(true);
+
+    const selectedTeam = teams.find((t) => t.id === formData.assignedTeamId);
+
+    const payload = {
+      title: formData.title.trim(),
+      description: formData.description.trim(),
+      disasterType: formData.disasterType,
+      severity: formData.severity,
+      location: formData.location.trim(),
+      region: formData.region.trim(),
+      coordinates: { lat: latNum, lng: lngNum },
+      status: formData.status,
+      affectedPopulation: parseInt(formData.affectedPopulation, 10) || 0,
+      assignedTeamId: selectedTeam ? selectedTeam.id : undefined,
+      assignedTeamName: selectedTeam ? selectedTeam.name : undefined,
+      verified: true,
+      priorityScore: formData.severity === 'critical' ? 95 : formData.severity === 'high' ? 75 : 50,
+      reportedBy: user ? `${user.name} (${user.agency})` : 'Disaster Ops Center',
+      tags: formData.tags.split(',').map((t) => t.trim()).filter(Boolean),
+    };
+
+    if (isEditing && activeIncident) {
+      onUpdateIncident(activeIncident.id, payload);
+      setActiveIncident({ ...activeIncident, ...payload, lastUpdated: new Date().toISOString() });
+      setIsEditing(false);
+      setIsCreateModalOpen(false);
+    } else {
+      const created = onCreateIncident(payload);
+      setIsCreateModalOpen(false);
+      setActiveIncident(created);
+    }
   };
 
-  const handleOpenEdit = (inc: Incident) => {
-    setEditingIncident(inc);
+  const openEditModal = (inc: Incident) => {
     setFormData({
       title: inc.title,
       description: inc.description,
-      category: inc.category,
+      disasterType: inc.disasterType,
       severity: inc.severity,
+      location: inc.location,
+      region: inc.region,
+      lat: String(inc.coordinates.lat),
+      lng: String(inc.coordinates.lng),
       status: inc.status,
-      priority: inc.priority,
-      locationName: inc.locationName,
-      latitude: inc.latitude,
-      longitude: inc.longitude,
+      affectedPopulation: String(inc.affectedPopulation),
       assignedTeamId: inc.assignedTeamId || '',
-      affectedPopulation: inc.affectedPopulation,
-      casualties: inc.casualties,
-      source: inc.source,
-      estimatedRadiusMeters: inc.estimatedRadiusMeters || 1000
+      tags: inc.tags.join(', '),
     });
-    setFormErrors({});
+    setIsEditing(true);
+    setIsCreateModalOpen(true);
   };
 
-  const handleSaveCreate = (e: React.FormEvent) => {
-    e.preventDefault();
-    const validation = validateIncidentForm({
-      title: formData.title,
-      category: formData.category,
-      severity: formData.severity,
-      locationName: formData.locationName,
-      latitude: formData.latitude,
-      longitude: formData.longitude,
-      affectedPopulation: formData.affectedPopulation
+  const openCreateModal = () => {
+    setFormData({
+      title: '',
+      description: '',
+      disasterType: 'flood',
+      severity: 'high',
+      location: '',
+      region: 'Odisha Coastal Belt',
+      lat: '20.4625',
+      lng: '85.8828',
+      status: 'active',
+      affectedPopulation: '1500',
+      assignedTeamId: teams[0]?.id || '',
+      tags: 'Triage In Progress, Field Deployment',
     });
-
-    if (!validation.isValid) {
-      setFormErrors(validation.errors);
-      return;
-    }
-
-    const assignedTeam = teams.find(t => t.id === formData.assignedTeamId);
-
-    addIncident({
-      title: formData.title,
-      description: formData.description,
-      category: formData.category,
-      severity: formData.severity,
-      status: formData.status,
-      priority: formData.priority,
-      locationName: formData.locationName,
-      latitude: Number(formData.latitude),
-      longitude: Number(formData.longitude),
-      assignedTeamId: formData.assignedTeamId || undefined,
-      assignedTeamName: assignedTeam ? assignedTeam.name : undefined,
-      affectedPopulation: Number(formData.affectedPopulation),
-      casualties: Number(formData.casualties),
-      source: formData.source,
-      estimatedRadiusMeters: Number(formData.estimatedRadiusMeters)
-    });
-
-    setIsCreateOpen(false);
+    setIsEditing(false);
+    setIsCreateModalOpen(true);
   };
 
-  const handleSaveEdit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingIncident) return;
-
-    const validation = validateIncidentForm({
-      title: formData.title,
-      category: formData.category,
-      severity: formData.severity,
-      locationName: formData.locationName,
-      latitude: formData.latitude,
-      longitude: formData.longitude,
-      affectedPopulation: formData.affectedPopulation
-    });
-
-    if (!validation.isValid) {
-      setFormErrors(validation.errors);
-      return;
-    }
-
-    const assignedTeam = teams.find(t => t.id === formData.assignedTeamId);
-
-    updateIncident(editingIncident.id, {
-      title: formData.title,
-      description: formData.description,
-      category: formData.category,
-      severity: formData.severity,
-      status: formData.status,
-      priority: formData.priority,
-      locationName: formData.locationName,
-      latitude: Number(formData.latitude),
-      longitude: Number(formData.longitude),
-      assignedTeamId: formData.assignedTeamId || undefined,
-      assignedTeamName: assignedTeam ? assignedTeam.name : undefined,
-      affectedPopulation: Number(formData.affectedPopulation),
-      casualties: Number(formData.casualties),
-      source: formData.source,
-      estimatedRadiusMeters: Number(formData.estimatedRadiusMeters)
-    });
-
-    // Update viewing drawer if open
-    if (viewingIncident && viewingIncident.id === editingIncident.id) {
-      setViewingIncident(prev => prev ? {
-        ...prev,
-        ...formData,
-        assignedTeamName: assignedTeam ? assignedTeam.name : undefined
-      } : null);
-    }
-
-    setEditingIncident(null);
-  };
-
-  const handleQuickStatusChange = (id: string, newStatus: IncidentStatus) => {
-    updateIncident(id, { status: newStatus });
-    if (viewingIncident && viewingIncident.id === id) {
-      setViewingIncident(prev => prev ? { ...prev, status: newStatus } : null);
-    }
-  };
-
-  const handleAddTimelineNote = () => {
-    if (!viewingIncident || !newTimelineNote.trim()) return;
-    const now = new Date().toISOString();
-    const newEntry = {
-      id: `TL-${Date.now()}`,
-      timestamp: now,
-      actor: activePersonaId.toUpperCase(),
-      note: newTimelineNote.trim(),
-      type: 'general' as const
-    };
-
-    updateIncident(viewingIncident.id, {
-      timeline: [...viewingIncident.timeline, newEntry]
-    });
-
-    setViewingIncident({
-      ...viewingIncident,
-      timeline: [...viewingIncident.timeline, newEntry]
-    });
-
-    setNewTimelineNote('');
-  };
+  // Columns for DataTable
+  const columns: Column<Incident>[] = [
+    {
+      header: 'Incident ID',
+      accessorKey: 'id',
+      width: '120px',
+      sortable: true,
+      cell: (item) => (
+        <span className="font-mono font-bold text-amber-400">{item.id}</span>
+      ),
+    },
+    {
+      header: 'Title & Summary',
+      sortable: true,
+      cell: (item) => (
+        <div className="min-w-0 pr-2">
+          <div className="font-medium text-slate-100 font-sans text-xs line-clamp-1">{item.title}</div>
+          <div className="text-[11px] text-slate-400 truncate mt-0.5">{item.location} · {item.region}</div>
+        </div>
+      ),
+    },
+    {
+      header: 'Disaster Type',
+      accessorKey: 'disasterType',
+      width: '120px',
+      sortable: true,
+      cell: (item) => (
+        <span className="font-mono text-slate-300 uppercase text-xs">{item.disasterType}</span>
+      ),
+    },
+    {
+      header: 'Severity',
+      accessorKey: 'severity',
+      width: '100px',
+      sortable: true,
+      cell: (item) => <SeverityBadge severity={item.severity} size="sm" />,
+    },
+    {
+      header: 'Status',
+      accessorKey: 'status',
+      width: '110px',
+      sortable: true,
+      cell: (item) => <StatusBadge status={item.status} size="sm" />,
+    },
+    {
+      header: 'Assigned Team',
+      width: '160px',
+      cell: (item) => (
+        <span className="text-slate-300 truncate block text-xs">
+          {item.assignedTeamName || 'Unassigned'}
+        </span>
+      ),
+    },
+    {
+      header: 'Reported',
+      accessorKey: 'reportedTime',
+      align: 'right',
+      width: '100px',
+      sortable: true,
+      cell: (item) => (
+        <span className="text-slate-400 font-mono tabular-nums text-xs">
+          {new Date(item.reportedTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </span>
+      ),
+    },
+  ];
 
   return (
-    <div className="space-y-4 animate-in fade-in duration-150">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-border">
-        <div>
+      <ResponsivePageHeader
+        title="Incident Operations Registry"
+        kicker="Incident Management Architecture"
+        description="Comprehensive disaster event ledger with priority scoring, casualty triage, and tactical response dispatch."
+        actions={
           <div className="flex items-center gap-2">
-            <Flame className="w-5 h-5 text-emergency" />
-            <h1 className="text-xl font-extrabold text-primary tracking-wide">
-              INCIDENT REGISTRY
-            </h1>
-            <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-panel-subtle border border-border text-primary-muted">
-              {filteredIncidents.length} OF {incidents.length} RECORDS
+            <button
+              type="button"
+              onClick={onNavigateToMap}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs font-mono border border-slate-700 transition-colors"
+            >
+              <MapPin className="w-3.5 h-3.5 text-sky-400" />
+              <span>Map View</span>
+            </button>
+            {permissions.canCreateIncident && (
+              <button
+                type="button"
+                onClick={openCreateModal}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs font-mono transition-colors shadow-sm"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Log New Incident</span>
+              </button>
+            )}
+          </div>
+        }
+      />
+
+      {/* Filter and Search Bar */}
+      <div className="p-3.5 bg-[#12171e] border border-slate-800 rounded space-y-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <SearchBar
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Search by ID, title, zone, disaster type..."
+            className="flex-1 max-w-md"
+          />
+
+          <div className="flex items-center gap-2 text-xs font-mono text-slate-400">
+            <span>Showing:</span>
+            <span className="text-slate-200 font-bold tabular-nums">
+              {filteredIncidents.length} of {incidents.length}
             </span>
           </div>
-          <p className="text-xs text-primary-muted mt-0.5">
-            Log, triage, track, and coordinate active disaster incidents across the district.
-          </p>
         </div>
 
-        <Button
-          variant="danger"
-          size="sm"
-          icon={Plus}
-          onClick={handleOpenCreate}
-          restricted={!canCreate}
-          restrictedReason={getPermissionRestrictionMessage(activePersonaId, 'create_incidents')}
-        >
-          Register Incident
-        </Button>
-      </div>
+        <div className="flex items-center gap-4 flex-wrap pt-2 border-t border-slate-850">
+          <FilterBar
+            label="Severity"
+            options={[
+              { id: 'all', label: 'All' },
+              { id: 'critical', label: 'Critical' },
+              { id: 'high', label: 'High' },
+              { id: 'medium', label: 'Medium' },
+              { id: 'low', label: 'Low' },
+            ]}
+            selectedId={severityFilter}
+            onSelect={setSeverityFilter}
+          />
 
-      {/* Search & Filter Toolbar */}
-      <div className="grid grid-cols-1 md:grid-cols-6 gap-2.5 p-3 bg-panel border border-border rounded-lg text-xs">
-        {/* Search */}
-        <div className="md:col-span-2 relative">
-          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-primary-dim" />
-          <input
-            type="text"
-            placeholder="Search by title, ID, or location..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-charcoal border border-border rounded pl-8 pr-3 py-1.5 text-xs text-primary placeholder:text-primary-dim focus:outline-none focus:border-border-subtle"
+          <FilterBar
+            label="Status"
+            options={[
+              { id: 'all', label: 'All' },
+              { id: 'active', label: 'Active' },
+              { id: 'investigating', label: 'Investigating' },
+              { id: 'contained', label: 'Contained' },
+              { id: 'resolved', label: 'Resolved' },
+            ]}
+            selectedId={statusFilter}
+            onSelect={setStatusFilter}
+          />
+
+          <FilterBar
+            label="Type"
+            options={[
+              { id: 'all', label: 'All Hazards' },
+              { id: 'flood', label: 'Flood' },
+              { id: 'cyclone', label: 'Cyclone' },
+              { id: 'landslide', label: 'Landslide' },
+              { id: 'industrial', label: 'Industrial' },
+            ]}
+            selectedId={disasterTypeFilter}
+            onSelect={setDisasterTypeFilter}
           />
         </div>
-
-        {/* Severity Filter */}
-        <div>
-          <select
-            value={filterSeverity}
-            onChange={(e) => setFilterSeverity(e.target.value)}
-            className="w-full bg-charcoal border border-border rounded px-2.5 py-1.5 text-xs text-primary focus:outline-none"
-          >
-            <option value="all">All Severities</option>
-            <option value="Critical">Critical</option>
-            <option value="High">High</option>
-            <option value="Moderate">Moderate</option>
-            <option value="Low">Low</option>
-          </select>
-        </div>
-
-        {/* Status Filter */}
-        <div>
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="w-full bg-charcoal border border-border rounded px-2.5 py-1.5 text-xs text-primary focus:outline-none"
-          >
-            <option value="all">All Statuses</option>
-            <option value="Reported">Reported</option>
-            <option value="Verified">Verified</option>
-            <option value="Active">Active</option>
-            <option value="Contained">Contained</option>
-            <option value="Resolved">Resolved</option>
-            <option value="Closed">Closed</option>
-          </select>
-        </div>
-
-        {/* Category Filter */}
-        <div>
-          <select
-            value={filterCategory}
-            onChange={(e) => setFilterCategory(e.target.value)}
-            className="w-full bg-charcoal border border-border rounded px-2.5 py-1.5 text-xs text-primary focus:outline-none"
-          >
-            <option value="all">All Categories</option>
-            <option value="flood">Flood</option>
-            <option value="flash_flood">Flash Flood</option>
-            <option value="heavy_rainfall">Heavy Rainfall</option>
-            <option value="cyclone">Cyclone</option>
-            <option value="earthquake">Earthquake</option>
-            <option value="landslide">Landslide</option>
-            <option value="wildfire">Wildfire</option>
-            <option value="industrial">Industrial</option>
-          </select>
-        </div>
-
-        {/* Sort */}
-        <div className="flex items-center gap-1">
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as any)}
-            className="flex-1 bg-charcoal border border-border rounded px-2 py-1.5 text-xs text-primary focus:outline-none"
-          >
-            <option value="reportedAt">Time</option>
-            <option value="priority">Priority</option>
-            <option value="severity">Severity</option>
-          </select>
-          <button
-            onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
-            className="p-1.5 rounded bg-charcoal border border-border text-primary-muted hover:text-primary"
-            title={`Toggle sort order (${sortOrder.toUpperCase()})`}
-          >
-            <ArrowUpDown className="w-3.5 h-3.5" />
-          </button>
-        </div>
       </div>
 
-      {/* Incidents Table */}
-      <div className="bg-panel border border-border rounded-lg overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-panel-card text-[10px] font-mono text-primary-dim uppercase border-b border-border tracking-wider">
-              <tr>
-                <th className="p-3">Incident ID & Title</th>
-                <th className="p-3">Category</th>
-                <th className="p-3">Priority</th>
-                <th className="p-3">Severity</th>
-                <th className="p-3">Status</th>
-                <th className="p-3">Assigned Team</th>
-                <th className="p-3">Reported</th>
-                <th className="p-3 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/40 font-mono">
-              {filteredIncidents.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="p-8 text-center text-xs text-primary-dim font-sans">
-                    No matching incidents found. Adjust filters or register a new incident.
-                  </td>
-                </tr>
-              ) : (
-                filteredIncidents.map((inc) => (
-                  <tr
-                    key={inc.id}
-                    className="hover:bg-panel-elevated transition-colors group"
-                  >
-                    <td className="p-3">
-                      <div className="font-bold text-primary font-sans text-xs group-hover:text-emergency transition-colors cursor-pointer" onClick={() => setViewingIncident(inc)}>
-                        {inc.title}
-                      </div>
-                      <div className="text-[10px] text-primary-dim flex items-center gap-1.5 mt-0.5">
-                        <span className="font-semibold text-primary-muted">{inc.id}</span>
-                        <span>•</span>
-                        <span className="truncate max-w-[200px]">{inc.locationName}</span>
-                      </div>
-                    </td>
+      {/* Incident Data Table */}
+      <DataTable
+        data={filteredIncidents}
+        columns={columns}
+        keyExtractor={(item) => item.id}
+        onRowClick={(item) => setActiveIncident(item)}
+        pageSize={8}
+        emptyMessage="No disaster incidents match your active search filters."
+      />
 
-                    <td className="p-3">
-                      <span className="text-[11px] font-sans text-primary-muted">
-                        {formatCategory(inc.category)}
-                      </span>
-                    </td>
-
-                    <td className="p-3">
-                      <PriorityBadge priority={inc.priority} />
-                    </td>
-
-                    <td className="p-3">
-                      <SeverityBadge severity={inc.severity} />
-                    </td>
-
-                    <td className="p-3">
-                      <StatusBadge status={inc.status} />
-                    </td>
-
-                    <td className="p-3">
-                      <span className="text-[11px] font-sans text-primary-muted truncate block max-w-[150px]">
-                        {inc.assignedTeamName || <span className="text-primary-dim italic">Unassigned</span>}
-                      </span>
-                    </td>
-
-                    <td className="p-3 text-primary-dim text-[11px]">
-                      {formatRelativeTime(inc.reportedAt)}
-                    </td>
-
-                    <td className="p-3 text-right">
-                      <div className="flex items-center justify-end gap-1 font-sans">
-                        <button
-                          onClick={() => setViewingIncident(inc)}
-                          className="p-1 rounded text-primary-muted hover:text-primary hover:bg-panel-subtle"
-                          title="Inspect incident details"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleOpenEdit(inc)}
-                          disabled={!canEdit}
-                          className={`p-1 rounded ${canEdit ? 'text-primary-muted hover:text-primary hover:bg-panel-subtle' : 'opacity-30 cursor-not-allowed'}`}
-                          title={canEdit ? 'Edit incident' : 'Editing restricted'}
-                        >
-                          <Edit3 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => setDeletingId(inc.id)}
-                          disabled={!canDelete}
-                          className={`p-1 rounded ${canDelete ? 'text-primary-muted hover:text-emergency hover:bg-emergency/10' : 'opacity-30 cursor-not-allowed'}`}
-                          title={canDelete ? 'Delete incident' : 'Deleting restricted'}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* CREATE INCIDENT MODAL */}
-      <Modal
-        isOpen={isCreateOpen}
-        onClose={() => setIsCreateOpen(false)}
-        title="Register New Emergency Incident"
-        subtitle="Submit a verified or incoming field incident to the district operations registry."
-        maxWidth="2xl"
-      >
-        <form onSubmit={handleSaveCreate} className="space-y-4 text-xs">
-          <div>
-            <label className="font-semibold text-primary block mb-1">
-              Incident Title <span className="text-emergency">*</span>
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. Flash Flood Inundation & Culvert Breach — Sector 4"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className={`w-full bg-charcoal border rounded px-3 py-2 text-primary focus:outline-none ${formErrors.title ? 'border-emergency' : 'border-border'}`}
-            />
-            {formErrors.title && <p className="text-emergency text-[11px] mt-1">{formErrors.title}</p>}
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="font-semibold text-primary block mb-1">Disaster Category</label>
-              <select
-                value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value as DisasterCategory })}
-                className="w-full bg-charcoal border border-border rounded px-3 py-2 text-primary focus:outline-none"
-              >
-                <option value="flood">Flood</option>
-                <option value="flash_flood">Flash Flood</option>
-                <option value="heavy_rainfall">Heavy Rainfall</option>
-                <option value="cyclone">Cyclone</option>
-                <option value="earthquake">Earthquake</option>
-                <option value="landslide">Landslide</option>
-                <option value="wildfire">Wildfire</option>
-                <option value="industrial">Industrial</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="font-semibold text-primary block mb-1">Severity Classification</label>
-              <select
-                value={formData.severity}
-                onChange={(e) => setFormData({ ...formData, severity: e.target.value as IncidentSeverity })}
-                className="w-full bg-charcoal border border-border rounded px-3 py-2 text-primary focus:outline-none"
-              >
-                <option value="Critical">Critical</option>
-                <option value="High">High</option>
-                <option value="Moderate">Moderate</option>
-                <option value="Low">Low</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="font-semibold text-primary block mb-1">Tactical Priority</label>
-              <select
-                value={formData.priority}
-                onChange={(e) => setFormData({ ...formData, priority: e.target.value as IncidentPriority })}
-                className="w-full bg-charcoal border border-border rounded px-3 py-2 text-primary focus:outline-none"
-              >
-                <option value="P1">P1 - Highest Emergency</option>
-                <option value="P2">P2 - Severe Hazard</option>
-                <option value="P3">P3 - Moderate Alert</option>
-                <option value="P4">P4 - Low / Monitored</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="font-semibold text-primary block mb-1">Detailed Description</label>
-            <textarea
-              rows={3}
-              placeholder="Provide field context, current hazard progression, immediate life safety threats..."
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full bg-charcoal border border-border rounded px-3 py-2 text-primary focus:outline-none"
-            />
-          </div>
-
-          {/* Location & Coordinates */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="sm:col-span-1">
-              <label className="font-semibold text-primary block mb-1">
-                Location Name <span className="text-emergency">*</span>
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. Ring Road Junction Reach"
-                value={formData.locationName}
-                onChange={(e) => setFormData({ ...formData, locationName: e.target.value })}
-                className={`w-full bg-charcoal border rounded px-3 py-2 text-primary focus:outline-none ${formErrors.locationName ? 'border-emergency' : 'border-border'}`}
-              />
-              {formErrors.locationName && <p className="text-emergency text-[11px] mt-1">{formErrors.locationName}</p>}
-            </div>
-
-            <div>
-              <label className="font-semibold text-primary block mb-1">
-                Latitude (-90 to 90) <span className="text-emergency">*</span>
-              </label>
-              <input
-                type="number"
-                step="any"
-                value={formData.latitude}
-                onChange={(e) => setFormData({ ...formData, latitude: parseFloat(e.target.value) })}
-                className={`w-full bg-charcoal border rounded px-3 py-2 font-mono text-primary focus:outline-none ${formErrors.latitude ? 'border-emergency' : 'border-border'}`}
-              />
-              {formErrors.latitude && <p className="text-emergency text-[11px] mt-1">{formErrors.latitude}</p>}
-            </div>
-
-            <div>
-              <label className="font-semibold text-primary block mb-1">
-                Longitude (-180 to 180) <span className="text-emergency">*</span>
-              </label>
-              <input
-                type="number"
-                step="any"
-                value={formData.longitude}
-                onChange={(e) => setFormData({ ...formData, longitude: parseFloat(e.target.value) })}
-                className={`w-full bg-charcoal border rounded px-3 py-2 font-mono text-primary focus:outline-none ${formErrors.longitude ? 'border-emergency' : 'border-border'}`}
-              />
-              {formErrors.longitude && <p className="text-emergency text-[11px] mt-1">{formErrors.longitude}</p>}
-            </div>
-          </div>
-
-          {/* Estimates & Assignments */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="font-semibold text-primary block mb-1">Assign Response Team</label>
-              <select
-                value={formData.assignedTeamId}
-                onChange={(e) => setFormData({ ...formData, assignedTeamId: e.target.value })}
-                className="w-full bg-charcoal border border-border rounded px-3 py-2 text-primary focus:outline-none"
-              >
-                <option value="">None (Unassigned)</option>
-                {teams.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name} ({t.status})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="font-semibold text-primary block mb-1">Affected Population Est.</label>
-              <input
-                type="number"
-                min="0"
-                value={formData.affectedPopulation}
-                onChange={(e) => setFormData({ ...formData, affectedPopulation: parseInt(e.target.value) || 0 })}
-                className="w-full bg-charcoal border border-border rounded px-3 py-2 font-mono text-primary focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="font-semibold text-primary block mb-1">Casualty / Injury Est.</label>
-              <input
-                type="number"
-                min="0"
-                value={formData.casualties}
-                onChange={(e) => setFormData({ ...formData, casualties: parseInt(e.target.value) || 0 })}
-                className="w-full bg-charcoal border border-border rounded px-3 py-2 font-mono text-primary focus:outline-none"
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center justify-end gap-2 pt-4 border-t border-border">
-            <Button size="sm" variant="outline" type="button" onClick={() => setIsCreateOpen(false)}>
-              Cancel
-            </Button>
-            <Button size="sm" variant="danger" type="submit">
-              Register Incident
-            </Button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* EDIT INCIDENT MODAL */}
-      <Modal
-        isOpen={editingIncident !== null}
-        onClose={() => setEditingIncident(null)}
-        title={`Edit Incident: ${editingIncident?.id}`}
-        subtitle="Update severity, status transition, coordinates, or team assignment."
-        maxWidth="2xl"
-      >
-        <form onSubmit={handleSaveEdit} className="space-y-4 text-xs">
-          <div>
-            <label className="font-semibold text-primary block mb-1">Incident Title</label>
-            <input
-              type="text"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className="w-full bg-charcoal border border-border rounded px-3 py-2 text-primary focus:outline-none"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="font-semibold text-primary block mb-1">Disaster Category</label>
-              <select
-                value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value as DisasterCategory })}
-                className="w-full bg-charcoal border border-border rounded px-3 py-2 text-primary focus:outline-none"
-              >
-                <option value="flood">Flood</option>
-                <option value="flash_flood">Flash Flood</option>
-                <option value="heavy_rainfall">Heavy Rainfall</option>
-                <option value="cyclone">Cyclone</option>
-                <option value="earthquake">Earthquake</option>
-                <option value="landslide">Landslide</option>
-                <option value="wildfire">Wildfire</option>
-                <option value="industrial">Industrial</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="font-semibold text-primary block mb-1">Severity Classification</label>
-              <select
-                value={formData.severity}
-                onChange={(e) => setFormData({ ...formData, severity: e.target.value as IncidentSeverity })}
-                className="w-full bg-charcoal border border-border rounded px-3 py-2 text-primary focus:outline-none"
-              >
-                <option value="Critical">Critical</option>
-                <option value="High">High</option>
-                <option value="Moderate">Moderate</option>
-                <option value="Low">Low</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="font-semibold text-primary block mb-1">Lifecycle Status</label>
-              <select
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value as IncidentStatus })}
-                className="w-full bg-charcoal border border-border rounded px-3 py-2 text-primary focus:outline-none"
-              >
-                <option value="Reported">Reported</option>
-                <option value="Verified">Verified</option>
-                <option value="Active">Active</option>
-                <option value="Contained">Contained</option>
-                <option value="Resolved">Resolved</option>
-                <option value="Closed" disabled={!canClose}>
-                  Closed {!canClose ? '(Restricted)' : ''}
-                </option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="font-semibold text-primary block mb-1">Description</label>
-            <textarea
-              rows={3}
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full bg-charcoal border border-border rounded px-3 py-2 text-primary focus:outline-none"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="font-semibold text-primary block mb-1">Location Name</label>
-              <input
-                type="text"
-                value={formData.locationName}
-                onChange={(e) => setFormData({ ...formData, locationName: e.target.value })}
-                className="w-full bg-charcoal border border-border rounded px-3 py-2 text-primary focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="font-semibold text-primary block mb-1">Latitude</label>
-              <input
-                type="number"
-                step="any"
-                value={formData.latitude}
-                onChange={(e) => setFormData({ ...formData, latitude: parseFloat(e.target.value) })}
-                className="w-full bg-charcoal border border-border rounded px-3 py-2 font-mono text-primary focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="font-semibold text-primary block mb-1">Longitude</label>
-              <input
-                type="number"
-                step="any"
-                value={formData.longitude}
-                onChange={(e) => setFormData({ ...formData, longitude: parseFloat(e.target.value) })}
-                className="w-full bg-charcoal border border-border rounded px-3 py-2 font-mono text-primary focus:outline-none"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="font-semibold text-primary block mb-1">Assigned Response Team</label>
-              <select
-                value={formData.assignedTeamId}
-                onChange={(e) => setFormData({ ...formData, assignedTeamId: e.target.value })}
-                className="w-full bg-charcoal border border-border rounded px-3 py-2 text-primary focus:outline-none"
-              >
-                <option value="">None (Unassigned)</option>
-                {teams.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name} ({t.status})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="font-semibold text-primary block mb-1">Affected Population</label>
-              <input
-                type="number"
-                min="0"
-                value={formData.affectedPopulation}
-                onChange={(e) => setFormData({ ...formData, affectedPopulation: parseInt(e.target.value) || 0 })}
-                className="w-full bg-charcoal border border-border rounded px-3 py-2 font-mono text-primary focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="font-semibold text-primary block mb-1">Estimated Radius (m)</label>
-              <input
-                type="number"
-                min="100"
-                step="100"
-                value={formData.estimatedRadiusMeters}
-                onChange={(e) => setFormData({ ...formData, estimatedRadiusMeters: parseInt(e.target.value) || 1000 })}
-                className="w-full bg-charcoal border border-border rounded px-3 py-2 font-mono text-primary focus:outline-none"
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center justify-end gap-2 pt-4 border-t border-border">
-            <Button size="sm" variant="outline" type="button" onClick={() => setEditingIncident(null)}>
-              Cancel
-            </Button>
-            <Button size="sm" variant="primary" type="submit">
-              Save Changes
-            </Button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* VIEW INCIDENT DRAWER / MODAL */}
-      <Modal
-        isOpen={viewingIncident !== null}
-        onClose={() => setViewingIncident(null)}
-        title={viewingIncident ? `${viewingIncident.id} — ${viewingIncident.title}` : ''}
-        subtitle={viewingIncident?.locationName}
-        maxWidth="2xl"
-      >
-        {viewingIncident && (
-          <div className="space-y-4 text-xs">
-            {/* Top Badges & Status Transitions */}
-            <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-panel-subtle rounded border border-border">
-              <div className="flex items-center gap-2">
-                <SeverityBadge severity={viewingIncident.severity} />
-                <StatusBadge status={viewingIncident.status} />
-                <PriorityBadge priority={viewingIncident.priority} />
-              </div>
-
-              {/* Status Transition Quick Buttons */}
-              <div className="flex items-center gap-1">
-                {viewingIncident.status === 'Reported' && (
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => handleQuickStatusChange(viewingIncident.id, 'Verified')}
-                    restricted={!canEdit}
-                  >
-                    Verify
-                  </Button>
-                )}
-                {viewingIncident.status === 'Verified' && (
-                  <Button
-                    size="sm"
-                    variant="warning"
-                    onClick={() => handleQuickStatusChange(viewingIncident.id, 'Active')}
-                    restricted={!canEdit}
-                  >
-                    Activate
-                  </Button>
-                )}
-                {viewingIncident.status === 'Active' && (
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => handleQuickStatusChange(viewingIncident.id, 'Contained')}
-                    restricted={!canEdit}
-                  >
-                    Mark Contained
-                  </Button>
-                )}
-                {viewingIncident.status === 'Contained' && (
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => handleQuickStatusChange(viewingIncident.id, 'Resolved')}
-                    restricted={!canEdit}
-                  >
-                    Mark Resolved
-                  </Button>
-                )}
-                {viewingIncident.status !== 'Closed' && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleQuickStatusChange(viewingIncident.id, 'Closed')}
-                    restricted={!canClose}
-                    restrictedReason="Closing incidents requires Commander or Administrator role."
-                  >
-                    Close
-                  </Button>
-                )}
-              </div>
-            </div>
-
-            {/* Description */}
-            <div>
-              <span className="text-[10px] font-mono uppercase tracking-wider text-primary-dim block">
-                DESCRIPTION & THREAT CONTEXT
-              </span>
-              <p className="text-primary-muted leading-relaxed mt-1 bg-charcoal p-3 rounded border border-border">
-                {viewingIncident.description}
-              </p>
-            </div>
-
-            {/* Metrics Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono text-[11px]">
-              <div className="p-2.5 bg-panel-card rounded border border-border">
-                <span className="text-primary-dim block text-[10px]">COORDINATES</span>
-                <span className="text-primary font-semibold">
-                  {formatCoordinates(viewingIncident.latitude, viewingIncident.longitude)}
-                </span>
-              </div>
-              <div className="p-2.5 bg-panel-card rounded border border-border">
-                <span className="text-primary-dim block text-[10px]">AFFECTED POPULATION</span>
-                <span className="text-primary font-bold">
-                  {viewingIncident.affectedPopulation.toLocaleString()}
-                </span>
-              </div>
-              <div className="p-2.5 bg-panel-card rounded border border-border">
-                <span className="text-primary-dim block text-[10px]">CASUALTIES / INJURED</span>
-                <span className="text-primary font-bold">
-                  {viewingIncident.casualties}
-                </span>
-              </div>
-              <div className="p-2.5 bg-panel-card rounded border border-border">
-                <span className="text-primary-dim block text-[10px]">SOURCE TYPE</span>
-                <span className="text-primary font-semibold">
-                  {viewingIncident.source}
-                </span>
-              </div>
-            </div>
-
-            {/* Assigned Unit */}
-            <div className="p-3 rounded bg-panel-card border border-border flex items-center justify-between">
+      {/* Incident Detail Inspection Drawer / Modal */}
+      {activeIncident && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="w-full max-w-2xl bg-[#161c24] border border-slate-750 rounded-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <div className="p-4 bg-[#12171e] border-b border-slate-800 flex items-start justify-between gap-3 shrink-0">
               <div>
-                <span className="text-[10px] font-mono text-primary-dim block">ASSIGNED RESPONSE UNIT</span>
-                <span className="text-sm font-semibold text-primary">
-                  {viewingIncident.assignedTeamName || 'No unit assigned currently.'}
-                </span>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-sm font-bold font-mono text-amber-400">{activeIncident.id}</span>
+                  <SeverityBadge severity={activeIncident.severity} size="sm" />
+                  <StatusBadge status={activeIncident.status} size="sm" />
+                </div>
+                <h3 className="text-base font-bold text-slate-100 leading-snug">
+                  {activeIncident.title}
+                </h3>
               </div>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  setViewingIncident(null);
-                  handleOpenEdit(viewingIncident);
-                }}
-                restricted={!canEdit}
+              <button
+                type="button"
+                onClick={() => setActiveIncident(null)}
+                aria-label="Close detail"
+                className="p-1 rounded text-slate-400 hover:text-slate-100 hover:bg-slate-800"
               >
-                Change Assignment
-              </Button>
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
-            {/* Timeline & Activity History */}
-            <div>
-              <span className="text-[10px] font-mono uppercase tracking-wider text-primary-dim block mb-2">
-                OPERATIONAL TIMELINE & FIELD LOG ({viewingIncident.timeline.length} EVENTS)
-              </span>
-
-              <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar p-2 bg-charcoal rounded border border-border">
-                {viewingIncident.timeline.map((entry) => (
-                  <div key={entry.id} className="text-[11px] p-2 rounded bg-panel-subtle border border-border/60">
-                    <div className="flex items-center justify-between text-primary-dim font-mono text-[10px] mb-1">
-                      <span className="font-semibold text-primary">{entry.actor}</span>
-                      <span>{formatDateTime(entry.timestamp)}</span>
-                    </div>
-                    <p className="text-primary-muted">{entry.note}</p>
-                  </div>
-                ))}
+            {/* Content Body */}
+            <div className="p-5 overflow-y-auto space-y-5 flex-1 text-xs">
+              {/* Situation Description */}
+              <div>
+                <div className="font-mono text-[11px] uppercase tracking-wider text-slate-400 mb-1.5 font-semibold">
+                  Tactical Situation Assessment
+                </div>
+                <p className="text-slate-300 leading-relaxed bg-[#0d1117] p-3 rounded border border-slate-850">
+                  {activeIncident.description}
+                </p>
               </div>
 
-              {/* Add Note Input */}
-              {canEdit && (
-                <div className="flex items-center gap-2 mt-2">
-                  <input
-                    type="text"
-                    placeholder="Add operational status note or field update..."
-                    value={newTimelineNote}
-                    onChange={(e) => setNewTimelineNote(e.target.value)}
-                    className="flex-1 bg-charcoal border border-border rounded px-3 py-1.5 text-xs text-primary focus:outline-none"
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddTimelineNote()}
-                  />
-                  <Button size="sm" variant="secondary" onClick={handleAddTimelineNote}>
-                    Post Note
-                  </Button>
+              {/* Coordinates & Zone */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono">
+                <div className="p-2.5 rounded bg-slate-900 border border-slate-850">
+                  <div className="text-[10px] text-slate-500 uppercase">Hazard Type</div>
+                  <div className="text-slate-200 font-bold uppercase mt-0.5">{activeIncident.disasterType}</div>
+                </div>
+                <div className="p-2.5 rounded bg-slate-900 border border-slate-850">
+                  <div className="text-[10px] text-slate-500 uppercase">Priority Index</div>
+                  <div className="text-amber-400 font-bold mt-0.5 tabular-nums">{activeIncident.priorityScore}/100</div>
+                </div>
+                <div className="p-2.5 rounded bg-slate-900 border border-slate-850">
+                  <div className="text-[10px] text-slate-500 uppercase">Affected People</div>
+                  <div className="text-slate-200 font-bold mt-0.5 tabular-nums">
+                    ~{activeIncident.affectedPopulation.toLocaleString()}
+                  </div>
+                </div>
+                <div className="p-2.5 rounded bg-slate-900 border border-slate-850">
+                  <div className="text-[10px] text-slate-500 uppercase">Verification</div>
+                  <div className="text-emerald-400 font-bold mt-0.5 flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>VERIFIED</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Geospatial and Assigned Unit */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="p-3 rounded bg-slate-900 border border-slate-850 space-y-1.5">
+                  <div className="font-mono text-[10px] uppercase text-slate-500 flex items-center gap-1">
+                    <MapPin className="w-3.5 h-3.5 text-sky-400" />
+                    <span>Location & GPS Anchor</span>
+                  </div>
+                  <div className="text-slate-200 font-medium">{activeIncident.location}</div>
+                  <div className="text-slate-400 text-[11px]">{activeIncident.region}</div>
+                  <div className="text-amber-400/90 font-mono text-[11px] tabular-nums pt-1">
+                    LAT: {activeIncident.coordinates.lat.toFixed(4)}° N, LNG: {activeIncident.coordinates.lng.toFixed(4)}° E
+                  </div>
+                </div>
+
+                <div className="p-3 rounded bg-slate-900 border border-slate-850 space-y-1.5">
+                  <div className="font-mono text-[10px] uppercase text-slate-500 flex items-center gap-1">
+                    <Users className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Assigned Response Force</span>
+                  </div>
+                  <div className="text-slate-200 font-medium">
+                    {activeIncident.assignedTeamName || 'No Team Dispatched Yet'}
+                  </div>
+                  <div className="text-slate-400 text-[11px]">
+                    Reported by: {activeIncident.reportedBy}
+                  </div>
+                  <div className="text-slate-500 text-[11px] font-mono tabular-nums pt-1">
+                    Reported: {new Date(activeIncident.reportedTime).toLocaleString()}
+                  </div>
+                </div>
+              </div>
+
+              {/* Casualties / Rescued Status */}
+              {activeIncident.casualties && (
+                <div className="p-3 rounded bg-slate-900 border border-slate-850">
+                  <div className="font-mono text-[10px] uppercase text-slate-500 mb-2">
+                    Human Life Impact & Rescue Progress
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 font-mono text-center">
+                    <div className="p-2 rounded bg-slate-850">
+                      <div className="text-xs text-emerald-400 font-bold tabular-nums">
+                        {activeIncident.casualties.rescued}
+                      </div>
+                      <div className="text-[10px] text-slate-400">Rescued / Safe</div>
+                    </div>
+                    <div className="p-2 rounded bg-slate-850">
+                      <div className="text-xs text-amber-400 font-bold tabular-nums">
+                        {activeIncident.casualties.injured}
+                      </div>
+                      <div className="text-[10px] text-slate-400">Medical Aid Needed</div>
+                    </div>
+                    <div className="p-2 rounded bg-slate-850">
+                      <div className="text-xs text-rose-400 font-bold tabular-nums">
+                        {activeIncident.casualties.deceased}
+                      </div>
+                      <div className="text-[10px] text-slate-400">Fatalities</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Status Update Quick Buttons */}
+              {permissions.canEditIncident && (
+                <div className="pt-2 border-t border-slate-850">
+                  <div className="font-mono text-[10px] uppercase text-slate-500 mb-2">
+                    Fast Operational Status Transition
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {(['active', 'investigating', 'contained', 'resolved'] as IncidentStatus[]).map((st) => (
+                      <button
+                        key={st}
+                        type="button"
+                        onClick={() => {
+                          onUpdateIncident(activeIncident.id, { status: st });
+                          setActiveIncident({ ...activeIncident, status: st });
+                        }}
+                        className={`px-3 py-1 text-xs font-mono rounded transition-colors uppercase ${
+                          activeIncident.status === st
+                            ? 'bg-amber-500 text-slate-950 font-bold'
+                            : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        {st}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
 
-            <div className="flex items-center justify-end pt-3 border-t border-border">
-              <Button size="sm" variant="primary" onClick={() => setViewingIncident(null)}>
-                Close Inspector
-              </Button>
+            {/* Footer Actions */}
+            <div className="p-3 bg-[#12171e] border-t border-slate-800 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2">
+                {permissions.canDeleteIncident && (
+                  <button
+                    type="button"
+                    onClick={() => setDeleteTargetId(activeIncident.id)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-mono text-rose-400 hover:bg-rose-950/40 transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Delete Record</span>
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                {permissions.canEditIncident && (
+                  <button
+                    type="button"
+                    onClick={() => openEditModal(activeIncident)}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs font-mono border border-slate-700 transition-colors"
+                  >
+                    <Edit2 className="w-3.5 h-3.5" />
+                    <span>Edit Incident</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setActiveIncident(null)}
+                  className="px-4 py-1.5 rounded bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs font-mono transition-colors"
+                >
+                  Dismiss
+                </button>
+              </div>
             </div>
           </div>
-        )}
-      </Modal>
+        </div>
+      )}
 
-      {/* DELETE CONFIRMATION DIALOG */}
+      {/* Create / Edit Incident Modal Form */}
+      {isCreateModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-xs"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="w-full max-w-xl bg-[#161c24] border border-slate-750 rounded-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col">
+            <div className="p-4 bg-[#12171e] border-b border-slate-800 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-500" />
+                <h3 className="text-sm font-mono font-bold uppercase tracking-wider text-slate-100">
+                  {isEditing ? 'Modify Incident Ledger Record' : 'Log New Emergency Incident'}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCreateModalOpen(false)}
+                className="p-1 rounded text-slate-400 hover:text-slate-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleFormSubmit} className="p-5 overflow-y-auto space-y-4 flex-1">
+              <FormField label="Incident Title" required error={formErrors.title} id="inc-title">
+                <input
+                  id="inc-title"
+                  type="text"
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  placeholder="e.g. Flash Flood Breach at River Enbankment"
+                  className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded text-xs text-slate-100 focus:outline-none focus:border-amber-500/80"
+                />
+              </FormField>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <FormField label="Hazard / Disaster Type" required id="inc-disaster">
+                  <select
+                    id="inc-disaster"
+                    value={formData.disasterType}
+                    onChange={(e) => setFormData({ ...formData, disasterType: e.target.value as DisasterType })}
+                    className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded text-xs font-mono text-slate-100 focus:outline-none focus:border-amber-500/80 uppercase"
+                  >
+                    <option value="flood">Flood</option>
+                    <option value="cyclone">Cyclone</option>
+                    <option value="earthquake">Earthquake</option>
+                    <option value="landslide">Landslide</option>
+                    <option value="wildfire">Wildfire</option>
+                    <option value="industrial">Industrial / HazMat</option>
+                    <option value="medical">Medical Epidemic</option>
+                    <option value="tsunami">Tsunami</option>
+                  </select>
+                </FormField>
+
+                <FormField label="Severity Level" required id="inc-severity">
+                  <select
+                    id="inc-severity"
+                    value={formData.severity}
+                    onChange={(e) => setFormData({ ...formData, severity: e.target.value as SeverityLevel })}
+                    className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded text-xs font-mono text-slate-100 focus:outline-none focus:border-amber-500/80 uppercase"
+                  >
+                    <option value="critical">Critical (Life Threatening)</option>
+                    <option value="high">High (Severe Impact)</option>
+                    <option value="medium">Medium (Localized Threat)</option>
+                    <option value="low">Low (Precautionary)</option>
+                  </select>
+                </FormField>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <FormField label="Specific Location" required error={formErrors.location} id="inc-location">
+                  <input
+                    id="inc-location"
+                    type="text"
+                    value={formData.location}
+                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                    placeholder="e.g. Sector 4 Bridge, Cuttack"
+                    className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded text-xs text-slate-100 focus:outline-none focus:border-amber-500/80"
+                  />
+                </FormField>
+
+                <FormField label="Command Region" required id="inc-region">
+                  <input
+                    id="inc-region"
+                    type="text"
+                    value={formData.region}
+                    onChange={(e) => setFormData({ ...formData, region: e.target.value })}
+                    placeholder="Odisha Coastal Belt"
+                    className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded text-xs text-slate-100 focus:outline-none focus:border-amber-500/80"
+                  />
+                </FormField>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <FormField label="Latitude (N)" required error={formErrors.lat} id="inc-lat">
+                  <input
+                    id="inc-lat"
+                    type="text"
+                    value={formData.lat}
+                    onChange={(e) => setFormData({ ...formData, lat: e.target.value })}
+                    placeholder="20.4625"
+                    className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded text-xs font-mono text-slate-100 focus:outline-none focus:border-amber-500/80"
+                  />
+                </FormField>
+
+                <FormField label="Longitude (E)" required error={formErrors.lng} id="inc-lng">
+                  <input
+                    id="inc-lng"
+                    type="text"
+                    value={formData.lng}
+                    onChange={(e) => setFormData({ ...formData, lng: e.target.value })}
+                    placeholder="85.8828"
+                    className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded text-xs font-mono text-slate-100 focus:outline-none focus:border-amber-500/80"
+                  />
+                </FormField>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <FormField label="Affected Population" error={formErrors.affectedPopulation} id="inc-pop">
+                  <input
+                    id="inc-pop"
+                    type="number"
+                    value={formData.affectedPopulation}
+                    onChange={(e) => setFormData({ ...formData, affectedPopulation: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded text-xs font-mono text-slate-100 focus:outline-none focus:border-amber-500/80"
+                  />
+                </FormField>
+
+                <FormField label="Assign Response Team" id="inc-team">
+                  <select
+                    id="inc-team"
+                    value={formData.assignedTeamId}
+                    onChange={(e) => setFormData({ ...formData, assignedTeamId: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded text-xs text-slate-100 focus:outline-none focus:border-amber-500/80"
+                  >
+                    <option value="">No Team Assigned</option>
+                    {teams.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name} ({t.status.toUpperCase()})
+                      </option>
+                    ))}
+                  </select>
+                </FormField>
+              </div>
+
+              <FormField label="Situation Details" required error={formErrors.description} id="inc-desc">
+                <textarea
+                  id="inc-desc"
+                  rows={3}
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Detail the on-ground situation, immediate risk, hazards, and requested resources..."
+                  className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded text-xs text-slate-100 focus:outline-none focus:border-amber-500/80 resize-none"
+                />
+              </FormField>
+
+              <FormField label="Operational Tags" hint="Comma-separated" id="inc-tags">
+                <input
+                  id="inc-tags"
+                  type="text"
+                  value={formData.tags}
+                  onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
+                  placeholder="Boats Needed, Power Cut, Medical Emergency"
+                  className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded text-xs text-slate-100 focus:outline-none focus:border-amber-500/80"
+                />
+              </FormField>
+
+              <div className="pt-3 border-t border-slate-800 flex items-center justify-end gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setIsCreateModalOpen(false)}
+                  className="px-3.5 py-1.5 text-xs font-mono text-slate-400 hover:text-slate-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-xs font-mono font-bold rounded bg-amber-500 hover:bg-amber-400 text-slate-950 transition-colors shadow-sm"
+                >
+                  {isEditing ? 'Commit Changes' : 'Record Emergency Incident'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation */}
       <ConfirmDialog
-        isOpen={deletingId !== null}
-        onClose={() => setDeletingId(null)}
+        isOpen={!!deleteTargetId}
+        title="Delete Incident Record"
+        message="Are you sure you want to permanently remove this incident record? This operation will be logged to the immutable audit trail."
+        confirmLabel="Confirm Deletion"
+        isDestructive
         onConfirm={() => {
-          if (deletingId) {
-            deleteIncident(deletingId);
-            setDeletingId(null);
+          if (deleteTargetId) {
+            onDeleteIncident(deleteTargetId);
+            setDeleteTargetId(null);
+            if (activeIncident?.id === deleteTargetId) {
+              setActiveIncident(null);
+            }
           }
         }}
-        title="Delete Incident Record?"
-        message="Are you sure you want to permanently delete this incident? All recorded timelines and operational coordinates will be removed from the registry."
-        confirmLabel="Delete Record"
-        variant="danger"
+        onCancel={() => setDeleteTargetId(null)}
       />
     </div>
   );

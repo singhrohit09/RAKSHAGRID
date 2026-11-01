@@ -1,223 +1,260 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import React, { useState, useMemo } from 'react';
-import { useRaksha } from '../context/RakshaContext';
-import { AuditEntityType } from '../types/audit';
-import { 
-  History, 
-  Search, 
-  FileJson, 
-  FileSpreadsheet, 
-  ShieldCheck
-} from 'lucide-react';
-import { Button } from '../components/common/Button';
-import { exportToCSV, exportToJSON } from '../utils/csvExport';
-import { formatDateTime } from '../utils/formatters';
+import { History, Download, Filter, Search, FileText, CheckCircle2, Lock } from 'lucide-react';
+import { AuditEvent } from '../types';
+import { useAuth } from '../context/AuthContext';
+import { ResponsivePageHeader } from '../components/common/ResponsivePageHeader';
+import { DataTable, Column } from '../components/common/DataTable';
+import { SearchBar } from '../components/common/SearchBar';
+import { FilterBar } from '../components/common/FilterBar';
 
-export const AuditLogPage: React.FC = () => {
-  const { auditLogs } = useRaksha();
+interface AuditLogPageProps {
+  auditLogs: AuditEvent[];
+}
 
+export const AuditLogPage: React.FC<AuditLogPageProps> = ({ auditLogs }) => {
+  const { role, permissions } = useAuth();
   const [search, setSearch] = useState('');
-  const [filterEntity, setFilterEntity] = useState<string>('all');
-  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
+  const [severityFilter, setSeverityFilter] = useState('all');
+  const [entityFilter, setEntityFilter] = useState('all');
+
+  if (!permissions.canViewAudit) {
+    return (
+      <div className="space-y-6">
+        <ResponsivePageHeader
+          title="Command Compliance & Audit Trail"
+          kicker="Non-Repudiation Security Registry"
+          description="Chronological record of every incident report, dispatch order, alert transmission, and system alteration."
+        />
+        <div className="p-8 bg-[#12171e] border border-amber-900/60 rounded-lg flex flex-col items-center text-center max-w-lg mx-auto space-y-3.5 my-8">
+          <div className="p-3.5 rounded-full bg-amber-950/60 text-amber-400 border border-amber-800">
+            <Lock className="w-6 h-6" />
+          </div>
+          <h3 className="text-sm font-mono font-bold uppercase tracking-wider text-slate-100">
+            Restricted Operational Clearance
+          </h3>
+          <p className="text-xs text-slate-400 leading-relaxed max-w-sm">
+            Access to the immutable audit trail is restricted to <strong>Administrator</strong> and <strong>Incident Commander</strong> roles.
+          </p>
+          <div className="text-xs font-mono text-amber-400 bg-slate-900 px-3 py-1.5 rounded border border-slate-800">
+            Active Persona: <span className="uppercase font-bold">{role.replace(/_/g, ' ')}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const filteredLogs = useMemo(() => {
-    return auditLogs.filter(log => {
-      const matchSearch = 
-        log.description.toLowerCase().includes(search.toLowerCase()) ||
-        log.actor.toLowerCase().includes(search.toLowerCase()) ||
-        log.entityId.toLowerCase().includes(search.toLowerCase()) ||
-        log.action.toLowerCase().includes(search.toLowerCase()) ||
-        log.id.toLowerCase().includes(search.toLowerCase());
-
-      const matchEntity = filterEntity === 'all' || log.entityType === filterEntity;
-      return matchSearch && matchEntity;
-    }).sort((a, b) => {
-      const timeA = new Date(a.timestamp).getTime();
-      const timeB = new Date(b.timestamp).getTime();
-      return sortOrder === 'desc' ? timeB - timeA : timeA - timeB;
+    return auditLogs.filter((log) => {
+      if (search) {
+        const q = search.toLowerCase();
+        const matches =
+          log.details.toLowerCase().includes(q) ||
+          log.action.toLowerCase().includes(q) ||
+          log.actor.name.toLowerCase().includes(q) ||
+          log.entityId.toLowerCase().includes(q) ||
+          log.entityType.toLowerCase().includes(q);
+        if (!matches) return false;
+      }
+      if (severityFilter !== 'all' && log.severity !== severityFilter) return false;
+      if (entityFilter !== 'all' && log.entityType !== entityFilter) return false;
+      return true;
     });
-  }, [auditLogs, search, filterEntity, sortOrder]);
+  }, [auditLogs, search, severityFilter, entityFilter]);
 
-  const handleExportCSV = () => {
-    const rows = filteredLogs.map(l => ({
-      EventID: l.id,
-      Timestamp: l.timestamp,
-      Actor: l.actor,
-      Role: l.actorRole,
-      Action: l.action,
-      EntityType: l.entityType,
-      EntityID: l.entityId,
-      Description: l.description
-    }));
-
-    exportToCSV(`rakshagrid-audit-log-${Date.now()}`, rows, [
-      { key: 'EventID', label: 'Event ID' },
-      { key: 'Timestamp', label: 'ISO Timestamp' },
-      { key: 'Actor', label: 'Actor Name' },
-      { key: 'Role', label: 'Persona Role' },
-      { key: 'Action', label: 'Action Performed' },
-      { key: 'EntityType', label: 'Entity Domain' },
-      { key: 'EntityID', label: 'Entity Identifier' },
-      { key: 'Description', label: 'Activity Description' }
-    ]);
-  };
-
+  // Export JSON
   const handleExportJSON = () => {
-    exportToJSON(`rakshagrid-audit-log-${Date.now()}`, filteredLogs);
+    const jsonStr = JSON.stringify(filteredLogs, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `rakshagrid_audit_trail_${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
-  const entityBadges: Record<AuditEntityType, string> = {
-    incident: 'bg-emergency/15 text-emergency border-emergency/30',
-    team: 'bg-operational-cyan/15 text-operational-cyan border-operational-cyan/30',
-    shelter: 'bg-safe/15 text-safe border-safe/30',
-    resource: 'bg-hazard/15 text-hazard border-hazard/30',
-    task: 'bg-operational-purple/15 text-purple-400 border-purple-500/30',
-    alert: 'bg-emergency/20 text-emergency border-emergency/40',
-    settings: 'bg-panel-subtle text-primary-muted border-border',
-    system: 'bg-charcoal text-primary-dim border-border',
-    geofence: 'bg-operational-cyan/20 text-operational-cyan border-operational-cyan/40'
+  // Export CSV
+  const handleExportCSV = () => {
+    const headers = ['Event ID', 'Timestamp', 'Actor Name', 'Role', 'Agency', 'Action', 'Entity Type', 'Entity ID', 'Details', 'Severity', 'IP'];
+    const rows = filteredLogs.map((l) => [
+      l.id,
+      l.timestamp,
+      `"${l.actor.name}"`,
+      l.actor.role,
+      `"${l.actor.agency}"`,
+      l.action,
+      l.entityType,
+      l.entityId,
+      `"${l.details.replace(/"/g, '""')}"`,
+      l.severity,
+      l.ipAddress,
+    ]);
+
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `rakshagrid_audit_trail_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
+
+  const columns: Column<AuditEvent>[] = [
+    {
+      header: 'Event ID',
+      accessorKey: 'id',
+      width: '100px',
+      sortable: true,
+      cell: (item) => <span className="font-mono text-amber-400 font-bold">{item.id}</span>,
+    },
+    {
+      header: 'Timestamp',
+      accessorKey: 'timestamp',
+      width: '170px',
+      sortable: true,
+      cell: (item) => (
+        <span className="font-mono text-slate-400 tabular-nums text-xs">
+          {new Date(item.timestamp).toLocaleString()}
+        </span>
+      ),
+    },
+    {
+      header: 'Actor & Role',
+      sortable: true,
+      width: '200px',
+      cell: (item) => (
+        <div>
+          <div className="font-medium text-slate-200">{item.actor.name}</div>
+          <div className="text-[10px] text-amber-400/90 font-mono capitalize">
+            {item.actor.role.replace(/_/g, ' ')} · {item.actor.agency}
+          </div>
+        </div>
+      ),
+    },
+    {
+      header: 'Action Code',
+      accessorKey: 'action',
+      width: '180px',
+      sortable: true,
+      cell: (item) => (
+        <span className="font-mono text-slate-300 font-semibold text-[11px] bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">
+          {item.action}
+        </span>
+      ),
+    },
+    {
+      header: 'Event Description',
+      cell: (item) => (
+        <div className="text-slate-300 text-xs font-sans line-clamp-2">{item.details}</div>
+      ),
+    },
+    {
+      header: 'Terminal IP',
+      accessorKey: 'ipAddress',
+      align: 'right',
+      width: '120px',
+      cell: (item) => (
+        <span className="font-mono text-slate-500 tabular-nums text-[11px]">{item.ipAddress}</span>
+      ),
+    },
+  ];
 
   return (
-    <div className="space-y-4 animate-in fade-in duration-150">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-border">
-        <div>
-          <div className="flex items-center gap-2">
-            <History className="w-5 h-5 text-primary-muted" />
-            <h1 className="text-xl font-extrabold text-primary tracking-wide">
-              AUDIT LOG & OPERATIONAL ACTIVITY TRAIL
-            </h1>
-            <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-panel-subtle border border-border text-primary-muted">
-              {auditLogs.length} LOGGED EVENTS
-            </span>
+      <ResponsivePageHeader
+        title="Command Compliance & Audit Trail"
+        kicker="Non-Repudiation Security Registry"
+        description="Chronological record of every incident report, dispatch order, alert transmission, and system alteration."
+        metadata={
+          <div className="flex items-center gap-2 font-mono text-[11px] text-slate-400">
+            <span>Total Events: {auditLogs.length}</span>
+            <span>·</span>
+            <span className="text-emerald-400 font-semibold">Integrity Verified</span>
           </div>
-          <p className="text-xs text-primary-muted mt-0.5">
-            Application-level operational ledger recording all incidents, allocations, alerts, and state transitions.
-          </p>
-        </div>
+        }
+        actions={
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleExportCSV}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-850 text-slate-200 border border-slate-800 text-xs font-mono transition-colors"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Export CSV</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleExportJSON}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-850 text-slate-200 border border-slate-800 text-xs font-mono transition-colors"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              <span>Export JSON</span>
+            </button>
+          </div>
+        }
+      />
 
-        {/* Exports */}
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            variant="secondary"
-            icon={FileSpreadsheet}
-            onClick={handleExportCSV}
-          >
-            Export CSV
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            icon={FileJson}
-            onClick={handleExportJSON}
-          >
-            Export JSON
-          </Button>
-        </div>
-      </div>
-
-      {/* Audit Disclaimer Notice */}
-      <div className="p-3 bg-panel border border-border rounded-lg text-xs flex items-center justify-between text-primary-dim font-mono">
-        <span className="flex items-center gap-2">
-          <ShieldCheck className="w-4 h-4 text-operational-cyan shrink-0" />
-          <span>PHASE 1 IN-MEMORY / LOCALSTORAGE AUDIT: Events generated through centralized domain services. Phase 2 introduces cryptographically sealed server-side audit trails.</span>
-        </span>
-      </div>
-
-      {/* Toolbar */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 p-3 bg-panel border border-border rounded-lg text-xs">
-        <div className="sm:col-span-2 relative">
-          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-primary-dim" />
-          <input
-            type="text"
-            placeholder="Search audit descriptions, actors, or entity IDs..."
+      {/* Filter and Search */}
+      <div className="p-3.5 bg-[#12171e] border border-slate-800 rounded space-y-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <SearchBar
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-charcoal border border-border rounded pl-8 pr-3 py-1.5 text-xs text-primary placeholder:text-primary-dim focus:outline-none"
+            onChange={setSearch}
+            placeholder="Search action code, actor name, entity ID, details..."
+            className="flex-1 max-w-md"
+          />
+
+          <div className="text-xs font-mono text-slate-400">
+            Showing <strong className="text-slate-200 tabular-nums">{filteredLogs.length}</strong> of{' '}
+            <span className="tabular-nums">{auditLogs.length}</span> records
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4 flex-wrap pt-2 border-t border-slate-850">
+          <FilterBar
+            label="Severity"
+            options={[
+              { id: 'all', label: 'All' },
+              { id: 'info', label: 'Info' },
+              { id: 'warning', label: 'Warning' },
+              { id: 'critical', label: 'Critical' },
+            ]}
+            selectedId={severityFilter}
+            onSelect={setSeverityFilter}
+          />
+
+          <FilterBar
+            label="Entity"
+            options={[
+              { id: 'all', label: 'All Entities' },
+              { id: 'incident', label: 'Incident' },
+              { id: 'team', label: 'Team' },
+              { id: 'alert', label: 'Alert' },
+              { id: 'task', label: 'Task' },
+              { id: 'resource', label: 'Resource' },
+              { id: 'auth', label: 'Auth' },
+            ]}
+            selectedId={entityFilter}
+            onSelect={setEntityFilter}
           />
         </div>
-
-        <div>
-          <select
-            value={filterEntity}
-            onChange={(e) => setFilterEntity(e.target.value)}
-            className="w-full bg-charcoal border border-border rounded px-2.5 py-1.5 text-xs text-primary focus:outline-none"
-          >
-            <option value="all">All Entity Domains</option>
-            <option value="incident">Incidents</option>
-            <option value="team">Teams</option>
-            <option value="shelter">Shelters</option>
-            <option value="resource">Resources</option>
-            <option value="task">Tasks</option>
-            <option value="alert">Alerts</option>
-            <option value="settings">Settings</option>
-            <option value="system">System / Reset</option>
-          </select>
-        </div>
-
-        <div>
-          <select
-            value={sortOrder}
-            onChange={(e) => setSortOrder(e.target.value as any)}
-            className="w-full bg-charcoal border border-border rounded px-2.5 py-1.5 text-xs text-primary focus:outline-none"
-          >
-            <option value="desc">Newest First (Descending)</option>
-            <option value="asc">Oldest First (Ascending)</option>
-          </select>
-        </div>
       </div>
 
-      {/* Audit Log Table */}
-      <div className="bg-panel border border-border rounded-lg overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-panel-card text-[10px] font-mono text-primary-dim uppercase border-b border-border tracking-wider">
-              <tr>
-                <th className="p-3">Event ID</th>
-                <th className="p-3">Timestamp</th>
-                <th className="p-3">Actor / Persona</th>
-                <th className="p-3">Domain</th>
-                <th className="p-3">Action</th>
-                <th className="p-3">Description</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/40 font-mono text-[11px]">
-              {filteredLogs.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="p-8 text-center text-xs text-primary-dim font-sans">
-                    No matching audit log entries found.
-                  </td>
-                </tr>
-              ) : (
-                filteredLogs.map((log) => (
-                  <tr key={log.id} className="hover:bg-panel-elevated transition-colors">
-                    <td className="p-3 font-semibold text-primary">{log.id}</td>
-                    <td className="p-3 text-primary-dim whitespace-nowrap">
-                      {formatDateTime(log.timestamp)}
-                    </td>
-                    <td className="p-3">
-                      <div className="text-primary font-bold font-sans">{log.actor}</div>
-                      <div className="text-[10px] text-primary-dim font-sans">{log.actorRole}</div>
-                    </td>
-                    <td className="p-3">
-                      <span className={`text-[10px] px-2 py-0.5 rounded border uppercase ${entityBadges[log.entityType] || 'border-border'}`}>
-                        {log.entityType}
-                      </span>
-                    </td>
-                    <td className="p-3 text-primary-muted font-bold">
-                      {log.action}
-                    </td>
-                    <td className="p-3 font-sans text-primary leading-relaxed max-w-md">
-                      {log.description}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* Audit DataTable */}
+      <DataTable
+        data={filteredLogs}
+        columns={columns}
+        keyExtractor={(item) => item.id}
+        pageSize={10}
+        emptyMessage="No audit event records found matching current search criteria."
+      />
     </div>
   );
 };
