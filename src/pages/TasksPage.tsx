@@ -50,11 +50,11 @@ export const TasksPage: React.FC<TasksPageProps> = ({
     dueDateHours: '4',
   });
 
-  const columns: { id: TaskStatus; label: string; colorClass: string }[] = [
-    { id: 'triage', label: 'Triage & Staging', colorClass: 'border-t-cyan-500' },
-    { id: 'en_route', label: 'En Route / Transit', colorClass: 'border-t-amber-500' },
-    { id: 'on_scene', label: 'On Scene Tactical Action', colorClass: 'border-t-rose-500' },
-    { id: 'resolved', label: 'Completed & Signed-Off', colorClass: 'border-t-emerald-500' },
+  const columns: { id: TaskStatus; label: string; borderAccent: string }[] = [
+    { id: 'triage', label: 'Triage & Staging', borderAccent: 'border-t-[#315C46]' },
+    { id: 'en_route', label: 'En Route / Transit', borderAccent: 'border-t-[#C18A32]' },
+    { id: 'on_scene', label: 'On Scene Action', borderAccent: 'border-t-[#B9433D]' },
+    { id: 'resolved', label: 'Completed', borderAccent: 'border-t-[#315C46]' },
   ];
 
   const handleCreateSubmit = (e: React.FormEvent) => {
@@ -82,14 +82,14 @@ export const TasksPage: React.FC<TasksPageProps> = ({
   const getPriorityStyle = (priority: TaskPriority) => {
     switch (priority) {
       case 'critical':
-        return 'text-rose-400 bg-rose-950/40 border-rose-800/60';
+        return 'text-[#B9433D] bg-[#F9EBEA] border-[#E8C2BF]';
       case 'high':
-        return 'text-amber-400 bg-amber-950/40 border-amber-800/60';
+        return 'text-[#C18A32] bg-[#FAF2E6] border-[#EED7B8]';
       case 'medium':
-        return 'text-sky-400 bg-sky-950/40 border-sky-800/60';
+        return 'text-[#315C46] bg-[#E5EDE6] border-[#C8DACB]';
       case 'low':
       default:
-        return 'text-slate-400 bg-slate-900 border-slate-700';
+        return 'text-[#575D56] bg-[#EBEBE6] border-[#DCDCD5]';
     }
   };
 
@@ -111,25 +111,25 @@ export const TasksPage: React.FC<TasksPageProps> = ({
       {/* Header */}
       <ResponsivePageHeader
         title="Field Tactical Dispatch Board"
-        kicker="Incident Action Plan (IAP) Execution"
+        kicker="Incident Action Plan (IAP)"
         description="Operational task allocation, responder milestone tracking, and priority triage for rapid on-ground intervention."
         metadata={
-          <div className="flex items-center gap-2 font-mono text-[11px] text-slate-400">
-            <span>Total Tasks: {tasks.length}</span>
+          <div className="flex items-center gap-2 text-xs text-[#777D77]">
+            <span>Total Tasks: <strong className="text-[#171B19]">{tasks.length}</strong></span>
             <span>·</span>
-            <span className="text-amber-400 font-semibold">
+            <span className="text-[#C18A32] font-semibold">
               Pending: {tasks.filter((t) => t.status !== 'resolved').length}
             </span>
           </div>
         }
         actions={
           <div className="flex items-center gap-2">
-            <div className="flex items-center bg-slate-900 border border-slate-800 rounded p-0.5">
+            <div className="flex items-center bg-white border border-[#E4E3DC] rounded-lg p-0.5 shadow-2xs">
               <button
                 type="button"
                 onClick={() => setViewMode('board')}
-                className={`px-2.5 py-1 text-xs font-mono rounded ${
-                  viewMode === 'board' ? 'bg-slate-800 text-slate-100 font-bold' : 'text-slate-400'
+                className={`px-3 py-1.5 text-xs rounded-md font-medium transition-colors ${
+                  viewMode === 'board' ? 'bg-[#E5EDE6] text-[#315C46] font-semibold' : 'text-[#777D77] hover:text-[#171B19]'
                 }`}
               >
                 Board
@@ -137,8 +137,8 @@ export const TasksPage: React.FC<TasksPageProps> = ({
               <button
                 type="button"
                 onClick={() => setViewMode('list')}
-                className={`px-2.5 py-1 text-xs font-mono rounded ${
-                  viewMode === 'list' ? 'bg-slate-800 text-slate-100 font-bold' : 'text-slate-400'
+                className={`px-3 py-1.5 text-xs rounded-md font-medium transition-colors ${
+                  viewMode === 'list' ? 'bg-[#E5EDE6] text-[#315C46] font-semibold' : 'text-[#777D77] hover:text-[#171B19]'
                 }`}
               >
                 List
@@ -149,7 +149,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({
               <button
                 type="button"
                 onClick={() => setIsCreateOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs font-mono transition-colors shadow-sm"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-[#315C46] hover:bg-[#264937] text-white font-semibold text-xs transition-colors shadow-xs"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Issue Field Task</span>
@@ -167,20 +167,20 @@ export const TasksPage: React.FC<TasksPageProps> = ({
             return (
               <div
                 key={col.id}
-                className={`bg-[#12171e] border border-slate-800 rounded-lg p-3.5 flex flex-col border-t-2 ${col.colorClass}`}
+                className={`bg-white border border-[#E4E3DC] rounded-xl p-4 flex flex-col border-t-4 shadow-xs ${col.borderAccent}`}
               >
-                <div className="flex items-center justify-between pb-2.5 border-b border-slate-850 mb-3">
-                  <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-200">
+                <div className="flex items-center justify-between pb-2.5 border-b border-[#E4E3DC] mb-3">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#171B19]">
                     {col.label}
                   </h3>
-                  <span className="text-xs font-mono bg-slate-900 px-2 py-0.5 rounded text-slate-400 border border-slate-800 tabular-nums">
+                  <span className="text-xs font-mono bg-[#FAF9F5] px-2 py-0.5 rounded-full text-[#777D77] border border-[#E4E3DC] tabular-nums">
                     {columnTasks.length}
                   </span>
                 </div>
 
                 <div className="space-y-3 flex-1 overflow-y-auto max-h-[600px] pr-1">
                   {columnTasks.length === 0 ? (
-                    <div className="py-8 text-center text-xs font-mono text-slate-600">
+                    <div className="py-8 text-center text-xs text-[#999F99]">
                       No tasks in this stage
                     </div>
                   ) : (
@@ -189,14 +189,14 @@ export const TasksPage: React.FC<TasksPageProps> = ({
                       return (
                         <div
                           key={task.id}
-                          className="p-3 bg-slate-900/90 border border-slate-800 rounded hover:border-slate-700 transition-colors space-y-2 text-xs"
+                          className="p-3.5 bg-[#FAF9F5] border border-[#E4E3DC] rounded-lg hover:border-[#D0CFC5] transition-colors space-y-2 text-xs"
                         >
                           <div className="flex items-center justify-between">
-                            <span className="font-mono text-[11px] text-amber-400 font-bold">
+                            <span className="font-mono text-[11px] text-[#315C46] font-bold">
                               {task.id}
                             </span>
                             <span
-                              className={`text-[10px] font-mono font-bold uppercase px-1.5 py-0.5 rounded border ${getPriorityStyle(
+                              className={`text-[10px] font-mono font-medium uppercase px-2 py-0.5 rounded-md border ${getPriorityStyle(
                                 task.priority
                               )}`}
                             >
@@ -204,24 +204,24 @@ export const TasksPage: React.FC<TasksPageProps> = ({
                             </span>
                           </div>
 
-                          <h4 className="font-semibold text-slate-100 text-xs leading-snug">
+                          <h4 className="font-semibold text-[#171B19] text-xs leading-snug">
                             {task.title}
                           </h4>
 
-                          <p className="text-[11px] text-slate-400 line-clamp-2">
+                          <p className="text-[11px] text-[#777D77] line-clamp-2">
                             {task.description}
                           </p>
 
-                          <div className="pt-2 border-t border-slate-850 text-[11px] font-mono space-y-1">
-                            <div className="flex items-center justify-between text-slate-400">
+                          <div className="pt-2 border-t border-[#E4E3DC] text-[11px] space-y-1">
+                            <div className="flex items-center justify-between text-[#777D77]">
                               <span>Assigned:</span>
-                              <span className="text-slate-200 truncate max-w-[130px] font-medium">
+                              <span className="text-[#171B19] truncate max-w-[130px] font-medium">
                                 {task.assignedToUserName}
                               </span>
                             </div>
-                            <div className="flex items-center justify-between text-slate-500">
+                            <div className="flex items-center justify-between text-[#777D77]">
                               <span>Due:</span>
-                              <span className="tabular-nums">
+                              <span className="tabular-nums font-mono">
                                 {new Date(task.dueDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                               </span>
                             </div>
@@ -231,9 +231,9 @@ export const TasksPage: React.FC<TasksPageProps> = ({
                             <button
                               type="button"
                               onClick={() => onUpdateTaskStatus(task.id, nextSt)}
-                              className="w-full mt-2 py-1 text-[11px] font-mono rounded bg-slate-800 hover:bg-slate-750 text-slate-300 border border-slate-700 transition-colors flex items-center justify-center gap-1"
+                              className="w-full mt-2 py-1.5 text-xs font-semibold rounded-lg bg-white hover:bg-[#F5F4EF] text-[#315C46] border border-[#E4E3DC] transition-colors flex items-center justify-center gap-1 shadow-2xs"
                             >
-                              <span>Advance to {nextSt.replace('_', ' ')}</span>
+                              <span>Advance to {nextSt.replace(/_/g, ' ')}</span>
                               <ArrowRight className="w-3 h-3" />
                             </button>
                           )}
@@ -248,10 +248,10 @@ export const TasksPage: React.FC<TasksPageProps> = ({
         </div>
       ) : (
         /* List View */
-        <div className="border border-slate-800 rounded bg-[#12171e] overflow-hidden">
-          <table className="w-full text-left text-xs font-mono">
+        <div className="border border-[#E4E3DC] rounded-xl bg-white overflow-hidden shadow-xs">
+          <table className="w-full text-left text-xs">
             <thead>
-              <tr className="bg-[#0d1117] border-b border-slate-800 text-slate-400 uppercase text-[11px]">
+              <tr className="bg-[#FAF9F5] border-b border-[#E4E3DC] text-[#777D77] uppercase text-[11px] font-semibold">
                 <th className="py-3 px-3.5">ID</th>
                 <th className="py-3 px-3.5">Task Title</th>
                 <th className="py-3 px-3.5">Priority</th>
@@ -261,30 +261,30 @@ export const TasksPage: React.FC<TasksPageProps> = ({
                 <th className="py-3 px-3.5 text-right">Due Time</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-850">
+            <tbody className="divide-y divide-[#E4E3DC]">
               {tasks.map((task) => (
-                <tr key={task.id} className="hover:bg-slate-850/40 transition-colors">
-                  <td className="py-2.5 px-3.5 font-bold text-amber-400">{task.id}</td>
-                  <td className="py-2.5 px-3.5 font-sans font-medium text-slate-100 max-w-[250px]">
+                <tr key={task.id} className="hover:bg-[#FAF9F5] transition-colors">
+                  <td className="py-3 px-3.5 font-bold font-mono text-[#315C46]">{task.id}</td>
+                  <td className="py-3 px-3.5 font-medium text-[#171B19] max-w-[250px]">
                     {task.title}
                   </td>
-                  <td className="py-2.5 px-3.5 uppercase">
+                  <td className="py-3 px-3.5 uppercase">
                     <span
-                      className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${getPriorityStyle(
+                      className={`text-[10px] font-mono px-2 py-0.5 rounded-md border ${getPriorityStyle(
                         task.priority
                       )}`}
                     >
                       {task.priority}
                     </span>
                   </td>
-                  <td className="py-2.5 px-3.5 uppercase text-slate-300">
-                    {task.status.replace('_', ' ')}
+                  <td className="py-3 px-3.5 uppercase text-[#171B19]">
+                    {task.status.replace(/_/g, ' ')}
                   </td>
-                  <td className="py-2.5 px-3.5 text-slate-300">{task.assignedToUserName}</td>
-                  <td className="py-2.5 px-3.5 text-slate-400 max-w-[180px] truncate">
+                  <td className="py-3 px-3.5 text-[#171B19]">{task.assignedToUserName}</td>
+                  <td className="py-3 px-3.5 text-[#777D77] max-w-[180px] truncate">
                     {task.incidentTitle}
                   </td>
-                  <td className="py-2.5 px-3.5 text-right text-slate-400 tabular-nums">
+                  <td className="py-3 px-3.5 text-right text-[#777D77] font-mono tabular-nums">
                     {new Date(task.dueDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </td>
                 </tr>
@@ -297,33 +297,33 @@ export const TasksPage: React.FC<TasksPageProps> = ({
       {/* Create Task Modal */}
       {isCreateOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs"
           role="dialog"
           aria-modal="true"
         >
-          <div className="w-full max-w-lg bg-[#161c24] border border-slate-750 rounded-lg shadow-2xl overflow-hidden p-5 text-slate-200">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
-              <h3 className="text-sm font-mono font-bold uppercase tracking-wider text-slate-100">
+          <div className="w-full max-w-lg bg-white border border-[#E4E3DC] rounded-xl shadow-2xl overflow-hidden p-5 text-[#171B19]">
+            <div className="flex items-center justify-between pb-3 border-b border-[#E4E3DC] mb-4">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-[#171B19]">
                 Issue Field Action Task
               </h3>
               <button
                 type="button"
                 onClick={() => setIsCreateOpen(false)}
-                className="text-slate-400 hover:text-slate-100"
+                className="text-[#777D77] hover:text-[#171B19]"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateSubmit} className="space-y-3.5">
+            <form onSubmit={handleCreateSubmit} className="space-y-4">
               <FormField label="Task Objective Title" required id="tsk-title">
                 <input
                   id="tsk-title"
                   type="text"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="e.g. Evacuate stranded elderly citizens from Ward 4"
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded text-xs text-slate-100 focus:outline-none focus:border-amber-500/80"
+                  placeholder="e.g. Evacuate stranded citizens from Ward 4"
+                  className="w-full px-3 py-2 bg-white border border-[#E4E3DC] rounded-lg text-xs text-[#171B19] focus:outline-none focus:border-[#315C46]"
                 />
               </FormField>
 
@@ -333,7 +333,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({
                     id="tsk-priority"
                     value={formData.priority}
                     onChange={(e) => setFormData({ ...formData, priority: e.target.value as TaskPriority })}
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded text-xs font-mono text-slate-100 focus:outline-none focus:border-amber-500/80 uppercase"
+                    className="w-full px-3 py-2 bg-white border border-[#E4E3DC] rounded-lg text-xs text-[#171B19] focus:outline-none focus:border-[#315C46] uppercase"
                   >
                     <option value="critical">Critical</option>
                     <option value="high">High</option>
@@ -347,7 +347,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({
                     id="tsk-inc"
                     value={formData.incidentId}
                     onChange={(e) => setFormData({ ...formData, incidentId: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded text-xs font-mono text-slate-100 focus:outline-none focus:border-amber-500/80"
+                    className="w-full px-3 py-2 bg-white border border-[#E4E3DC] rounded-lg text-xs text-[#171B19] focus:outline-none focus:border-[#315C46]"
                   >
                     {incidents.map((i) => (
                       <option key={i.id} value={i.id}>
@@ -365,7 +365,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({
                     type="text"
                     value={formData.assignedToUserName}
                     onChange={(e) => setFormData({ ...formData, assignedToUserName: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded text-xs text-slate-100 focus:outline-none focus:border-amber-500/80"
+                    className="w-full px-3 py-2 bg-white border border-[#E4E3DC] rounded-lg text-xs text-[#171B19] focus:outline-none focus:border-[#315C46]"
                   />
                 </FormField>
 
@@ -375,7 +375,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({
                     type="text"
                     value={formData.location}
                     onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded text-xs text-slate-100 focus:outline-none focus:border-amber-500/80"
+                    className="w-full px-3 py-2 bg-white border border-[#E4E3DC] rounded-lg text-xs text-[#171B19] focus:outline-none focus:border-[#315C46]"
                   />
                 </FormField>
               </div>
@@ -387,21 +387,21 @@ export const TasksPage: React.FC<TasksPageProps> = ({
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder="Detail specific instructions, required equipment, safety warnings..."
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded text-xs text-slate-100 focus:outline-none focus:border-amber-500/80 resize-none"
+                  className="w-full px-3 py-2 bg-white border border-[#E4E3DC] rounded-lg text-xs text-[#171B19] focus:outline-none focus:border-[#315C46] resize-none"
                 />
               </FormField>
 
-              <div className="pt-2 border-t border-slate-800 flex items-center justify-end gap-2">
+              <div className="pt-3 border-t border-[#E4E3DC] flex items-center justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => setIsCreateOpen(false)}
-                  className="px-3 py-1.5 text-xs font-mono text-slate-400 hover:text-slate-200"
+                  className="px-3.5 py-1.5 text-xs text-[#777D77] hover:text-[#171B19]"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 text-xs font-mono font-bold rounded bg-amber-500 hover:bg-amber-400 text-slate-950 transition-colors"
+                  className="px-4 py-2 text-xs font-semibold rounded-lg bg-[#315C46] hover:bg-[#264937] text-white transition-colors shadow-xs"
                 >
                   Issue Task
                 </button>

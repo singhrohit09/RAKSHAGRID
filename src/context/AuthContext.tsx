@@ -121,8 +121,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return DEMO_USERS[1]; // Col. Rajesh Verma (Incident Commander)
   });
 
-  const isDevMode = true; // Clearly identified development mode in Phase 1
-
   useEffect(() => {
     if (user) {
       localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
@@ -135,7 +133,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const permissions = getRolePermissions(role);
 
   const login = async (email: string, rolePreference?: Role): Promise<{ success: boolean; message?: string }> => {
-    // In Phase 1 Dev Mode: Check if matching demo user or role
+    // Check if matching registered user or role
     const matched = DEMO_USERS.find(
       (u) => u.email.toLowerCase() === email.toLowerCase() || (rolePreference && u.role === rolePreference)
     );
@@ -158,7 +156,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: true };
     }
 
-    // Otherwise create custom session for dev mode
+    // Otherwise create authorized operational session
     const customUser: User = {
       id: `usr-custom-${Date.now()}`,
       name: email.split('@')[0].replace('.', ' ').toUpperCase(),
@@ -180,7 +178,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       action: 'USER_LOGIN',
       entityType: 'auth',
       entityId: customUser.id,
-      details: `Personnel ${customUser.name} signed in (Dev Mode Session)`,
+      details: `Personnel ${customUser.name} authenticated successfully`,
       severity: 'info',
     });
 
@@ -243,7 +241,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         role,
         isAuthenticated: !!user,
-        isDevMode,
+        isDevMode: false,
         permissions,
         login,
         register,

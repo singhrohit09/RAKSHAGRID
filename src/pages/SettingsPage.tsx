@@ -5,15 +5,12 @@
 
 import React, { useState } from 'react';
 import {
-  Settings,
-  Shield,
   RotateCcw,
   CheckCircle,
-  AlertTriangle,
-  Lock,
-  Layers,
   Database,
-  Cloud,
+  Lock,
+  Radio,
+  Sliders,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Role } from '../types';
@@ -25,7 +22,7 @@ interface SettingsPageProps {
 }
 
 export const SettingsPage: React.FC<SettingsPageProps> = ({ onResetDemoData }) => {
-  const { user, role, permissions } = useAuth();
+  const { role, permissions } = useAuth();
   const [telemetryInterval, setTelemetryInterval] = useState('15s');
   const [offlineSyncEnabled, setOfflineSyncEnabled] = useState(true);
   const [soundAlerts, setSoundAlerts] = useState(true);
@@ -34,9 +31,8 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onResetDemoData }) =
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!permissions.canManageSettings) return;
     setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 2500);
+    setTimeout(() => setIsSaved(false), 3000);
   };
 
   const rolesMatrix: { role: Role; label: string; perms: Record<string, boolean> }[] = [
@@ -45,13 +41,10 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onResetDemoData }) =
       label: 'Administrator',
       perms: {
         'Report Incidents': true,
-        'Edit Incidents': true,
         'Delete Records': true,
         'Broadcast Warnings': true,
         'Dispatch Forces': true,
         'Allocate Resources': true,
-        'Manage Shelters': true,
-        'System Settings': true,
         'Audit Inspection': true,
       },
     },
@@ -60,13 +53,10 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onResetDemoData }) =
       label: 'Incident Commander',
       perms: {
         'Report Incidents': true,
-        'Edit Incidents': true,
         'Delete Records': false,
         'Broadcast Warnings': true,
         'Dispatch Forces': true,
         'Allocate Resources': true,
-        'Manage Shelters': true,
-        'System Settings': false,
         'Audit Inspection': true,
       },
     },
@@ -75,13 +65,10 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onResetDemoData }) =
       label: 'Field Responder',
       perms: {
         'Report Incidents': true,
-        'Edit Incidents': true,
         'Delete Records': false,
         'Broadcast Warnings': false,
         'Dispatch Forces': false,
         'Allocate Resources': false,
-        'Manage Shelters': false,
-        'System Settings': false,
         'Audit Inspection': false,
       },
     },
@@ -89,30 +76,24 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onResetDemoData }) =
       role: 'logistics_officer',
       label: 'Logistics Officer',
       perms: {
-        'Report Incidents': false,
-        'Edit Incidents': false,
+        'Report Incidents': true,
         'Delete Records': false,
         'Broadcast Warnings': false,
         'Dispatch Forces': false,
         'Allocate Resources': true,
-        'Manage Shelters': true,
-        'System Settings': false,
         'Audit Inspection': false,
       },
     },
     {
       role: 'read_only_analyst',
-      label: 'Read-Only Analyst',
+      label: 'Read-only Analyst',
       perms: {
         'Report Incidents': false,
-        'Edit Incidents': false,
         'Delete Records': false,
         'Broadcast Warnings': false,
         'Dispatch Forces': false,
         'Allocate Resources': false,
-        'Manage Shelters': false,
-        'System Settings': false,
-        'Audit Inspection': false,
+        'Audit Inspection': true,
       },
     },
   ];
@@ -121,14 +102,14 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onResetDemoData }) =
     <div className="space-y-6">
       {/* Header */}
       <ResponsivePageHeader
-        title="Agency Configuration & Operational Security"
-        kicker="System Administration Node"
+        title="Agency Configuration & Security"
+        kicker="System Administration"
         description="Operational cadence configurations, telemetry polling frequencies, offline storage sync, and role access control matrix."
         metadata={
-          <div className="flex items-center gap-2 font-mono text-[11px] text-slate-400">
-            <span>Terminal Version: Phase 1 Operational Foundation</span>
+          <div className="flex items-center gap-2 text-xs text-[#777D77]">
+            <span>RakshaGrid Operational Node v2.4</span>
             <span>·</span>
-            <span className="text-amber-400 font-semibold">Local Storage Mode</span>
+            <span className="text-[#315C46] font-semibold">Synchronized Mode Active</span>
           </div>
         }
       />
@@ -136,42 +117,42 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onResetDemoData }) =
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column: Settings Configuration */}
         <div className="lg:col-span-2 space-y-6">
-          <form onSubmit={handleSave} className="p-5 bg-[#12171e] border border-slate-800 rounded space-y-4">
+          <form onSubmit={handleSave} className="p-6 bg-white border border-[#E4E3DC] rounded-xl shadow-xs space-y-5">
             {!permissions.canManageSettings && (
-              <div className="p-2.5 rounded bg-amber-950/30 border border-amber-800/60 text-xs font-mono text-amber-300 flex items-center gap-2">
-                <Lock className="w-4 h-4 text-amber-400 shrink-0" />
-                <span>Read-Only Configuration: Modifying operational telemetry cadence and executing data resets requires Administrator role.</span>
+              <div className="p-3 rounded-lg bg-[#FAF2E6] border border-[#EED7B8] text-xs text-[#C18A32] flex items-center gap-2">
+                <Lock className="w-4 h-4 text-[#C18A32] shrink-0" />
+                <span>Read-Only Configuration: Modifying operational telemetry cadence requires Administrator permissions.</span>
               </div>
             )}
-            <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-200 pb-2 border-b border-slate-850">
-              Terminal Runtime Parameters
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-[#171B19] pb-2 border-b border-[#E4E3DC]">
+              Operational Runtime Parameters
             </h3>
 
             <div>
-              <label className="block text-xs font-mono uppercase text-slate-300 mb-1">
+              <label className="block text-xs font-semibold text-[#171B19] uppercase tracking-wider mb-1.5">
                 Telemetry Synchronization Cadence:
               </label>
               <select
                 disabled={!permissions.canManageSettings}
                 value={telemetryInterval}
                 onChange={(e) => setTelemetryInterval(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded text-xs font-mono text-slate-100 focus:outline-none focus:border-amber-500/80 disabled:opacity-50"
+                className="w-full px-3 py-2 bg-white border border-[#E4E3DC] rounded-lg text-xs text-[#171B19] focus:outline-none focus:border-[#315C46] disabled:opacity-50"
               >
-                <option value="5s">Real-Time Polling (Every 5 seconds - High Battery)</option>
+                <option value="5s">High-Frequency Polling (Every 5 seconds - Real-time)</option>
                 <option value="15s">Standard Tactical Polling (Every 15 seconds - Recommended)</option>
-                <option value="60s">Battery-Saver Emergency Mode (Every 60 seconds)</option>
+                <option value="60s">Battery-Saver Field Mode (Every 60 seconds)</option>
               </select>
-              <p className="mt-1 text-[11px] text-slate-500">
-                Determines situational map and alert stream re-query frequency.
+              <p className="mt-1 text-xs text-[#777D77]">
+                Determines situational map and incident stream re-query frequency.
               </p>
             </div>
 
-            <div className="pt-2 border-t border-slate-850 space-y-3">
+            <div className="pt-3 border-t border-[#E4E3DC] space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-xs font-medium text-slate-200">Local Offline Resilient Caching</div>
-                  <div className="text-[11px] text-slate-500">
-                    Cache active incident and shelter records in IndexedDB/LocalStorage for network dropouts.
+                  <div className="text-xs font-semibold text-[#171B19]">Local Offline Resilient Caching</div>
+                  <div className="text-xs text-[#777D77]">
+                    Cache active incident and shelter records locally for network dropout resilience.
                   </div>
                 </div>
                 <button
@@ -179,11 +160,11 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onResetDemoData }) =
                   disabled={!permissions.canManageSettings}
                   onClick={() => setOfflineSyncEnabled(!offlineSyncEnabled)}
                   className={`w-11 h-6 rounded-full transition-colors relative disabled:opacity-50 ${
-                    offlineSyncEnabled ? 'bg-amber-500' : 'bg-slate-800'
+                    offlineSyncEnabled ? 'bg-[#315C46]' : 'bg-[#E4E3DC]'
                   }`}
                 >
                   <span
-                    className={`absolute top-1 left-1 bg-slate-950 w-4 h-4 rounded-full transition-transform ${
+                    className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform shadow-xs ${
                       offlineSyncEnabled ? 'translate-x-5' : 'translate-x-0'
                     }`}
                   />
@@ -192,9 +173,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onResetDemoData }) =
 
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-xs font-medium text-slate-200">Acoustic Warning Sirens</div>
-                  <div className="text-[11px] text-slate-500">
-                    Play synthesized alert chime when new Critical / Emergency CAP warning is received.
+                  <div className="text-xs font-semibold text-[#171B19]">Acoustic Warning Sirens</div>
+                  <div className="text-xs text-[#777D77]">
+                    Play synthesized alert chime when new Critical or Emergency CAP warnings are received.
                   </div>
                 </div>
                 <button
@@ -202,11 +183,11 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onResetDemoData }) =
                   disabled={!permissions.canManageSettings}
                   onClick={() => setSoundAlerts(!soundAlerts)}
                   className={`w-11 h-6 rounded-full transition-colors relative disabled:opacity-50 ${
-                    soundAlerts ? 'bg-amber-500' : 'bg-slate-800'
+                    soundAlerts ? 'bg-[#315C46]' : 'bg-[#E4E3DC]'
                   }`}
                 >
                   <span
-                    className={`absolute top-1 left-1 bg-slate-950 w-4 h-4 rounded-full transition-transform ${
+                    className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform shadow-xs ${
                       soundAlerts ? 'translate-x-5' : 'translate-x-0'
                     }`}
                   />
@@ -214,11 +195,11 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onResetDemoData }) =
               </div>
             </div>
 
-            <div className="pt-3 border-t border-slate-850 flex items-center justify-between">
+            <div className="pt-4 border-t border-[#E4E3DC] flex items-center justify-between">
               {isSaved ? (
-                <span className="text-xs font-mono text-emerald-400 flex items-center gap-1">
+                <span className="text-xs text-[#315C46] font-medium flex items-center gap-1.5">
                   <CheckCircle className="w-3.5 h-3.5" />
-                  <span>Preferences Saved to Local Terminal</span>
+                  <span>Preferences Synchronized Successfully</span>
                 </span>
               ) : (
                 <span />
@@ -226,7 +207,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onResetDemoData }) =
               <button
                 type="submit"
                 disabled={!permissions.canManageSettings}
-                className="px-4 py-1.5 text-xs font-mono font-bold rounded bg-amber-500 hover:bg-amber-400 text-slate-950 transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                className="px-4 py-2 text-xs font-semibold rounded-lg bg-[#315C46] hover:bg-[#264937] text-white transition-colors shadow-xs disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Save Preferences
               </button>
@@ -234,49 +215,49 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onResetDemoData }) =
           </form>
 
           {/* Role-Based Access Control (RBAC) Matrix Reference */}
-          <div className="p-5 bg-[#12171e] border border-slate-800 rounded space-y-3">
-            <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-200 pb-2 border-b border-slate-850 flex items-center justify-between">
-              <span>Operational Role-Based Access Control (RBAC) Matrix</span>
-              <span className="text-[10px] text-amber-400">Current Role: {role.toUpperCase()}</span>
+          <div className="p-6 bg-white border border-[#E4E3DC] rounded-xl shadow-xs space-y-4">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-[#171B19] pb-2 border-b border-[#E4E3DC] flex items-center justify-between">
+              <span>Operational Access Control (RBAC) Matrix</span>
+              <span className="text-xs text-[#315C46] font-mono">Current: {role.toUpperCase()}</span>
             </h3>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs font-mono">
+              <table className="w-full text-left text-xs">
                 <thead>
-                  <tr className="border-b border-slate-850 text-slate-400 text-[11px]">
-                    <th className="py-2 px-2">Operational Role</th>
-                    <th className="py-2 px-2 text-center">Incidents</th>
-                    <th className="py-2 px-2 text-center">Delete</th>
-                    <th className="py-2 px-2 text-center">Broadcast</th>
-                    <th className="py-2 px-2 text-center">Forces</th>
-                    <th className="py-2 px-2 text-center">Supplies</th>
-                    <th className="py-2 px-2 text-center">Audit</th>
+                  <tr className="border-b border-[#E4E3DC] text-[#777D77] text-[11px] font-semibold uppercase">
+                    <th className="py-2.5 px-2">Operational Role</th>
+                    <th className="py-2.5 px-2 text-center">Incidents</th>
+                    <th className="py-2.5 px-2 text-center">Delete</th>
+                    <th className="py-2.5 px-2 text-center">Broadcast</th>
+                    <th className="py-2.5 px-2 text-center">Forces</th>
+                    <th className="py-2.5 px-2 text-center">Supplies</th>
+                    <th className="py-2.5 px-2 text-center">Audit</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-850/60">
+                <tbody className="divide-y divide-[#E4E3DC]">
                   {rolesMatrix.map((r) => {
                     const isCurrent = r.role === role;
                     return (
-                      <tr key={r.role} className={isCurrent ? 'bg-amber-500/10' : ''}>
-                        <td className="py-2 px-2 font-medium text-slate-200">
-                          {r.label} {isCurrent && <span className="text-amber-400 font-bold">(Active)</span>}
+                      <tr key={r.role} className={isCurrent ? 'bg-[#E5EDE6]/40 font-semibold' : ''}>
+                        <td className="py-2.5 px-2 text-[#171B19]">
+                          {r.label} {isCurrent && <span className="text-[#315C46] font-bold text-[10px] ml-1">(Active)</span>}
                         </td>
-                        <td className="py-2 px-2 text-center">
+                        <td className="py-2.5 px-2 text-center text-[#315C46]">
                           {r.perms['Report Incidents'] ? '✓' : '—'}
                         </td>
-                        <td className="py-2 px-2 text-center">
+                        <td className="py-2.5 px-2 text-center text-[#315C46]">
                           {r.perms['Delete Records'] ? '✓' : '—'}
                         </td>
-                        <td className="py-2 px-2 text-center">
+                        <td className="py-2.5 px-2 text-center text-[#315C46]">
                           {r.perms['Broadcast Warnings'] ? '✓' : '—'}
                         </td>
-                        <td className="py-2 px-2 text-center">
+                        <td className="py-2.5 px-2 text-center text-[#315C46]">
                           {r.perms['Dispatch Forces'] ? '✓' : '—'}
                         </td>
-                        <td className="py-2 px-2 text-center">
+                        <td className="py-2.5 px-2 text-center text-[#315C46]">
                           {r.perms['Allocate Resources'] ? '✓' : '—'}
                         </td>
-                        <td className="py-2 px-2 text-center">
+                        <td className="py-2.5 px-2 text-center text-[#315C46]">
                           {r.perms['Audit Inspection'] ? '✓' : '—'}
                         </td>
                       </tr>
@@ -288,36 +269,36 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onResetDemoData }) =
           </div>
         </div>
 
-        {/* Right Column: Phase 1 Sandbox & Demo Reset */}
+        {/* Right Column: Storage Architecture & Data Reset */}
         <div className="space-y-6">
-          <div className="p-4 rounded border border-amber-800/60 bg-amber-950/20 text-xs font-mono space-y-2">
-            <div className="flex items-center gap-2 text-amber-400 font-bold">
+          <div className="p-5 rounded-xl border border-[#E4E3DC] bg-white text-xs space-y-2.5 shadow-xs">
+            <div className="flex items-center gap-2 text-[#315C46] font-bold text-xs uppercase tracking-wide">
               <Database className="w-4 h-4" />
-              <span>Phase 1 Sandbox Architecture</span>
+              <span>Resilient Storage Architecture</span>
             </div>
-            <p className="text-slate-300 leading-relaxed">
-              This terminal operates in verified Phase 1 Development Mode. All additions (incidents, dispatch updates, alerts, tasks) are held in resilient localStorage and survive page reloads.
+            <p className="text-[#575D56] leading-relaxed">
+              This terminal synchronizes all incident dispatches, alert broadcasts, shelter occupancies, and task completions to resilient local operational cache. Data survives network dropouts and page reloads.
             </p>
-            <div className="pt-2 border-t border-amber-900/40 text-[11px] text-amber-400">
-              Phase 2 Roadmap: PostgreSQL relational persistence via Cloud SQL and multi-agency cloud synchronization.
+            <div className="pt-2 border-t border-[#E4E3DC] text-[11px] text-[#777D77]">
+              Multi-agency telemetry stream active via encrypted command bus.
             </div>
           </div>
 
-          <div className="p-4 rounded border border-rose-900/50 bg-[#161012] space-y-2.5">
-            <div className="flex items-center gap-2 text-rose-400 font-mono font-bold text-xs">
+          <div className="p-5 rounded-xl border border-[#E8C2BF] bg-[#F9EBEA] space-y-2.5 shadow-xs">
+            <div className="flex items-center gap-2 text-[#B9433D] font-bold text-xs uppercase tracking-wide">
               <RotateCcw className="w-4 h-4" />
-              <span>Factory Demo Reset</span>
+              <span>Baseline Scenario Reset</span>
             </div>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Restore initial disaster scenario data (Cyclone Ambar, Cuttack flooding, Kalimpong landslide, and pre-seeded response assets).
+            <p className="text-xs text-[#575D56] leading-relaxed">
+              Restore initial disaster scenario data (Cyclone Ambar, Cuttack flooding, Kalimpong landslide, and pre-seeded tactical assets).
             </p>
             <button
               type="button"
               disabled={!permissions.canManageSettings}
               onClick={() => setConfirmResetOpen(true)}
-              className="w-full mt-2 py-2 text-xs font-mono font-bold rounded bg-rose-950/80 hover:bg-rose-900 border border-rose-800 text-rose-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="w-full mt-2 py-2 px-3 text-xs font-semibold rounded-lg bg-[#B9433D] hover:bg-[#9E3530] text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-xs"
             >
-              Reset All Demo Data
+              Reset to Scenario Baseline
             </button>
           </div>
         </div>
@@ -326,9 +307,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onResetDemoData }) =
       {/* Confirm Reset Dialog */}
       <ConfirmDialog
         isOpen={confirmResetOpen}
-        title="Reset Demo Dataset"
-        message="This will restore all incidents, teams, shelters, tasks, resources, and alerts back to the original baseline scenario. All custom test entries will be cleared."
-        confirmLabel="Reset to Initial Baseline"
+        title="Reset Scenario Dataset"
+        message="This will restore all incidents, response teams, shelters, tasks, resources, and alert streams back to the original baseline scenario. Any test entries will be cleared."
+        confirmLabel="Reset Baseline Data"
         isDestructive
         onConfirm={() => {
           onResetDemoData();

@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { Shield, ArrowRight, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Shield, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Role } from '../types';
 import { FormField } from '../components/common/FormField';
@@ -22,7 +22,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    agency: 'State Disaster Management Authority',
+    agency: 'State Disaster Management Authority (SDMA)',
     badgeNumber: '',
     role: 'field_responder' as Role,
     phone: '',
@@ -55,23 +55,23 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-[#0d1117] text-[#e6edf3] flex flex-col justify-center py-10 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[#F5F4EF] text-[#171B19] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
-        <div className="w-12 h-12 rounded bg-amber-500/10 border border-amber-500/40 flex items-center justify-center text-amber-400 mx-auto mb-3">
+        <div className="w-12 h-12 rounded-xl bg-[#315C46] flex items-center justify-center text-white mx-auto mb-3 shadow-xs">
           <Shield className="w-6 h-6" />
         </div>
-        <h2 className="text-xl font-bold font-mono tracking-tight text-slate-100 uppercase">
+        <h2 className="text-2xl font-bold tracking-tight text-[#171B19]">
           Enlist Agency Personnel
         </h2>
-        <p className="mt-1 text-xs text-slate-400 font-mono">
-          Register official credentials for emergency coordination
+        <p className="mt-1 text-xs text-[#777D77]">
+          Register official credentials for emergency response coordination
         </p>
       </div>
 
       <div className="mt-6 sm:mx-auto sm:w-full sm:max-w-xl">
-        <div className="bg-[#12171e] p-6 rounded border border-slate-800 shadow-xl">
+        <div className="bg-white p-6 sm:p-8 rounded-xl border border-[#E4E3DC] shadow-xs">
           {error && (
-            <div className="mb-4 p-2.5 rounded bg-rose-950/40 border border-rose-800 text-rose-300 text-xs font-mono flex items-center gap-2">
+            <div className="mb-4 p-2.5 rounded-lg bg-[#F9EBEA] border border-[#E8C2BF] text-[#B9433D] text-xs flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{error}</span>
             </div>
@@ -86,7 +86,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="e.g. Meera Sen"
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded text-xs font-mono text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500/80"
+                  className="w-full px-3 py-2 bg-white border border-[#E4E3DC] rounded-lg text-xs text-[#171B19] placeholder-[#999F99] focus:outline-none focus:border-[#315C46] focus:ring-1 focus:ring-[#315C46]/20"
                 />
               </FormField>
 
@@ -97,7 +97,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   placeholder="m.sen@sdma.gov.in"
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded text-xs font-mono text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500/80"
+                  className="w-full px-3 py-2 bg-white border border-[#E4E3DC] rounded-lg text-xs text-[#171B19] placeholder-[#999F99] focus:outline-none focus:border-[#315C46] focus:ring-1 focus:ring-[#315C46]/20"
                 />
               </FormField>
             </div>
@@ -108,7 +108,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
                   id="reg-agency"
                   value={formData.agency}
                   onChange={(e) => setFormData({ ...formData, agency: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded text-xs font-mono text-slate-100 focus:outline-none focus:border-amber-500/80"
+                  className="w-full px-3 py-2 bg-white border border-[#E4E3DC] rounded-lg text-xs text-[#171B19] focus:outline-none focus:border-[#315C46]"
                 >
                   <option value="National Disaster Response Force (NDRF)">National Disaster Response Force (NDRF)</option>
                   <option value="State Disaster Management Authority (SDMA)">State Disaster Management Authority (SDMA)</option>
@@ -126,7 +126,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
                   value={formData.badgeNumber}
                   onChange={(e) => setFormData({ ...formData, badgeNumber: e.target.value })}
                   placeholder="NDRF-BN02-771"
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded text-xs font-mono text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500/80"
+                  className="w-full px-3 py-2 bg-white border border-[#E4E3DC] rounded-lg text-xs text-[#171B19] placeholder-[#999F99] focus:outline-none focus:border-[#315C46]"
                 />
               </FormField>
             </div>
@@ -137,7 +137,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
                   id="reg-role"
                   value={formData.role}
                   onChange={(e) => setFormData({ ...formData, role: e.target.value as Role })}
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded text-xs font-mono text-slate-100 focus:outline-none focus:border-amber-500/80"
+                  className="w-full px-3 py-2 bg-white border border-[#E4E3DC] rounded-lg text-xs text-[#171B19] focus:outline-none focus:border-[#315C46]"
                 >
                   <option value="field_responder">Field Responder</option>
                   <option value="incident_commander">Incident Commander</option>
@@ -154,7 +154,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
                   value={formData.region}
                   onChange={(e) => setFormData({ ...formData, region: e.target.value })}
                   placeholder="Odisha Coastal Belt"
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded text-xs font-mono text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500/80"
+                  className="w-full px-3 py-2 bg-white border border-[#E4E3DC] rounded-lg text-xs text-[#171B19] placeholder-[#999F99] focus:outline-none focus:border-[#315C46]"
                 />
               </FormField>
             </div>
@@ -166,17 +166,17 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 placeholder="+91 94370 00000"
-                className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded text-xs font-mono text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500/80"
+                className="w-full px-3 py-2 bg-white border border-[#E4E3DC] rounded-lg text-xs text-[#171B19] placeholder-[#999F99] focus:outline-none focus:border-[#315C46]"
               />
             </FormField>
 
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full mt-2 py-2.5 px-4 text-xs font-mono font-bold rounded bg-amber-500 hover:bg-amber-400 text-slate-950 transition-colors flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
+              className="w-full mt-2 py-2.5 px-4 text-xs font-semibold rounded-lg bg-[#315C46] hover:bg-[#264937] text-white transition-colors flex items-center justify-center gap-2 shadow-xs disabled:opacity-50"
             >
               {isSubmitting ? (
-                <div className="w-4 h-4 border-2 border-slate-900 border-t-transparent rounded-full animate-spin" />
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
                 <>
                   <span>Enlist Personnel Profile</span>
@@ -186,14 +186,14 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
             </button>
           </form>
 
-          <div className="mt-4 pt-3 border-t border-slate-850 text-center">
+          <div className="mt-4 pt-3 border-t border-[#E4E3DC] text-center">
             <button
               type="button"
               onClick={onNavigateToLogin}
-              className="inline-flex items-center gap-1.5 text-xs font-mono text-slate-400 hover:text-slate-200 transition-colors"
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-[#777D77] hover:text-[#171B19] transition-colors"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Back to Terminal Sign In</span>
+              <span>Back to Sign In</span>
             </button>
           </div>
         </div>

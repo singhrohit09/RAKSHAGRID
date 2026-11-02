@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { Box, Send, MapPin, CheckCircle, AlertTriangle, ArrowRight, Layers } from 'lucide-react';
+import { Box, Send, MapPin, CheckCircle, AlertTriangle, ArrowRight, Layers, X } from 'lucide-react';
 import { Resource, ResourceCategory, Team } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { ResponsivePageHeader } from '../components/common/ResponsivePageHeader';
@@ -60,13 +60,13 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({
       {/* Header */}
       <ResponsivePageHeader
         title="Disaster Logistics & Relief Stockpile"
-        kicker="Material & Supply Supply Chain"
+        kicker="Supply Chain & Equipment"
         description="Strategic relief inventories, life-support asset allocation, field water purification, and trauma equipment dispatch."
         metadata={
-          <div className="flex items-center gap-2 font-mono text-[11px] text-slate-400">
-            <span>Total Catalogued Assets: {resources.length} SKUs</span>
+          <div className="flex items-center gap-2 text-xs text-[#777D77]">
+            <span>Total Catalogued Assets: <strong className="text-[#171B19]">{resources.length} SKUs</strong></span>
             <span>·</span>
-            <span className="text-emerald-400 font-semibold">
+            <span className="text-[#315C46] font-semibold">
               Stocked: {resources.filter((r) => r.status === 'stocked').length}
             </span>
           </div>
@@ -74,7 +74,7 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({
       />
 
       {/* Filter and Search */}
-      <div className="p-3.5 bg-[#12171e] border border-slate-800 rounded flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+      <div className="p-4 bg-white border border-[#E4E3DC] rounded-xl shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <SearchBar
           value={search}
           onChange={setSearch}
@@ -98,11 +98,11 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({
       </div>
 
       {/* Resources Table / Grid */}
-      <div className="border border-slate-800 rounded bg-[#12171e] overflow-hidden">
+      <div className="border border-[#E4E3DC] rounded-xl bg-white overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs font-mono">
+          <table className="w-full text-left text-xs">
             <thead>
-              <tr className="bg-[#0d1117] border-b border-slate-800 text-slate-400 tracking-wider uppercase text-[11px]">
+              <tr className="bg-[#FAF9F5] border-b border-[#E4E3DC] text-[#777D77] tracking-wider uppercase text-[11px] font-semibold">
                 <th className="py-3 px-3.5">SKU ID</th>
                 <th className="py-3 px-3.5">Asset Name</th>
                 <th className="py-3 px-3.5">Category</th>
@@ -113,30 +113,30 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({
                 {permissions.canAllocateResources && <th className="py-3 px-3.5 text-right">Action</th>}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-850">
+            <tbody className="divide-y divide-[#E4E3DC]">
               {filteredResources.map((item) => {
                 const isLow = item.availableQuantity === 0;
                 return (
-                  <tr key={item.id} className="hover:bg-slate-850/40 transition-colors">
-                    <td className="py-3 px-3.5 font-bold text-amber-400 whitespace-nowrap">
+                  <tr key={item.id} className="hover:bg-[#FAF9F5] transition-colors">
+                    <td className="py-3 px-3.5 font-mono font-bold text-[#315C46] whitespace-nowrap">
                       {item.id}
                     </td>
-                    <td className="py-3 px-3.5 font-sans font-medium text-slate-100 max-w-[220px]">
+                    <td className="py-3 px-3.5 font-medium text-[#171B19] max-w-[220px]">
                       {item.name}
                     </td>
-                    <td className="py-3 px-3.5 uppercase text-slate-400">
+                    <td className="py-3 px-3.5 uppercase text-[#777D77] font-mono text-[11px]">
                       {item.category.replace('_', ' & ')}
                     </td>
-                    <td className="py-3 px-3.5 tabular-nums">
-                      <span className={`font-bold ${isLow ? 'text-rose-400' : 'text-slate-100'}`}>
+                    <td className="py-3 px-3.5 tabular-nums font-mono">
+                      <span className={`font-bold ${isLow ? 'text-[#B9433D]' : 'text-[#171B19]'}`}>
                         {item.availableQuantity}
                       </span>{' '}
-                      / {item.totalQuantity} <span className="text-slate-500">{item.unit}</span>
+                      / {item.totalQuantity} <span className="text-[#777D77]">{item.unit}</span>
                     </td>
-                    <td className="py-3 px-3.5 text-slate-400 max-w-[180px] truncate">
+                    <td className="py-3 px-3.5 text-[#777D77] max-w-[180px] truncate">
                       {item.storageLocation}
                     </td>
-                    <td className="py-3 px-3.5 text-slate-300 max-w-[180px] truncate">
+                    <td className="py-3 px-3.5 text-[#171B19] max-w-[180px] truncate">
                       {item.assignedToTeamName || 'General Reserve'}
                     </td>
                     <td className="py-3 px-3.5 whitespace-nowrap">
@@ -151,7 +151,7 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({
                             setAllocatingItem(item);
                             setDispatchQty(Math.min(item.availableQuantity, 5));
                           }}
-                          className="px-2.5 py-1 text-xs font-mono font-medium rounded bg-amber-500/20 text-amber-300 hover:bg-amber-500 hover:text-slate-950 transition-colors disabled:opacity-30 disabled:hover:bg-amber-500/20 disabled:hover:text-amber-300"
+                          className="px-3 py-1 text-xs font-semibold rounded-lg bg-[#E5EDE6] text-[#315C46] hover:bg-[#315C46] hover:text-white transition-colors disabled:opacity-30 disabled:hover:bg-[#E5EDE6] disabled:hover:text-[#315C46] shadow-2xs"
                         >
                           Dispatch Stock
                         </button>
@@ -168,24 +168,35 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({
       {/* Allocate Stock Modal */}
       {allocatingItem && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs"
           role="dialog"
           aria-modal="true"
         >
-          <div className="w-full max-w-md bg-[#161c24] border border-slate-750 rounded shadow-2xl p-5 text-slate-200">
-            <h3 className="text-sm font-mono font-bold uppercase tracking-wider text-slate-100 mb-1">
-              Dispatch Resource: {allocatingItem.id}
-            </h3>
-            <p className="text-xs text-slate-300 mb-3 font-semibold">{allocatingItem.name}</p>
+          <div className="w-full max-w-md bg-white border border-[#E4E3DC] rounded-xl shadow-xl p-5 text-[#171B19]">
+            <div className="flex items-center justify-between pb-3 border-b border-[#E4E3DC] mb-3">
+              <div>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-[#171B19]">
+                  Dispatch Resource: {allocatingItem.id}
+                </h3>
+                <p className="text-xs text-[#777D77] mt-0.5">{allocatingItem.name}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAllocatingItem(null)}
+                className="p-1 rounded-md text-[#777D77] hover:text-[#171B19] hover:bg-[#F5F4EF]"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
 
-            <div className="p-2.5 rounded bg-slate-900 border border-slate-850 mb-4 font-mono text-xs">
-              <span className="text-slate-400">Available in Reserve:</span>{' '}
-              <span className="font-bold text-amber-400">{allocatingItem.availableQuantity}</span> {allocatingItem.unit}
+            <div className="p-3 rounded-lg bg-[#FAF9F5] border border-[#E4E3DC] mb-4 text-xs">
+              <span className="text-[#777D77]">Available in Reserve:</span>{' '}
+              <span className="font-bold font-mono text-[#315C46]">{allocatingItem.availableQuantity}</span> {allocatingItem.unit}
             </div>
 
             <form onSubmit={handleAllocateSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-mono uppercase text-slate-300 mb-1">
+                <label className="block text-xs font-semibold uppercase text-[#171B19] tracking-wider mb-1.5">
                   Dispatch Quantity ({allocatingItem.unit}):
                 </label>
                 <input
@@ -194,18 +205,18 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({
                   max={allocatingItem.availableQuantity}
                   value={dispatchQty}
                   onChange={(e) => setDispatchQty(parseInt(e.target.value, 10) || 1)}
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded text-xs font-mono text-slate-100 focus:outline-none focus:border-amber-500/80"
+                  className="w-full px-3 py-2 bg-white border border-[#E4E3DC] rounded-lg text-xs font-mono text-[#171B19] focus:outline-none focus:border-[#315C46]"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-mono uppercase text-slate-300 mb-1">
+                <label className="block text-xs font-semibold uppercase text-[#171B19] tracking-wider mb-1.5">
                   Recipient Team / Station:
                 </label>
                 <select
                   value={selectedTeamName}
                   onChange={(e) => setSelectedTeamName(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded text-xs text-slate-100 font-mono focus:outline-none focus:border-amber-500/80"
+                  className="w-full px-3 py-2 bg-white border border-[#E4E3DC] rounded-lg text-xs text-[#171B19] focus:outline-none focus:border-[#315C46]"
                 >
                   {teams.map((t) => (
                     <option key={t.id} value={t.name}>
@@ -216,17 +227,17 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({
                 </select>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-[#E4E3DC]">
                 <button
                   type="button"
                   onClick={() => setAllocatingItem(null)}
-                  className="px-3.5 py-1.5 text-xs font-mono text-slate-400 hover:text-slate-200"
+                  className="px-3.5 py-1.5 text-xs text-[#777D77] hover:text-[#171B19]"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 text-xs font-mono font-bold rounded bg-amber-500 hover:bg-amber-400 text-slate-950 transition-colors"
+                  className="px-4 py-2 text-xs font-semibold rounded-lg bg-[#315C46] hover:bg-[#264937] text-white transition-colors shadow-xs"
                 >
                   Authorize Stock Movement
                 </button>

@@ -17,6 +17,8 @@ import {
   Layers,
   Activity,
   Check,
+  Shield,
+  Radio,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -110,10 +112,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       }
     });
     return [
-      { name: 'Critical', value: counts.critical, color: '#f43f5e', id: 'critical' },
-      { name: 'High', value: counts.high, color: '#f59e0b', id: 'high' },
-      { name: 'Medium', value: counts.medium, color: '#38bdf8', id: 'medium' },
-      { name: 'Low', value: counts.low, color: '#10b981', id: 'low' },
+      { name: 'Critical', value: counts.critical, color: '#B9433D', id: 'critical' },
+      { name: 'High', value: counts.high, color: '#C18A32', id: 'high' },
+      { name: 'Medium', value: counts.medium, color: '#315C46', id: 'medium' },
+      { name: 'Low', value: counts.low, color: '#777D77', id: 'low' },
     ].filter((item) => item.value > 0);
   }, [filteredIncidents]);
 
@@ -132,40 +134,47 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Operational Status Bar */}
+      <div className="bg-white border border-[#E4E3DC] rounded-xl p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-3">
+          <div className="w-2.5 h-2.5 rounded-full bg-[#315C46] animate-pulse" />
+          <span className="font-semibold text-[#171B19]">Operational State: Active Monitoring</span>
+          <span className="text-[#E4E3DC] hidden md:inline">|</span>
+          <span className="text-[#777D77]">Active Incidents: <strong className="text-[#B9433D] font-mono">{activeEmergencies}</strong></span>
+          <span className="text-[#E4E3DC] hidden md:inline">|</span>
+          <span className="text-[#777D77]">Teams Deployed: <strong className="text-[#315C46] font-mono">{deployedTeams}</strong></span>
+          <span className="text-[#E4E3DC] hidden md:inline">|</span>
+          <span className="text-[#777D77]">Shelters Active: <strong className="text-[#171B19] font-mono">{openShelters}</strong></span>
+        </div>
+        <div className="flex items-center gap-2 text-[#777D77] shrink-0">
+          <span className="font-mono text-[11px]">UTC Synced</span>
+          <span>·</span>
+          <span>Local: {new Date().toLocaleTimeString()}</span>
+        </div>
+      </div>
+
       {/* Page Header */}
       <ResponsivePageHeader
         title="Emergency Operations Command"
-        kicker="Incident Management Node 01"
-        description="Unified real-time disaster intelligence, tactical field deployment, and life-safety coordination."
-        metadata={
-          <div className="flex items-center gap-2 font-mono text-[11px] text-slate-400">
-            <span className="inline-flex items-center gap-1.5 text-emerald-400">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              <span>Telemetry Synchronized</span>
-            </span>
-            <span aria-hidden="true">·</span>
-            <span>Local Time: {new Date().toLocaleTimeString()}</span>
-            <span aria-hidden="true">·</span>
-            <span className="text-amber-400 font-semibold">[DEMO ENVIRONMENT]</span>
-          </div>
-        }
+        kicker="National Command Center"
+        description="Unified real-time disaster intelligence, field deployment status, and life-safety coordination across response zones."
         actions={
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={onRefreshData}
               aria-label="Refresh telemetry data"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-slate-900 border border-slate-800 hover:bg-slate-850 text-slate-300 text-xs font-mono transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white border border-[#E4E3DC] hover:bg-[#F5F4EF] text-[#171B19] text-xs font-medium transition-colors shadow-2xs"
             >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>Sync</span>
+              <RefreshCw className="w-3.5 h-3.5 text-[#777D77]" />
+              <span>Sync Telemetry</span>
             </button>
             <button
               type="button"
               onClick={() => onNavigate('/map')}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded bg-slate-800 hover:bg-slate-750 text-slate-100 text-xs font-mono font-medium border border-slate-700 transition-colors"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-[#315C46] hover:bg-[#264937] text-white text-xs font-semibold transition-colors shadow-xs"
             >
-              <Layers className="w-3.5 h-3.5 text-sky-400" />
+              <Layers className="w-3.5 h-3.5 text-white" />
               <span>Situational Map</span>
             </button>
           </div>
@@ -173,9 +182,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       />
 
       {/* Operational Filter Strip */}
-      <div className="p-3 bg-[#12171e] border border-slate-800 rounded flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div className="p-3 bg-white border border-[#E4E3DC] rounded-xl shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="flex items-center gap-2 flex-wrap">
-          <Filter className="w-3.5 h-3.5 text-slate-500" />
+          <Filter className="w-3.5 h-3.5 text-[#777D77]" />
           <FilterBar
             label="Severity"
             options={[
@@ -202,16 +211,16 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0 self-end md:self-auto">
-          <span className="text-[11px] font-mono text-slate-500 uppercase">Window:</span>
+          <span className="text-[11px] font-semibold text-[#777D77] uppercase">Window:</span>
           {(['24h', '7d', '30d'] as const).map((period) => (
             <button
               key={period}
               type="button"
               onClick={() => setDateRange(period)}
-              className={`px-2 py-0.5 text-xs font-mono rounded ${
+              className={`px-2.5 py-1 text-xs font-mono rounded-md transition-colors ${
                 dateRange === period
-                  ? 'bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-[#E5EDE6] text-[#315C46] font-bold border border-[#C8DACB]'
+                  : 'text-[#777D77] hover:text-[#171B19] hover:bg-[#F5F4EF]'
               }`}
             >
               {period}
@@ -230,7 +239,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           onClick={() => onNavigate('/incidents')}
         />
         <MetricCard
-          label="Active Emergencies"
+          label="Active Incidents"
           value={activeEmergencies}
           subtext="Ongoing operations"
           variant="critical"
@@ -282,17 +291,17 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       {/* Primary Analytics & Visualizations Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Severity Distribution Donut */}
-        <div className="p-4 bg-[#12171e] border border-slate-800 rounded flex flex-col">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
-            <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-200">
-              Severity Distribution
+        <div className="p-5 bg-white border border-[#E4E3DC] rounded-xl shadow-xs flex flex-col">
+          <div className="flex items-center justify-between pb-3 border-b border-[#E4E3DC] mb-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-[#171B19]">
+              Incident Severity Breakdown
             </h3>
-            <span className="text-[10px] font-mono text-slate-500">[DEMO DATA]</span>
+            <span className="text-xs font-mono text-[#777D77]">{filteredIncidents.length} events</span>
           </div>
 
           <div className="h-56 w-full flex items-center justify-center">
             {severityDistribution.length === 0 ? (
-              <div className="text-xs font-mono text-slate-500">No matching incident records</div>
+              <div className="text-xs text-[#777D77]">No matching incident records</div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -316,11 +325,12 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                   </Pie>
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: '#161c24',
-                      borderColor: '#334155',
-                      borderRadius: '4px',
+                      backgroundColor: '#FFFFFF',
+                      borderColor: '#E4E3DC',
+                      borderRadius: '8px',
                       fontSize: '12px',
-                      fontFamily: 'monospace',
+                      color: '#171B19',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
                     }}
                   />
                 </PieChart>
@@ -328,31 +338,31 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-850">
+          <div className="grid grid-cols-2 gap-2 pt-3 border-t border-[#E4E3DC]">
             {severityDistribution.map((item) => (
               <button
                 key={item.id}
                 type="button"
                 onClick={() => onNavigate(`/incidents?severity=${item.id}`)}
-                className="flex items-center justify-between p-1.5 rounded hover:bg-slate-850 text-left transition-colors text-xs font-mono"
+                className="flex items-center justify-between p-2 rounded-lg hover:bg-[#FAF9F5] text-left transition-colors text-xs"
               >
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-                  <span className="text-slate-300">{item.name}</span>
+                  <span className="text-[#575D56] font-medium">{item.name}</span>
                 </div>
-                <span className="text-slate-100 font-bold tabular-nums">{item.value}</span>
+                <span className="text-[#171B19] font-bold font-mono tabular-nums">{item.value}</span>
               </button>
             ))}
           </div>
         </div>
 
         {/* Hazard Types Bar Chart */}
-        <div className="p-4 bg-[#12171e] border border-slate-800 rounded flex flex-col lg:col-span-2">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
-            <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-200">
-              Active Hazard Profiles
+        <div className="p-5 bg-white border border-[#E4E3DC] rounded-xl shadow-xs flex flex-col lg:col-span-2">
+          <div className="flex items-center justify-between pb-3 border-b border-[#E4E3DC] mb-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-[#171B19]">
+              Active Hazard Profiles & Categories
             </h3>
-            <span className="text-xs font-mono text-slate-400">Total: {filteredIncidents.length} Events</span>
+            <span className="text-xs font-mono text-[#777D77]">Total: {filteredIncidents.length} Events</span>
           </div>
 
           <div className="h-56 w-full">
@@ -360,25 +370,26 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               <BarChart data={disasterTypeDistribution} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
                 <XAxis
                   dataKey="name"
-                  tick={{ fill: '#94a3b8', fontSize: 10, fontFamily: 'monospace' }}
+                  tick={{ fill: '#777D77', fontSize: 10, fontFamily: 'monospace' }}
                   angle={-15}
                   textAnchor="end"
                 />
-                <YAxis tick={{ fill: '#94a3b8', fontSize: 10, fontFamily: 'monospace' }} allowDecimals={false} />
+                <YAxis tick={{ fill: '#777D77', fontSize: 10, fontFamily: 'monospace' }} allowDecimals={false} />
                 <Tooltip
-                  cursor={{ fill: 'rgba(255,255,255,0.03)' }}
+                  cursor={{ fill: 'rgba(0,0,0,0.03)' }}
                   contentStyle={{
-                    backgroundColor: '#161c24',
-                    borderColor: '#334155',
-                    borderRadius: '4px',
+                    backgroundColor: '#FFFFFF',
+                    borderColor: '#E4E3DC',
+                    borderRadius: '8px',
                     fontSize: '12px',
-                    fontFamily: 'monospace',
+                    color: '#171B19',
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
                   }}
                 />
                 <Bar
                   dataKey="count"
-                  fill="#d97706"
-                  radius={[3, 3, 0, 0]}
+                  fill="#315C46"
+                  radius={[4, 4, 0, 0]}
                   onClick={(data: unknown) => {
                     const item = data as { name?: string } | undefined;
                     if (item && item.name) {
@@ -391,11 +402,11 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             </ResponsiveContainer>
           </div>
 
-          <div className="flex items-center justify-between pt-2 border-t border-slate-850 text-xs font-mono text-slate-500">
-            <span>Click any bar to drill down into corresponding incident logs</span>
+          <div className="flex items-center justify-between pt-3 border-t border-[#E4E3DC] text-xs text-[#777D77]">
+            <span>Click any bar to filter incidents by disaster classification</span>
             <button
               onClick={() => onNavigate('/analytics')}
-              className="text-amber-400 hover:text-amber-300 font-medium transition-colors"
+              className="text-[#315C46] hover:text-[#264937] font-semibold transition-colors"
             >
               Open Full Intelligence →
             </button>
@@ -406,17 +417,17 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       {/* 2-Column Operational Feeds: Recent Incidents & Tactical Alerts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Incidents Table */}
-        <div className="p-4 bg-[#12171e] border border-slate-800 rounded lg:col-span-2 flex flex-col">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
+        <div className="p-5 bg-white border border-[#E4E3DC] rounded-xl shadow-xs lg:col-span-2 flex flex-col">
+          <div className="flex items-center justify-between pb-3 border-b border-[#E4E3DC] mb-3">
             <div className="flex items-center gap-2">
-              <AlertOctagon className="w-4 h-4 text-amber-500" />
-              <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-200">
-                Recent Incident Log
+              <AlertOctagon className="w-4 h-4 text-[#315C46]" />
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-[#171B19]">
+                Live Incident Registry
               </h3>
             </div>
             <button
               onClick={() => onNavigate('/incidents')}
-              className="text-xs font-mono text-amber-400 hover:text-amber-300 inline-flex items-center gap-1 transition-colors"
+              className="text-xs font-medium text-[#315C46] hover:text-[#264937] inline-flex items-center gap-1 transition-colors"
             >
               <span>View All ({incidents.length})</span>
               <ArrowRight className="w-3 h-3" />
@@ -424,40 +435,40 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs font-mono">
+            <table className="w-full text-left text-xs">
               <thead>
-                <tr className="text-slate-500 border-b border-slate-850 pb-2">
-                  <th className="py-2 px-2">ID</th>
-                  <th className="py-2 px-2">Incident Title</th>
-                  <th className="py-2 px-2">Severity</th>
-                  <th className="py-2 px-2">Location</th>
-                  <th className="py-2 px-2">Status</th>
-                  <th className="py-2 px-2 text-right">Reported</th>
+                <tr className="text-[#777D77] border-b border-[#E4E3DC] pb-2 font-semibold uppercase text-[11px]">
+                  <th className="py-2.5 px-2">ID</th>
+                  <th className="py-2.5 px-2">Incident Title</th>
+                  <th className="py-2.5 px-2">Severity</th>
+                  <th className="py-2.5 px-2">Location</th>
+                  <th className="py-2.5 px-2">Status</th>
+                  <th className="py-2.5 px-2 text-right">Reported</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-850/60">
+              <tbody className="divide-y divide-[#E4E3DC]">
                 {filteredIncidents.slice(0, 5).map((inc) => (
                   <tr
                     key={inc.id}
                     onClick={() => onNavigate(`/incidents?id=${inc.id}`)}
-                    className="hover:bg-slate-850/50 cursor-pointer transition-colors"
+                    className="hover:bg-[#FAF9F5] cursor-pointer transition-colors"
                   >
-                    <td className="py-2.5 px-2 text-amber-400 font-semibold whitespace-nowrap">
+                    <td className="py-3 px-2 text-[#315C46] font-mono font-bold whitespace-nowrap">
                       {inc.id}
                     </td>
-                    <td className="py-2.5 px-2 text-slate-200 font-sans font-medium max-w-[200px] truncate">
+                    <td className="py-3 px-2 text-[#171B19] font-medium max-w-[200px] truncate">
                       {inc.title}
                     </td>
-                    <td className="py-2.5 px-2 whitespace-nowrap">
+                    <td className="py-3 px-2 whitespace-nowrap">
                       <SeverityBadge severity={inc.severity} size="sm" />
                     </td>
-                    <td className="py-2.5 px-2 text-slate-400 max-w-[150px] truncate">
+                    <td className="py-3 px-2 text-[#777D77] max-w-[150px] truncate">
                       {inc.location}
                     </td>
-                    <td className="py-2.5 px-2 whitespace-nowrap">
+                    <td className="py-3 px-2 whitespace-nowrap">
                       <StatusBadge status={inc.status} size="sm" />
                     </td>
-                    <td className="py-2.5 px-2 text-right text-slate-500 whitespace-nowrap tabular-nums">
+                    <td className="py-3 px-2 text-right text-[#777D77] font-mono whitespace-nowrap tabular-nums">
                       {new Date(inc.reportedTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </td>
                   </tr>
@@ -468,19 +479,19 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         </div>
 
         {/* Latest High-Priority Alerts */}
-        <div className="p-4 bg-[#12171e] border border-slate-800 rounded flex flex-col">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
+        <div className="p-5 bg-white border border-[#E4E3DC] rounded-xl shadow-xs flex flex-col">
+          <div className="flex items-center justify-between pb-3 border-b border-[#E4E3DC] mb-3">
             <div className="flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-rose-500" />
-              <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-200">
-                Active Tactical Alerts
+              <AlertTriangle className="w-4 h-4 text-[#B9433D]" />
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-[#171B19]">
+                Active Emergency Alerts
               </h3>
             </div>
             <button
               onClick={() => onNavigate('/alerts')}
-              className="text-xs font-mono text-amber-400 hover:text-amber-300 transition-colors"
+              className="text-xs font-medium text-[#315C46] hover:text-[#264937] transition-colors"
             >
-              Broadcast Center →
+              Alerts Center →
             </button>
           </div>
 
@@ -488,33 +499,33 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             {alerts.slice(0, 3).map((alert) => (
               <div
                 key={alert.id}
-                className="p-3 rounded border border-slate-800 bg-slate-900/80 space-y-2 text-xs"
+                className="p-3.5 rounded-lg border border-[#E4E3DC] bg-[#FAF9F5] space-y-2 text-xs"
               >
                 <div className="flex items-center justify-between">
                   <SeverityBadge severity={alert.severity} size="sm" />
-                  <span className="text-[10px] font-mono text-slate-500">
+                  <span className="text-[10px] font-mono text-[#777D77]">
                     {new Date(alert.issuedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
-                <h4 className="font-semibold text-slate-100 text-xs leading-snug">
+                <h4 className="font-semibold text-[#171B19] text-xs leading-snug">
                   {alert.title}
                 </h4>
-                <p className="text-[11px] text-slate-400 line-clamp-2">
+                <p className="text-[11px] text-[#777D77] line-clamp-2">
                   {alert.message}
                 </p>
-                <div className="pt-2 border-t border-slate-850 flex items-center justify-between text-[11px] font-mono">
-                  <span className="text-slate-500 truncate max-w-[140px]">{alert.targetRegion}</span>
+                <div className="pt-2 border-t border-[#E4E3DC] flex items-center justify-between text-[11px]">
+                  <span className="text-[#777D77] truncate max-w-[140px]">{alert.targetRegion}</span>
                   {!alert.acknowledgedByCommander ? (
                     <button
                       type="button"
                       onClick={() => onAcknowledgeAlert(alert.id)}
-                      className="inline-flex items-center gap-1 text-emerald-400 hover:text-emerald-300 transition-colors"
+                      className="inline-flex items-center gap-1 text-[#315C46] hover:text-[#264937] font-semibold transition-colors"
                     >
                       <Check className="w-3 h-3" />
                       <span>Acknowledge</span>
                     </button>
                   ) : (
-                    <span className="text-slate-500">✓ Acknowledged</span>
+                    <span className="text-[#777D77]">✓ Acknowledged</span>
                   )}
                 </div>
               </div>
@@ -523,31 +534,31 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         </div>
       </div>
 
-      {/* Recent Operational Audit Activity Feed */}
-      <div className="p-4 bg-[#12171e] border border-slate-800 rounded">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
+      {/* Operational Audit Feed */}
+      <div className="p-5 bg-white border border-[#E4E3DC] rounded-xl shadow-xs">
+        <div className="flex items-center justify-between pb-3 border-b border-[#E4E3DC] mb-3">
           <div className="flex items-center gap-2">
-            <Activity className="w-4 h-4 text-emerald-500" />
-            <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-200">
+            <Activity className="w-4 h-4 text-[#315C46]" />
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-[#171B19]">
               Response Command Audit Trail
             </h3>
           </div>
           <button
             onClick={() => onNavigate('/audit-log')}
-            className="text-xs font-mono text-amber-400 hover:text-amber-300 transition-colors"
+            className="text-xs font-medium text-[#315C46] hover:text-[#264937] transition-colors"
           >
             Full Audit Stream ({auditLogs.length}) →
           </button>
         </div>
 
-        <div className="divide-y divide-slate-850/60 font-mono text-xs">
+        <div className="divide-y divide-[#E4E3DC] text-xs">
           {auditLogs.slice(0, 4).map((log) => (
             <div key={log.id} className="py-2.5 flex items-start justify-between gap-3">
               <div className="flex items-start gap-2.5 min-w-0">
-                <span className="text-amber-500/80 font-semibold shrink-0">[{log.action}]</span>
-                <span className="text-slate-300 truncate font-sans text-xs">{log.details}</span>
+                <span className="text-[#315C46] font-mono font-semibold shrink-0">[{log.action}]</span>
+                <span className="text-[#171B19] truncate">{log.details}</span>
               </div>
-              <div className="flex items-center gap-3 text-slate-500 text-[11px] shrink-0">
+              <div className="flex items-center gap-3 text-[#777D77] text-[11px] shrink-0 font-mono">
                 <span>{log.actor.name}</span>
                 <span>·</span>
                 <span className="tabular-nums">

@@ -28,20 +28,45 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   icon: Icon,
   variant = 'default',
   onClick,
-  showDemoBadge = true,
 }) => {
   const getVariantStyles = () => {
     switch (variant) {
       case 'critical':
-        return 'border-rose-900/50 bg-[#171013] hover:border-rose-700/60 text-rose-400';
+        return 'border-[#E8C2BF] bg-white hover:border-[#B9433D]/50';
       case 'warning':
-        return 'border-amber-900/50 bg-[#19140e] hover:border-amber-700/60 text-amber-400';
+        return 'border-[#EED7B8] bg-white hover:border-[#C18A32]/50';
       case 'success':
-        return 'border-emerald-900/50 bg-[#0d1814] hover:border-emerald-700/60 text-emerald-400';
+        return 'border-[#C8DACB] bg-white hover:border-[#315C46]/50';
       case 'info':
-        return 'border-sky-900/50 bg-[#0e1620] hover:border-sky-700/60 text-sky-400';
+        return 'border-[#E4E3DC] bg-white hover:border-[#D0CFC5]';
       default:
-        return 'border-slate-800 bg-[#12171e] hover:border-slate-700 text-slate-300';
+        return 'border-[#E4E3DC] bg-white hover:border-[#D0CFC5]';
+    }
+  };
+
+  const getValueColor = () => {
+    switch (variant) {
+      case 'critical':
+        return 'text-[#B9433D]';
+      case 'warning':
+        return 'text-[#C18A32]';
+      case 'success':
+        return 'text-[#315C46]';
+      default:
+        return 'text-[#171B19]';
+    }
+  };
+
+  const getIconWrapperStyles = () => {
+    switch (variant) {
+      case 'critical':
+        return 'bg-[#F9EBEA] text-[#B9433D]';
+      case 'warning':
+        return 'bg-[#FAF2E6] text-[#C18A32]';
+      case 'success':
+        return 'bg-[#E5EDE6] text-[#315C46]';
+      default:
+        return 'bg-[#F5F4EF] text-[#315C46]';
     }
   };
 
@@ -58,40 +83,33 @@ export const MetricCard: React.FC<MetricCardProps> = ({
           onClick();
         }
       }}
-      className={`relative p-4 rounded border transition-all duration-150 text-left select-none ${getVariantStyles()} ${
-        isClickable ? 'cursor-pointer hover:shadow-md hover:shadow-black/30' : ''
+      className={`relative p-5 rounded-xl border transition-all duration-150 text-left select-none shadow-xs ${getVariantStyles()} ${
+        isClickable ? 'cursor-pointer hover:shadow-sm' : ''
       }`}
     >
-      <div className="flex items-center justify-between gap-2 mb-2">
-        <span className="text-xs font-medium text-slate-400 tracking-wide uppercase truncate">
+      <div className="flex items-center justify-between gap-2 mb-2.5">
+        <span className="text-xs font-semibold text-[#777D77] tracking-wider uppercase truncate">
           {label}
         </span>
-        <div className="flex items-center gap-1.5 shrink-0">
-          {showDemoBadge && (
-            <span className="text-[10px] font-mono text-slate-500 bg-slate-900/80 px-1 py-0.5 rounded border border-slate-800">
-              DEMO
-            </span>
-          )}
-          {Icon && (
-            <div className="p-1 rounded bg-slate-800/40 text-slate-300">
-              <Icon className="w-4 h-4" />
-            </div>
-          )}
-        </div>
+        {Icon && (
+          <div className={`p-1.5 rounded-lg shrink-0 ${getIconWrapperStyles()}`}>
+            <Icon className="w-4 h-4" />
+          </div>
+        )}
       </div>
 
       <div className="flex items-baseline gap-2">
-        <div className="text-2xl lg:text-3xl font-bold font-mono tabular-nums text-slate-100 tracking-tight">
+        <div className={`text-2xl lg:text-3xl font-bold font-mono tabular-nums tracking-tight ${getValueColor()}`}>
           {value}
         </div>
         {trend && (
           <span
-            className={`text-xs font-mono tabular-nums ${
+            className={`text-xs font-mono tabular-nums font-medium ${
               trend.direction === 'up'
-                ? 'text-rose-400'
+                ? 'text-[#B9433D]'
                 : trend.direction === 'down'
-                ? 'text-emerald-400'
-                : 'text-slate-400'
+                ? 'text-[#315C46]'
+                : 'text-[#777D77]'
             }`}
           >
             {trend.direction === 'up' ? '▲' : trend.direction === 'down' ? '▼' : '—'} {trend.text}
@@ -100,7 +118,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
       </div>
 
       {subtext && (
-        <div className="mt-1.5 text-xs text-slate-400 truncate">
+        <div className="mt-1.5 text-xs text-[#777D77] truncate">
           {subtext}
         </div>
       )}

@@ -5,21 +5,18 @@
 
 import React, { useState, useMemo } from 'react';
 import {
-  MapPin,
+  Map as MapIcon,
   Layers,
-  Crosshair,
-  AlertTriangle,
+  Filter,
+  Flame,
   Home,
   Users,
-  Compass,
-  Maximize2,
-  ChevronRight,
-  ExternalLink,
-  Wifi,
-  WifiOff,
+  Waves,
+  ShieldAlert,
+  Info,
   Radio,
-  Clock,
-  Filter,
+  RefreshCw,
+  Search,
 } from 'lucide-react';
 import { Incident, Shelter, Team } from '../types';
 import { MapLayerState, GeocodeResult } from '../types/geospatial';
@@ -67,7 +64,7 @@ export const MapPage: React.FC<MapPageProps> = ({
   const [selectedDisasterType, setSelectedDisasterType] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [proximityRadiusKm, setProximityRadiusKm] = useState(25);
-  const [tileTheme, setTileTheme] = useState<'dark' | 'standard'>('dark');
+  const [tileTheme, setTileTheme] = useState<'dark' | 'standard'>('standard');
 
   // Selected GIS Entity
   const [selectedEntity, setSelectedEntity] = useState<InspectorSelection>(() => {
@@ -106,35 +103,35 @@ export const MapPage: React.FC<MapPageProps> = ({
       {/* Page Header */}
       <ResponsivePageHeader
         title="Live Geospatial Intelligence & GIS Monitoring"
-        kicker="Situational Grid · Phase 3 Operational Architecture"
+        kicker="Geospatial Situational Grid"
         description="Real-time multi-echelon disaster map integrating OpenStreetMap cartography, Open-Meteo atmospheric telemetry, Copernicus GloFAS river discharge, and Turf.js spatial analysis."
         metadata={
-          <div className="flex flex-wrap items-center gap-3 font-mono text-[11px] text-slate-400">
+          <div className="flex flex-wrap items-center gap-3 text-xs text-[#777D77]">
             <div className="flex items-center gap-1.5">
               <span
                 className={`w-2 h-2 rounded-full ${
                   realtimeStatus === 'CONNECTED'
-                    ? 'bg-emerald-500 animate-pulse'
+                    ? 'bg-[#315C46] animate-pulse'
                     : realtimeStatus === 'RECONNECTING'
-                    ? 'bg-amber-500 animate-pulse'
-                    : 'bg-rose-500'
+                    ? 'bg-[#C18A32] animate-pulse'
+                    : 'bg-[#B9433D]'
                 }`}
               />
-              <span className="text-slate-300">Realtime Mesh: {realtimeStatus}</span>
+              <span className="text-[#171B19] font-medium">Realtime Mesh: {realtimeStatus}</span>
             </div>
             <span>·</span>
-            <div className="flex items-center gap-1 text-slate-300">
-              <Radio className="w-3 h-3 text-sky-400" />
-              <span>GloFAS Flood & River Telemetry: Live</span>
+            <div className="flex items-center gap-1.5 text-[#171B19]">
+              <Radio className="w-3.5 h-3.5 text-[#315C46]" />
+              <span className="font-medium">GloFAS Flood & River Telemetry: Live</span>
             </div>
             <span>·</span>
-            <span>Projection: WGS84 EPSG:3857</span>
+            <span className="font-mono text-[11px]">WGS84 EPSG:3857</span>
           </div>
         }
       />
 
       {/* Top Search & Location Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-[#11161d] p-3 rounded-lg border border-slate-800">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-[#E4E3DC] shadow-xs">
         <MapSearch
           onSelectLocation={(loc) => {
             setSearchedLocation(loc);
@@ -143,12 +140,12 @@ export const MapPage: React.FC<MapPageProps> = ({
         />
 
         {/* Mobile Tab Selector */}
-        <div className="flex lg:hidden bg-slate-900 p-1 rounded border border-slate-800 text-xs font-mono">
+        <div className="flex lg:hidden bg-[#F5F4EF] p-1 rounded-lg border border-[#E4E3DC] text-xs font-semibold">
           <button
             type="button"
             onClick={() => setMobileTab('map')}
-            className={`flex-1 py-1.5 px-3 rounded transition ${
-              mobileTab === 'map' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-400'
+            className={`flex-1 py-1.5 px-3 rounded-md transition ${
+              mobileTab === 'map' ? 'bg-white text-[#171B19] shadow-xs' : 'text-[#777D77]'
             }`}
           >
             Tactical Map
@@ -156,8 +153,8 @@ export const MapPage: React.FC<MapPageProps> = ({
           <button
             type="button"
             onClick={() => setMobileTab('inspector')}
-            className={`flex-1 py-1.5 px-3 rounded transition ${
-              mobileTab === 'inspector' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-400'
+            className={`flex-1 py-1.5 px-3 rounded-md transition ${
+              mobileTab === 'inspector' ? 'bg-white text-[#171B19] shadow-xs' : 'text-[#777D77]'
             }`}
           >
             Inspector
@@ -165,8 +162,8 @@ export const MapPage: React.FC<MapPageProps> = ({
           <button
             type="button"
             onClick={() => setMobileTab('controls')}
-            className={`flex-1 py-1.5 px-3 rounded transition ${
-              mobileTab === 'controls' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-400'
+            className={`flex-1 py-1.5 px-3 rounded-md transition ${
+              mobileTab === 'controls' ? 'bg-white text-[#171B19] shadow-xs' : 'text-[#777D77]'
             }`}
           >
             Layers
@@ -174,18 +171,18 @@ export const MapPage: React.FC<MapPageProps> = ({
         </div>
 
         {/* Quick Map Stat Counters */}
-        <div className="hidden sm:flex items-center gap-4 text-xs font-mono text-slate-400">
+        <div className="hidden sm:flex items-center gap-4 text-xs font-medium text-[#777D77]">
           <div>
-            <span className="text-rose-400 font-bold tabular-nums">{filteredIncidents.length}</span> Incidents
+            <span className="text-[#B9433D] font-bold tabular-nums">{filteredIncidents.length}</span> Incidents
           </div>
           <div>
-            <span className="text-emerald-400 font-bold tabular-nums">{shelters.length}</span> Shelters
+            <span className="text-[#315C46] font-bold tabular-nums">{shelters.length}</span> Shelters
           </div>
           <div>
-            <span className="text-cyan-400 font-bold tabular-nums">{teams.length}</span> Teams
+            <span className="text-[#315C46] font-bold tabular-nums">{teams.length}</span> Field Teams
           </div>
           <div>
-            <span className="text-blue-400 font-bold tabular-nums">{riverGauges.length}</span> River Gauges
+            <span className="text-blue-700 font-bold tabular-nums">{riverGauges.length}</span> River Gauges
           </div>
         </div>
       </div>
@@ -235,7 +232,6 @@ export const MapPage: React.FC<MapPageProps> = ({
             selectedEntity={selectedEntity}
             onSelectEntity={(sel) => {
               setSelectedEntity(sel);
-              // On mobile, automatically show inspector
               if (window.innerWidth < 1024) {
                 setMobileTab('inspector');
               }

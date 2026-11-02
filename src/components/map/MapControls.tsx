@@ -51,210 +51,189 @@ export const MapControls: React.FC<MapControlsProps> = ({
   totalFilteredCount,
 }) => {
   return (
-    <div className="bg-[#11161d] border border-slate-800 rounded-lg p-4 space-y-5 text-slate-200">
+    <div className="bg-white border border-[#E4E3DC] rounded-xl p-4 space-y-5 text-[#171B19] shadow-xs">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-        <div className="flex items-center gap-2 font-mono text-xs text-amber-400 font-semibold uppercase tracking-wider">
-          <Layers className="w-4 h-4 text-amber-500" />
+      <div className="flex items-center justify-between border-b border-[#E4E3DC] pb-3">
+        <div className="flex items-center gap-2 text-xs font-bold text-[#171B19] uppercase tracking-wider">
+          <Layers className="w-4 h-4 text-[#315C46]" />
           <span>GIS Layers & Filters</span>
         </div>
-        <span className="font-mono text-[11px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded">
-          {totalFilteredCount} Incidents Active
+        <span className="text-xs bg-[#E5EDE6] text-[#315C46] font-semibold px-2.5 py-0.5 rounded-full">
+          {totalFilteredCount} Incidents
         </span>
       </div>
 
       {/* Layer Visibility Toggles */}
       <div className="space-y-2">
-        <label className="text-[11px] font-mono text-slate-400 uppercase tracking-wider block">
-          Operational GIS Layers
+        <label className="text-xs font-semibold text-[#777D77] uppercase tracking-wider block">
+          Operational Layers
         </label>
         <div className="grid grid-cols-2 gap-2 text-xs">
           <button
             type="button"
             onClick={() => onToggleLayer('incidents')}
-            className={`flex items-center gap-2 p-2 rounded border transition text-left ${
+            className={`flex items-center gap-2 p-2 rounded-lg border transition text-left font-medium ${
               layerState.incidents
-                ? 'bg-rose-950/40 border-rose-600/60 text-rose-300'
-                : 'bg-slate-900 border-slate-800 text-slate-400 opacity-60'
+                ? 'bg-[#F9EBEA] border-[#B9433D]/40 text-[#B9433D]'
+                : 'bg-white border-[#E4E3DC] text-[#777D77] hover:bg-[#F5F4EF]'
             }`}
           >
-            <Flame className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+            <Flame className="w-3.5 h-3.5 text-[#B9433D] shrink-0" />
             <span className="truncate">Incidents</span>
           </button>
 
           <button
             type="button"
             onClick={() => onToggleLayer('shelters')}
-            className={`flex items-center gap-2 p-2 rounded border transition text-left ${
+            className={`flex items-center gap-2 p-2 rounded-lg border transition text-left font-medium ${
               layerState.shelters
-                ? 'bg-emerald-950/40 border-emerald-600/60 text-emerald-300'
-                : 'bg-slate-900 border-slate-800 text-slate-400 opacity-60'
+                ? 'bg-[#E5EDE6] border-[#315C46]/40 text-[#315C46]'
+                : 'bg-white border-[#E4E3DC] text-[#777D77] hover:bg-[#F5F4EF]'
             }`}
           >
-            <Home className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+            <Home className="w-3.5 h-3.5 text-[#315C46] shrink-0" />
             <span className="truncate">Shelters</span>
           </button>
 
           <button
             type="button"
             onClick={() => onToggleLayer('teams')}
-            className={`flex items-center gap-2 p-2 rounded border transition text-left ${
+            className={`flex items-center gap-2 p-2 rounded-lg border transition text-left font-medium ${
               layerState.teams
-                ? 'bg-cyan-950/40 border-cyan-600/60 text-cyan-300'
-                : 'bg-slate-900 border-slate-800 text-slate-400 opacity-60'
+                ? 'bg-[#E5EDE6] border-[#315C46]/40 text-[#315C46]'
+                : 'bg-white border-[#E4E3DC] text-[#777D77] hover:bg-[#F5F4EF]'
             }`}
           >
-            <Users className="w-3.5 h-3.5 text-cyan-500 shrink-0" />
-            <span className="truncate">Response Units</span>
+            <Users className="w-3.5 h-3.5 text-[#315C46] shrink-0" />
+            <span className="truncate">Field Teams</span>
           </button>
 
           <button
             type="button"
             onClick={() => onToggleLayer('hydrologyGauges')}
-            className={`flex items-center gap-2 p-2 rounded border transition text-left ${
+            className={`flex items-center gap-2 p-2 rounded-lg border transition text-left font-medium ${
               layerState.hydrologyGauges
-                ? 'bg-blue-950/40 border-blue-600/60 text-blue-300'
-                : 'bg-slate-900 border-slate-800 text-slate-400 opacity-60'
+                ? 'bg-[#EBF3FC] border-blue-300 text-blue-700'
+                : 'bg-white border-[#E4E3DC] text-[#777D77] hover:bg-[#F5F4EF]'
             }`}
           >
-            <Waves className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+            <Waves className="w-3.5 h-3.5 text-blue-600 shrink-0" />
             <span className="truncate">River Gauges</span>
           </button>
 
           <button
             type="button"
             onClick={() => onToggleLayer('hazardZones')}
-            className={`flex items-center gap-2 p-2 rounded border transition text-left ${
+            className={`flex items-center gap-2 p-2 rounded-lg border transition text-left font-medium ${
               layerState.hazardZones
-                ? 'bg-amber-950/40 border-amber-600/60 text-amber-300'
-                : 'bg-slate-900 border-slate-800 text-slate-400 opacity-60'
+                ? 'bg-[#FAF2E6] border-[#C18A32]/40 text-[#C18A32]'
+                : 'bg-white border-[#E4E3DC] text-[#777D77] hover:bg-[#F5F4EF]'
             }`}
           >
-            <ShieldAlert className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-            <span className="truncate">Hazard Polygons</span>
+            <ShieldAlert className="w-3.5 h-3.5 text-[#C18A32] shrink-0" />
+            <span className="truncate">Hazard Zones</span>
           </button>
 
           <button
             type="button"
             onClick={() => onToggleLayer('proximityBuffers')}
-            className={`flex items-center gap-2 p-2 rounded border transition text-left ${
+            className={`flex items-center gap-2 p-2 rounded-lg border transition text-left font-medium ${
               layerState.proximityBuffers
-                ? 'bg-purple-950/40 border-purple-600/60 text-purple-300'
-                : 'bg-slate-900 border-slate-800 text-slate-400 opacity-60'
+                ? 'bg-[#FAF2E6] border-[#C18A32]/40 text-[#C18A32]'
+                : 'bg-white border-[#E4E3DC] text-[#777D77] hover:bg-[#F5F4EF]'
             }`}
           >
-            <Compass className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-            <span className="truncate">Buffer ({proximityRadiusKm}km)</span>
+            <Compass className="w-3.5 h-3.5 text-[#C18A32] shrink-0" />
+            <span className="truncate">Safety Buffers</span>
           </button>
         </div>
       </div>
 
-      {/* Proximity Buffer Distance Slider */}
-      {layerState.proximityBuffers && (
-        <div className="bg-slate-900/80 p-3 rounded border border-slate-800 space-y-2">
-          <div className="flex items-center justify-between text-xs">
-            <span className="font-mono text-slate-300 text-[11px] uppercase">
-              Proximity Analysis Radius
-            </span>
-            <span className="font-mono text-purple-400 font-semibold">{proximityRadiusKm} km</span>
-          </div>
-          <input
-            type="range"
-            min={5}
-            max={75}
-            step={5}
-            value={proximityRadiusKm}
-            onChange={(e) => onChangeProximityRadius(Number(e.target.value))}
-            className="w-full accent-purple-500 cursor-pointer h-1.5 bg-slate-700 rounded-lg"
-          />
-          <p className="text-[10px] text-slate-400 leading-tight">
-            *Analytical radius around critical/high threat points. Not an empirical inundation boundary.
-          </p>
-        </div>
-      )}
-
-      {/* Incident Severity Filter */}
+      {/* Severity Filter */}
       <div className="space-y-1.5">
-        <label className="text-[11px] font-mono text-slate-400 uppercase tracking-wider block">
-          Incident Severity Filter
+        <label className="text-xs font-semibold text-[#777D77] uppercase tracking-wider block">
+          Filter by Severity
         </label>
         <select
           value={selectedSeverity}
           onChange={(e) => onChangeSeverity(e.target.value)}
-          className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-500"
+          className="w-full bg-white border border-[#E4E3DC] rounded-lg px-2.5 py-1.5 text-xs text-[#171B19] font-medium focus:outline-none focus:border-[#315C46] transition"
         >
-          <option value="all">All Threat Severities</option>
-          <option value="critical">Critical (Catastrophic / Immediate)</option>
-          <option value="high">High (Major Threat to Life)</option>
-          <option value="medium">Medium (Moderate Hazard)</option>
-          <option value="low">Low (Localized / Advisory)</option>
+          <option value="all">All Severities</option>
+          <option value="critical">Critical Only</option>
+          <option value="high">High Hazard</option>
+          <option value="medium">Medium Priority</option>
+          <option value="low">Low / Advisory</option>
         </select>
       </div>
 
-      {/* Disaster Hazard Type Filter */}
+      {/* Disaster Type Filter */}
       <div className="space-y-1.5">
-        <label className="text-[11px] font-mono text-slate-400 uppercase tracking-wider block">
-          Disaster Hazard Type
+        <label className="text-xs font-semibold text-[#777D77] uppercase tracking-wider block">
+          Hazard Classification
         </label>
         <select
           value={selectedDisasterType}
           onChange={(e) => onChangeDisasterType(e.target.value)}
-          className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-500"
+          className="w-full bg-white border border-[#E4E3DC] rounded-lg px-2.5 py-1.5 text-xs text-[#171B19] font-medium focus:outline-none focus:border-[#315C46] transition"
         >
-          <option value="all">All Hazard Classifications</option>
-          <option value="flood">Flood & Hydrological Inundation</option>
-          <option value="cyclone">Cyclone & Severe Storm Surge</option>
-          <option value="landslide">Landslide & Slope Debris Flow</option>
-          <option value="earthquake">Earthquake & Structural Seismic</option>
-          <option value="wildfire">Wildfire & Forest Conflagration</option>
-          <option value="industrial">Industrial & HazMat Contamination</option>
-          <option value="tsunami">Tsunami & Ocean Surge</option>
+          <option value="all">All Disaster Types</option>
+          <option value="flood">Flood</option>
+          <option value="cyclone">Cyclone / Storm</option>
+          <option value="earthquake">Earthquake</option>
+          <option value="landslide">Landslide</option>
+          <option value="wildfire">Wildfire</option>
+          <option value="industrial">Industrial / HazMat</option>
         </select>
       </div>
 
-      {/* Incident Status Filter */}
-      <div className="space-y-1.5">
-        <label className="text-[11px] font-mono text-slate-400 uppercase tracking-wider block">
-          Operational Status
-        </label>
-        <select
-          value={selectedStatus}
-          onChange={(e) => onChangeStatus(e.target.value)}
-          className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-500"
-        >
-          <option value="all">All Lifecycle States</option>
-          <option value="active">Active Triage / Immediate Response</option>
-          <option value="investigating">Investigating / Reconnaissance</option>
-          <option value="contained">Contained / Evacuated</option>
-          <option value="resolved">Resolved / Demobilized</option>
-        </select>
+      {/* Analytical Proximity Range Slider */}
+      <div className="space-y-2 pt-1 border-t border-[#E4E3DC]">
+        <div className="flex items-center justify-between text-xs font-semibold">
+          <span className="text-[#777D77]">Proximity Perimeter</span>
+          <span className="text-[#315C46] font-mono tabular-nums">{proximityRadiusKm} km</span>
+        </div>
+        <input
+          type="range"
+          min="5"
+          max="100"
+          step="5"
+          value={proximityRadiusKm}
+          onChange={(e) => onChangeProximityRadius(Number(e.target.value))}
+          className="w-full h-1.5 bg-[#E4E3DC] rounded-lg appearance-none cursor-pointer accent-[#315C46]"
+        />
+        <div className="flex justify-between text-[10px] text-[#777D77] font-mono">
+          <span>5 km</span>
+          <span>50 km</span>
+          <span>100 km</span>
+        </div>
       </div>
 
-      {/* Map Tile Theme Selection */}
-      <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-xs">
-        <span className="font-mono text-slate-400 text-[11px]">Map Tile Base</span>
-        <div className="flex gap-1">
-          <button
-            type="button"
-            onClick={() => onChangeTileTheme('dark')}
-            className={`px-2.5 py-1 text-[11px] font-mono rounded border transition ${
-              tileTheme === 'dark'
-                ? 'bg-amber-950/60 border-amber-600 text-amber-300'
-                : 'bg-slate-900 border-slate-700 text-slate-400'
-            }`}
-          >
-            Tactical Dark
-          </button>
+      {/* Tile Theme Switcher */}
+      <div className="pt-2 border-t border-[#E4E3DC] flex items-center justify-between">
+        <span className="text-xs font-semibold text-[#777D77]">Cartography Theme</span>
+        <div className="flex gap-1 bg-[#F5F4EF] p-0.5 rounded-lg border border-[#E4E3DC]">
           <button
             type="button"
             onClick={() => onChangeTileTheme('standard')}
-            className={`px-2.5 py-1 text-[11px] font-mono rounded border transition ${
+            className={`px-2.5 py-1 text-xs rounded-md font-semibold transition ${
               tileTheme === 'standard'
-                ? 'bg-amber-950/60 border-amber-600 text-amber-300'
-                : 'bg-slate-900 border-slate-700 text-slate-400'
+                ? 'bg-white text-[#171B19] shadow-xs'
+                : 'text-[#777D77] hover:text-[#171B19]'
             }`}
           >
-            OSM Standard
+            Light
+          </button>
+          <button
+            type="button"
+            onClick={() => onChangeTileTheme('dark')}
+            className={`px-2.5 py-1 text-xs rounded-md font-semibold transition ${
+              tileTheme === 'dark'
+                ? 'bg-white text-[#171B19] shadow-xs'
+                : 'text-[#777D77] hover:text-[#171B19]'
+            }`}
+          >
+            Dark
           </button>
         </div>
       </div>

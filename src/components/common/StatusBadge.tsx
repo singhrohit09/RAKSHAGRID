@@ -23,7 +23,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'md' })
       case 'deployed':
       case 'critical':
       case 'depleted':
-        return 'text-rose-300 bg-rose-950/30 border-rose-800/40';
+        return 'text-[#B9433D] bg-[#F9EBEA] border-[#E8C2BF]';
       // In progress / warning
       case 'investigating':
       case 'en_route':
@@ -31,13 +31,13 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'md' })
       case 'moderate':
       case 'full':
       case 'high':
-        return 'text-amber-300 bg-amber-950/30 border-amber-800/40';
+        return 'text-[#C18A32] bg-[#FAF2E6] border-[#EED7B8]';
       // Standby / triage
       case 'standby':
       case 'triage':
       case 'on_scene':
       case 'reserved':
-        return 'text-cyan-300 bg-cyan-950/30 border-cyan-800/40';
+        return 'text-[#2B5A84] bg-[#E8EFF5] border-[#C6D8E7]';
       // Contained / ready / available / resolved
       case 'contained':
       case 'resolved':
@@ -45,11 +45,11 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'md' })
       case 'open':
       case 'stocked':
       case 'adequate':
-        return 'text-emerald-300 bg-emerald-950/30 border-emerald-800/40';
+        return 'text-[#315C46] bg-[#E5EDE6] border-[#C8DACB]';
       case 'off_duty':
       case 'closed':
       default:
-        return 'text-slate-400 bg-slate-900 border-slate-800';
+        return 'text-[#555A55] bg-[#EBEBE6] border-[#DCDCD5]';
     }
   };
 
@@ -57,11 +57,11 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'md' })
     return text.replace(/_/g, ' ').toUpperCase();
   };
 
-  const pad = size === 'sm' ? 'px-2 py-0.5 text-[11px]' : 'px-2.5 py-1 text-xs';
+  const pad = size === 'sm' ? 'px-2 py-0.5 text-[10px]' : 'px-2.5 py-1 text-xs';
 
   return (
     <span
-      className={`inline-flex items-center font-mono font-medium rounded border whitespace-nowrap tracking-wide ${pad} ${getStyle()}`}
+      className={`inline-flex items-center font-medium rounded-md border tracking-wider font-mono ${pad} ${getStyle()}`}
     >
       {formatText(status)}
     </span>

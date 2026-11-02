@@ -354,29 +354,26 @@ export const AIIntelligencePage: React.FC<AIIntelligencePageProps> = ({
   return (
     <div className="space-y-6">
       {/* HEADER BANNER */}
-      <div className="bg-[#0f141f] border border-slate-800 rounded-lg p-5">
+      <div className="bg-white border border-[#E4E3DC] rounded-xl p-5 shadow-xs">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="flex items-start gap-3.5">
-            <div className="w-11 h-11 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+            <div className="w-11 h-11 rounded-xl bg-[#E5EDE6] flex items-center justify-center text-[#315C46] shrink-0">
               <Brain className="w-6 h-6" />
             </div>
             <div>
               <div className="flex items-center gap-2.5 flex-wrap">
-                <h1 className="text-xl font-bold tracking-tight text-slate-100 font-mono uppercase">
-                  AI Disaster Intelligence & Multi-Agent Command
+                <h1 className="text-xl font-bold tracking-tight text-[#171B19]">
+                  AI Disaster Intelligence & Multi-Agent Swarm
                 </h1>
-                <span className="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
-                  PHASE 4 ACTIVE
-                </span>
-                <span className="px-2 py-0.5 rounded text-[11px] font-mono font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-[#E5EDE6] text-[#315C46] border border-[#C8DACB] flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#315C46] animate-pulse" />
                   {GeminiDisasterService.isApiKeyConfigured()
                     ? `GEMINI 3.8 FLASH CONNECTED`
                     : `EXPLAINABLE HEURISTIC ENGINE ACTIVE`}
                 </span>
               </div>
-              <p className="text-xs text-slate-400 mt-1">
-                7 Specialized AI Agents • Deterministic Geospatial Calculations • Human-in-the-Loop Operational Safeguards
+              <p className="text-xs text-[#777D77] mt-1">
+                7 Specialized AI Agents • Deterministic Geospatial Analytics • Human-in-the-Loop Operational Safeguards
               </p>
             </div>
           </div>
@@ -386,68 +383,68 @@ export const AIIntelligencePage: React.FC<AIIntelligencePageProps> = ({
               type="button"
               onClick={runSwarmAnalysis}
               disabled={isLoading}
-              className="px-3.5 py-2 rounded bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-slate-950 font-mono font-bold text-xs flex items-center gap-2 transition-colors cursor-pointer"
+              className="px-4 py-2 rounded-lg bg-[#315C46] hover:bg-[#264937] disabled:opacity-50 text-white font-semibold text-xs flex items-center gap-2 transition-colors cursor-pointer shadow-xs"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-              {isLoading ? 'ORCHESTRATING SWARM...' : 'REFRESH INTELLIGENCE SWARM'}
+              {isLoading ? 'ORCHESTRATING SWARM...' : 'REFRESH INTELLIGENCE'}
             </button>
           </div>
         </div>
 
         {/* METRICS ROW */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-5 pt-5 border-t border-slate-800/80">
-          <div className="bg-[#0b0e17] p-3 rounded border border-slate-800">
-            <div className="text-[10px] font-mono uppercase text-slate-500">Overall Threat Index</div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-5 pt-5 border-t border-[#E4E3DC]">
+          <div className="bg-[#FAF9F5] p-3 rounded-xl border border-[#E4E3DC]">
+            <div className="text-[10px] font-semibold uppercase text-[#777D77]">Threat Assessment Index</div>
             <div className="flex items-baseline gap-2 mt-1">
               <span
                 className={`text-xl font-mono font-bold ${
                   (report?.overallScore || 50) >= 76
-                    ? 'text-rose-400'
+                    ? 'text-[#B9433D]'
                     : (report?.overallScore || 50) >= 51
-                    ? 'text-amber-400'
-                    : 'text-emerald-400'
+                    ? 'text-[#C18A32]'
+                    : 'text-[#315C46]'
                 }`}
               >
                 {report?.overallScore || 50}/100
               </span>
-              <span className="text-[11px] font-mono uppercase text-slate-400">
+              <span className="text-[11px] font-medium uppercase text-[#777D77]">
                 {report?.threatLevel || 'MODERATE'}
               </span>
             </div>
           </div>
 
-          <div className="bg-[#0b0e17] p-3 rounded border border-slate-800">
-            <div className="text-[10px] font-mono uppercase text-slate-500">Active Specialist Agents</div>
+          <div className="bg-[#FAF9F5] p-3 rounded-xl border border-[#E4E3DC]">
+            <div className="text-[10px] font-semibold uppercase text-[#777D77]">Active Specialist Agents</div>
             <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-xl font-mono font-bold text-cyan-400">7 / 7</span>
-              <span className="text-[11px] font-mono text-slate-400">Harmonized</span>
+              <span className="text-xl font-mono font-bold text-[#315C46]">7 / 7</span>
+              <span className="text-[11px] text-[#777D77]">Harmonized</span>
             </div>
           </div>
 
-          <div className="bg-[#0b0e17] p-3 rounded border border-slate-800">
-            <div className="text-[10px] font-mono uppercase text-slate-500">Pending Human Approvals</div>
+          <div className="bg-[#FAF9F5] p-3 rounded-xl border border-[#E4E3DC]">
+            <div className="text-[10px] font-semibold uppercase text-[#777D77]">Pending Commander Approvals</div>
             <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-xl font-mono font-bold text-amber-400">
+              <span className="text-xl font-mono font-bold text-[#C18A32]">
                 {recommendations.filter((r) => r.status === 'PENDING_REVIEW').length}
               </span>
-              <span className="text-[11px] font-mono text-slate-400">Awaiting Commander</span>
+              <span className="text-[11px] text-[#777D77]">Awaiting Review</span>
             </div>
           </div>
 
-          <div className="bg-[#0b0e17] p-3 rounded border border-slate-800">
-            <div className="text-[10px] font-mono uppercase text-slate-500">Benchmark Model F1</div>
+          <div className="bg-[#FAF9F5] p-3 rounded-xl border border-[#E4E3DC]">
+            <div className="text-[10px] font-semibold uppercase text-[#777D77]">Benchmark Accuracy F1</div>
             <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-xl font-mono font-bold text-emerald-400">
+              <span className="text-xl font-mono font-bold text-[#315C46]">
                 {(benchmarks.f1Score * 100).toFixed(1)}%
               </span>
-              <span className="text-[11px] font-mono text-slate-400">Historical Ground-Truth</span>
+              <span className="text-[11px] text-[#777D77]">Historical Ground-Truth</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* TABS NAVIGATION */}
-      <div className="flex items-center gap-1 border-b border-slate-800 overflow-x-auto no-scrollbar pb-0.5">
+      <div className="flex items-center gap-1.5 border-b border-[#E4E3DC] overflow-x-auto no-scrollbar pb-0.5">
         {[
           { id: 'overview', label: 'Situation Briefing & Swarm', icon: Activity },
           { id: 'risk_matrix', label: 'Explainable Risk Matrix', icon: Compass },
@@ -472,10 +469,10 @@ export const AIIntelligencePage: React.FC<AIIntelligencePageProps> = ({
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id as TabType)}
-              className={`px-3.5 py-2.5 rounded-t font-mono text-xs font-medium flex items-center gap-2 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+              className={`px-3.5 py-2.5 rounded-t-lg text-xs font-medium flex items-center gap-2 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
                 isActive
-                  ? 'border-amber-400 text-amber-300 bg-amber-500/10'
-                  : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
+                  ? 'border-[#315C46] text-[#315C46] bg-[#E5EDE6] font-semibold'
+                  : 'border-transparent text-[#777D77] hover:text-[#171B19] hover:bg-white'
               }`}
             >
               <Icon className="w-3.5 h-3.5" />

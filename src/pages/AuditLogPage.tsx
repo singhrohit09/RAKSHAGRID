@@ -30,17 +30,17 @@ export const AuditLogPage: React.FC<AuditLogPageProps> = ({ auditLogs }) => {
           kicker="Non-Repudiation Security Registry"
           description="Chronological record of every incident report, dispatch order, alert transmission, and system alteration."
         />
-        <div className="p-8 bg-[#12171e] border border-amber-900/60 rounded-lg flex flex-col items-center text-center max-w-lg mx-auto space-y-3.5 my-8">
-          <div className="p-3.5 rounded-full bg-amber-950/60 text-amber-400 border border-amber-800">
+        <div className="p-8 bg-white border border-[#E4E3DC] rounded-2xl flex flex-col items-center text-center max-w-lg mx-auto space-y-3.5 my-8 shadow-xs">
+          <div className="p-3.5 rounded-full bg-[#FAF2E6] text-[#C18A32] border border-[#C18A32]/30">
             <Lock className="w-6 h-6" />
           </div>
-          <h3 className="text-sm font-mono font-bold uppercase tracking-wider text-slate-100">
+          <h3 className="text-sm font-bold uppercase tracking-wider text-[#171B19]">
             Restricted Operational Clearance
           </h3>
-          <p className="text-xs text-slate-400 leading-relaxed max-w-sm">
+          <p className="text-xs text-[#777D77] leading-relaxed max-w-sm">
             Access to the immutable audit trail is restricted to <strong>Administrator</strong> and <strong>Incident Commander</strong> roles.
           </p>
-          <div className="text-xs font-mono text-amber-400 bg-slate-900 px-3 py-1.5 rounded border border-slate-800">
+          <div className="text-xs font-semibold text-[#315C46] bg-[#E5EDE6] px-3.5 py-1.5 rounded-lg border border-[#315C46]/30">
             Active Persona: <span className="uppercase font-bold">{role.replace(/_/g, ' ')}</span>
           </div>
         </div>
@@ -111,7 +111,7 @@ export const AuditLogPage: React.FC<AuditLogPageProps> = ({ auditLogs }) => {
       accessorKey: 'id',
       width: '100px',
       sortable: true,
-      cell: (item) => <span className="font-mono text-amber-400 font-bold">{item.id}</span>,
+      cell: (item) => <span className="font-mono text-[#315C46] font-bold text-xs">{item.id}</span>,
     },
     {
       header: 'Timestamp',
@@ -119,7 +119,7 @@ export const AuditLogPage: React.FC<AuditLogPageProps> = ({ auditLogs }) => {
       width: '170px',
       sortable: true,
       cell: (item) => (
-        <span className="font-mono text-slate-400 tabular-nums text-xs">
+        <span className="font-mono text-[#777D77] tabular-nums text-xs">
           {new Date(item.timestamp).toLocaleString()}
         </span>
       ),
@@ -130,8 +130,8 @@ export const AuditLogPage: React.FC<AuditLogPageProps> = ({ auditLogs }) => {
       width: '200px',
       cell: (item) => (
         <div>
-          <div className="font-medium text-slate-200">{item.actor.name}</div>
-          <div className="text-[10px] text-amber-400/90 font-mono capitalize">
+          <div className="font-semibold text-[#171B19] text-xs">{item.actor.name}</div>
+          <div className="text-[11px] text-[#777D77] capitalize">
             {item.actor.role.replace(/_/g, ' ')} · {item.actor.agency}
           </div>
         </div>
@@ -143,7 +143,7 @@ export const AuditLogPage: React.FC<AuditLogPageProps> = ({ auditLogs }) => {
       width: '180px',
       sortable: true,
       cell: (item) => (
-        <span className="font-mono text-slate-300 font-semibold text-[11px] bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">
+        <span className="font-mono text-[#171B19] font-medium text-[11px] bg-[#F5F4EF] px-2 py-0.5 rounded-md border border-[#E4E3DC]">
           {item.action}
         </span>
       ),
@@ -151,7 +151,7 @@ export const AuditLogPage: React.FC<AuditLogPageProps> = ({ auditLogs }) => {
     {
       header: 'Event Description',
       cell: (item) => (
-        <div className="text-slate-300 text-xs font-sans line-clamp-2">{item.details}</div>
+        <div className="text-[#171B19] text-xs font-sans line-clamp-2">{item.details}</div>
       ),
     },
     {
@@ -160,7 +160,7 @@ export const AuditLogPage: React.FC<AuditLogPageProps> = ({ auditLogs }) => {
       align: 'right',
       width: '120px',
       cell: (item) => (
-        <span className="font-mono text-slate-500 tabular-nums text-[11px]">{item.ipAddress}</span>
+        <span className="font-mono text-[#777D77] tabular-nums text-[11px]">{item.ipAddress}</span>
       ),
     },
   ];
@@ -173,10 +173,10 @@ export const AuditLogPage: React.FC<AuditLogPageProps> = ({ auditLogs }) => {
         kicker="Non-Repudiation Security Registry"
         description="Chronological record of every incident report, dispatch order, alert transmission, and system alteration."
         metadata={
-          <div className="flex items-center gap-2 font-mono text-[11px] text-slate-400">
+          <div className="flex items-center gap-2 text-xs text-[#777D77]">
             <span>Total Events: {auditLogs.length}</span>
             <span>·</span>
-            <span className="text-emerald-400 font-semibold">Integrity Verified</span>
+            <span className="text-[#315C46] font-semibold">Integrity Verified</span>
           </div>
         }
         actions={
@@ -184,17 +184,17 @@ export const AuditLogPage: React.FC<AuditLogPageProps> = ({ auditLogs }) => {
             <button
               type="button"
               onClick={handleExportCSV}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-850 text-slate-200 border border-slate-800 text-xs font-mono transition-colors"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-[#F5F4EF] text-[#171B19] border border-[#E4E3DC] text-xs font-semibold transition-colors shadow-xs"
             >
-              <Download className="w-3.5 h-3.5" />
+              <Download className="w-3.5 h-3.5 text-[#315C46]" />
               <span>Export CSV</span>
             </button>
             <button
               type="button"
               onClick={handleExportJSON}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-850 text-slate-200 border border-slate-800 text-xs font-mono transition-colors"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-[#F5F4EF] text-[#171B19] border border-[#E4E3DC] text-xs font-semibold transition-colors shadow-xs"
             >
-              <FileText className="w-3.5 h-3.5" />
+              <FileText className="w-3.5 h-3.5 text-[#315C46]" />
               <span>Export JSON</span>
             </button>
           </div>
@@ -202,7 +202,7 @@ export const AuditLogPage: React.FC<AuditLogPageProps> = ({ auditLogs }) => {
       />
 
       {/* Filter and Search */}
-      <div className="p-3.5 bg-[#12171e] border border-slate-800 rounded space-y-3">
+      <div className="p-4 bg-white border border-[#E4E3DC] rounded-2xl space-y-3 shadow-xs">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           <SearchBar
             value={search}
@@ -211,13 +211,13 @@ export const AuditLogPage: React.FC<AuditLogPageProps> = ({ auditLogs }) => {
             className="flex-1 max-w-md"
           />
 
-          <div className="text-xs font-mono text-slate-400">
-            Showing <strong className="text-slate-200 tabular-nums">{filteredLogs.length}</strong> of{' '}
+          <div className="text-xs text-[#777D77] font-medium">
+            Showing <strong className="text-[#171B19] tabular-nums">{filteredLogs.length}</strong> of{' '}
             <span className="tabular-nums">{auditLogs.length}</span> records
           </div>
         </div>
 
-        <div className="flex items-center gap-4 flex-wrap pt-2 border-t border-slate-850">
+        <div className="flex items-center gap-4 flex-wrap pt-3 border-t border-[#E4E3DC]">
           <FilterBar
             label="Severity"
             options={[

@@ -6,7 +6,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import {
   Plus,
-  Filter,
   MapPin,
   Clock,
   Users,
@@ -15,7 +14,6 @@ import {
   Trash2,
   X,
   CheckCircle2,
-  Share2,
 } from 'lucide-react';
 import { Incident, DisasterType, SeverityLevel, IncidentStatus, Team } from '../types';
 import { useAuth } from '../context/AuthContext';
@@ -102,99 +100,118 @@ export const IncidentsPage: React.FC<IncidentsPageProps> = ({
       setStatusFilter(initialStatus);
     }
     if (initialType) {
-      setDisasterTypeFilter(initialType.toLowerCase());
+      setDisasterTypeFilter(initialType);
     }
   }, [selectedIncidentId, initialAction, initialSeverity, initialStatus, initialType, incidents, permissions.canCreateIncident]);
 
-  // Filtered dataset
+  // Filter computation
   const filteredIncidents = useMemo(() => {
     return incidents.filter((inc) => {
-      // Query filter
-      if (searchQuery) {
+      // Text query
+      if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
-        const matchesQ =
+        const matchesText =
           inc.title.toLowerCase().includes(q) ||
           inc.id.toLowerCase().includes(q) ||
           inc.location.toLowerCase().includes(q) ||
           inc.region.toLowerCase().includes(q) ||
-          inc.disasterType.toLowerCase().includes(q);
-        if (!matchesQ) return false;
+          inc.disasterType.toLowerCase().includes(q) ||
+          inc.tags.some((tag) => tag.toLowerCase().includes(q));
+
+        if (!matchesText) return false;
       }
 
-      // Severity filter
-      if (severityFilter !== 'all' && inc.severity !== severityFilter) return false;
+      // Severity
+      if (severityFilter !== 'all' && inc.severity !== severityFilter) {
+        return false;
+      }
 
-      // Status filter
-      if (statusFilter !== 'all' && inc.status !== statusFilter) return false;
+      // Status
+      if (statusFilter !== 'all' && inc.status !== statusFilter) {
+        return false;
+      }
 
-      // Type filter
-      if (disasterTypeFilter !== 'all' && inc.disasterType !== disasterTypeFilter) return false;
+      // Disaster Type
+      if (disasterTypeFilter !== 'all' && inc.disasterType !== disasterTypeFilter) {
+        return false;
+      }
 
       return true;
     });
   }, [incidents, searchQuery, severityFilter, statusFilter, disasterTypeFilter]);
 
-  // Form Validation & Submit
-  const handleFormSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  // Form Validation
+  const validateForm = () => {
     const errors: Record<string, string> = {};
-
-    if (!formData.title.trim()) errors.title = 'Incident title is mandatory.';
-    if (!formData.location.trim()) errors.location = 'Specific location is required.';
-    if (!formData.description.trim()) errors.description = 'Incident description is required.';
+    if (!formData.title.trim()) errors.title = 'Title is required';
+    if (!formData.location.trim()) errors.location = 'Location description is required';
+    if (!formData.description.trim()) errors.description = 'Situation details are required';
 
     const latNum = parseFloat(formData.lat);
+    if (isNaN(latNum) || latNum < -90 || latNum > 90) {
+      errors.lat = 'Latitude must be between -90 and 90';
+    }
+
     const lngNum = parseFloat(formData.lng);
-    if (isNaN(latNum) || latNum < -90 || latNum > 90) errors.lat = 'Valid latitude required (-90 to +90).';
-    if (isNaN(lngNum) || lngNum < -180 || lngNum > 180) errors.lng = 'Valid longitude required (-180 to +180).';
-
-    const pop = parseInt(formData.affectedPopulation, 10);
-    if (isNaN(pop) || pop < 0) errors.affectedPopulation = 'Affected population must be a positive integer.';
-
-    if (!isEditing && !permissions.canCreateIncident) {
-      errors.title = 'Unauthorized: Current operational role cannot record new incidents.';
-    }
-    if (isEditing && !permissions.canEditIncident) {
-      errors.title = 'Unauthorized: Current operational role cannot modify incident records.';
+    if (isNaN(lngNum) || lngNum < -180 || lngNum > 180) {
+      errors.lng = 'Longitude must be between -180 and 180';
     }
 
-    if (Object.keys(errors).length > 0) {
-      setFormErrors(errors);
-      return;
+    const popNum = parseInt(formData.affectedPopulation, 10);
+    if (isNaN(popNum) || popNum < 0) {
+      errors.affectedPopulation = 'Affected population must be positive integer';
     }
 
-    setFormErrors({});
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
-    const selectedTeam = teams.find((t) => t.id === formData.assignedTeamId);
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+
+    const assignedTeam = teams.find((t) => t.id === formData.assignedTeamId);
 
     const payload = {
       title: formData.title.trim(),
       description: formData.description.trim(),
       disasterType: formData.disasterType,
       severity: formData.severity,
+      status: formData.status,
       location: formData.location.trim(),
       region: formData.region.trim(),
-      coordinates: { lat: latNum, lng: lngNum },
-      status: formData.status,
+      coordinates: {
+        lat: parseFloat(formData.lat),
+        lng: parseFloat(formData.lng),
+      },
       affectedPopulation: parseInt(formData.affectedPopulation, 10) || 0,
-      assignedTeamId: selectedTeam ? selectedTeam.id : undefined,
-      assignedTeamName: selectedTeam ? selectedTeam.name : undefined,
-      verified: true,
-      priorityScore: formData.severity === 'critical' ? 95 : formData.severity === 'high' ? 75 : 50,
-      reportedBy: user ? `${user.name} (${user.agency})` : 'Disaster Ops Center',
-      tags: formData.tags.split(',').map((t) => t.trim()).filter(Boolean),
+      assignedTeamId: formData.assignedTeamId || undefined,
+      assignedTeamName: assignedTeam ? assignedTeam.name : undefined,
+      priorityScore:
+        formData.severity === 'critical'
+          ? 95
+          : formData.severity === 'high'
+          ? 75
+          : formData.severity === 'medium'
+          ? 50
+          : 25,
+      reportedBy: user?.name || 'Command Center Dispatcher',
+      verified: isEditing ? (activeIncident?.verified ?? true) : true,
+      tags: formData.tags
+        .split(',')
+        .map((t) => t.trim())
+        .filter(Boolean),
     };
 
     if (isEditing && activeIncident) {
       onUpdateIncident(activeIncident.id, payload);
-      setActiveIncident({ ...activeIncident, ...payload, lastUpdated: new Date().toISOString() });
-      setIsEditing(false);
-      setIsCreateModalOpen(false);
+      setActiveIncident({ ...activeIncident, ...payload });
     } else {
       const created = onCreateIncident(payload);
-      setIsCreateModalOpen(false);
       setActiveIncident(created);
     }
+
+    setIsCreateModalOpen(false);
   };
 
   const openEditModal = (inc: Incident) => {
@@ -243,7 +260,7 @@ export const IncidentsPage: React.FC<IncidentsPageProps> = ({
       width: '120px',
       sortable: true,
       cell: (item) => (
-        <span className="font-mono font-bold text-amber-400">{item.id}</span>
+        <span className="font-mono font-bold text-[#315C46]">{item.id}</span>
       ),
     },
     {
@@ -251,8 +268,8 @@ export const IncidentsPage: React.FC<IncidentsPageProps> = ({
       sortable: true,
       cell: (item) => (
         <div className="min-w-0 pr-2">
-          <div className="font-medium text-slate-100 font-sans text-xs line-clamp-1">{item.title}</div>
-          <div className="text-[11px] text-slate-400 truncate mt-0.5">{item.location} · {item.region}</div>
+          <div className="font-semibold text-[#171B19] text-xs line-clamp-1">{item.title}</div>
+          <div className="text-[11px] text-[#777D77] truncate mt-0.5">{item.location} · {item.region}</div>
         </div>
       ),
     },
@@ -262,7 +279,7 @@ export const IncidentsPage: React.FC<IncidentsPageProps> = ({
       width: '120px',
       sortable: true,
       cell: (item) => (
-        <span className="font-mono text-slate-300 uppercase text-xs">{item.disasterType}</span>
+        <span className="font-mono text-[#575D56] uppercase text-xs">{item.disasterType}</span>
       ),
     },
     {
@@ -283,7 +300,7 @@ export const IncidentsPage: React.FC<IncidentsPageProps> = ({
       header: 'Assigned Team',
       width: '160px',
       cell: (item) => (
-        <span className="text-slate-300 truncate block text-xs">
+        <span className="text-[#171B19] truncate block text-xs">
           {item.assignedTeamName || 'Unassigned'}
         </span>
       ),
@@ -295,7 +312,7 @@ export const IncidentsPage: React.FC<IncidentsPageProps> = ({
       width: '100px',
       sortable: true,
       cell: (item) => (
-        <span className="text-slate-400 font-mono tabular-nums text-xs">
+        <span className="text-[#777D77] font-mono tabular-nums text-xs">
           {new Date(item.reportedTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </span>
       ),
@@ -307,23 +324,23 @@ export const IncidentsPage: React.FC<IncidentsPageProps> = ({
       {/* Header */}
       <ResponsivePageHeader
         title="Incident Operations Registry"
-        kicker="Incident Management Architecture"
+        kicker="Incident Management"
         description="Comprehensive disaster event ledger with priority scoring, casualty triage, and tactical response dispatch."
         actions={
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={onNavigateToMap}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs font-mono border border-slate-700 transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white border border-[#E4E3DC] hover:bg-[#F5F4EF] text-[#171B19] text-xs font-medium transition-colors shadow-2xs"
             >
-              <MapPin className="w-3.5 h-3.5 text-sky-400" />
+              <MapPin className="w-3.5 h-3.5 text-[#315C46]" />
               <span>Map View</span>
             </button>
             {permissions.canCreateIncident && (
               <button
                 type="button"
                 onClick={openCreateModal}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs font-mono transition-colors shadow-sm"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-[#315C46] hover:bg-[#264937] text-white font-semibold text-xs transition-colors shadow-xs"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Log New Incident</span>
@@ -334,7 +351,7 @@ export const IncidentsPage: React.FC<IncidentsPageProps> = ({
       />
 
       {/* Filter and Search Bar */}
-      <div className="p-3.5 bg-[#12171e] border border-slate-800 rounded space-y-3">
+      <div className="p-4 bg-white border border-[#E4E3DC] rounded-xl shadow-xs space-y-3">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           <SearchBar
             value={searchQuery}
@@ -343,15 +360,15 @@ export const IncidentsPage: React.FC<IncidentsPageProps> = ({
             className="flex-1 max-w-md"
           />
 
-          <div className="flex items-center gap-2 text-xs font-mono text-slate-400">
+          <div className="flex items-center gap-2 text-xs text-[#777D77]">
             <span>Showing:</span>
-            <span className="text-slate-200 font-bold tabular-nums">
+            <span className="text-[#171B19] font-bold font-mono tabular-nums">
               {filteredIncidents.length} of {incidents.length}
             </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-4 flex-wrap pt-2 border-t border-slate-850">
+        <div className="flex items-center gap-4 flex-wrap pt-3 border-t border-[#E4E3DC]">
           <FilterBar
             label="Severity"
             options={[
@@ -406,20 +423,20 @@ export const IncidentsPage: React.FC<IncidentsPageProps> = ({
       {/* Incident Detail Inspection Drawer / Modal */}
       {activeIncident && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs"
           role="dialog"
           aria-modal="true"
         >
-          <div className="w-full max-w-2xl bg-[#161c24] border border-slate-750 rounded-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col">
+          <div className="w-full max-w-2xl bg-white border border-[#E4E3DC] rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col">
             {/* Header */}
-            <div className="p-4 bg-[#12171e] border-b border-slate-800 flex items-start justify-between gap-3 shrink-0">
+            <div className="p-4 sm:p-5 bg-[#FAF9F5] border-b border-[#E4E3DC] flex items-start justify-between gap-3 shrink-0">
               <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-sm font-bold font-mono text-amber-400">{activeIncident.id}</span>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="text-sm font-bold font-mono text-[#315C46]">{activeIncident.id}</span>
                   <SeverityBadge severity={activeIncident.severity} size="sm" />
                   <StatusBadge status={activeIncident.status} size="sm" />
                 </div>
-                <h3 className="text-base font-bold text-slate-100 leading-snug">
+                <h3 className="text-base font-bold text-[#171B19] leading-snug">
                   {activeIncident.title}
                 </h3>
               </div>
@@ -427,7 +444,7 @@ export const IncidentsPage: React.FC<IncidentsPageProps> = ({
                 type="button"
                 onClick={() => setActiveIncident(null)}
                 aria-label="Close detail"
-                className="p-1 rounded text-slate-400 hover:text-slate-100 hover:bg-slate-800"
+                className="p-1 rounded-md text-[#777D77] hover:text-[#171B19] hover:bg-[#F5F4EF]"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -437,33 +454,33 @@ export const IncidentsPage: React.FC<IncidentsPageProps> = ({
             <div className="p-5 overflow-y-auto space-y-5 flex-1 text-xs">
               {/* Situation Description */}
               <div>
-                <div className="font-mono text-[11px] uppercase tracking-wider text-slate-400 mb-1.5 font-semibold">
+                <div className="text-[11px] uppercase tracking-wider text-[#777D77] mb-1.5 font-semibold">
                   Tactical Situation Assessment
                 </div>
-                <p className="text-slate-300 leading-relaxed bg-[#0d1117] p-3 rounded border border-slate-850">
+                <p className="text-[#171B19] leading-relaxed bg-[#FAF9F5] p-3.5 rounded-lg border border-[#E4E3DC]">
                   {activeIncident.description}
                 </p>
               </div>
 
               {/* Coordinates & Zone */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono">
-                <div className="p-2.5 rounded bg-slate-900 border border-slate-850">
-                  <div className="text-[10px] text-slate-500 uppercase">Hazard Type</div>
-                  <div className="text-slate-200 font-bold uppercase mt-0.5">{activeIncident.disasterType}</div>
+                <div className="p-3 rounded-lg bg-[#FAF9F5] border border-[#E4E3DC]">
+                  <div className="text-[10px] text-[#777D77] uppercase font-sans">Hazard Type</div>
+                  <div className="text-[#171B19] font-bold uppercase mt-0.5">{activeIncident.disasterType}</div>
                 </div>
-                <div className="p-2.5 rounded bg-slate-900 border border-slate-850">
-                  <div className="text-[10px] text-slate-500 uppercase">Priority Index</div>
-                  <div className="text-amber-400 font-bold mt-0.5 tabular-nums">{activeIncident.priorityScore}/100</div>
+                <div className="p-3 rounded-lg bg-[#FAF9F5] border border-[#E4E3DC]">
+                  <div className="text-[10px] text-[#777D77] uppercase font-sans">Priority Index</div>
+                  <div className="text-[#315C46] font-bold mt-0.5 tabular-nums">{activeIncident.priorityScore}/100</div>
                 </div>
-                <div className="p-2.5 rounded bg-slate-900 border border-slate-850">
-                  <div className="text-[10px] text-slate-500 uppercase">Affected People</div>
-                  <div className="text-slate-200 font-bold mt-0.5 tabular-nums">
+                <div className="p-3 rounded-lg bg-[#FAF9F5] border border-[#E4E3DC]">
+                  <div className="text-[10px] text-[#777D77] uppercase font-sans">Affected People</div>
+                  <div className="text-[#171B19] font-bold mt-0.5 tabular-nums">
                     ~{activeIncident.affectedPopulation.toLocaleString()}
                   </div>
                 </div>
-                <div className="p-2.5 rounded bg-slate-900 border border-slate-850">
-                  <div className="text-[10px] text-slate-500 uppercase">Verification</div>
-                  <div className="text-emerald-400 font-bold mt-0.5 flex items-center gap-1">
+                <div className="p-3 rounded-lg bg-[#FAF9F5] border border-[#E4E3DC]">
+                  <div className="text-[10px] text-[#777D77] uppercase font-sans">Verification</div>
+                  <div className="text-[#315C46] font-bold mt-0.5 flex items-center gap-1">
                     <CheckCircle2 className="w-3.5 h-3.5" />
                     <span>VERIFIED</span>
                   </div>
@@ -472,30 +489,30 @@ export const IncidentsPage: React.FC<IncidentsPageProps> = ({
 
               {/* Geospatial and Assigned Unit */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="p-3 rounded bg-slate-900 border border-slate-850 space-y-1.5">
-                  <div className="font-mono text-[10px] uppercase text-slate-500 flex items-center gap-1">
-                    <MapPin className="w-3.5 h-3.5 text-sky-400" />
-                    <span>Location & GPS Anchor</span>
+                <div className="p-3.5 rounded-lg bg-[#FAF9F5] border border-[#E4E3DC] space-y-1.5">
+                  <div className="text-[10px] uppercase text-[#777D77] font-semibold flex items-center gap-1">
+                    <MapPin className="w-3.5 h-3.5 text-[#315C46]" />
+                    <span>Location & Coordinates</span>
                   </div>
-                  <div className="text-slate-200 font-medium">{activeIncident.location}</div>
-                  <div className="text-slate-400 text-[11px]">{activeIncident.region}</div>
-                  <div className="text-amber-400/90 font-mono text-[11px] tabular-nums pt-1">
+                  <div className="text-[#171B19] font-semibold">{activeIncident.location}</div>
+                  <div className="text-[#777D77] text-[11px]">{activeIncident.region}</div>
+                  <div className="text-[#315C46] font-mono text-[11px] tabular-nums pt-1">
                     LAT: {activeIncident.coordinates.lat.toFixed(4)}° N, LNG: {activeIncident.coordinates.lng.toFixed(4)}° E
                   </div>
                 </div>
 
-                <div className="p-3 rounded bg-slate-900 border border-slate-850 space-y-1.5">
-                  <div className="font-mono text-[10px] uppercase text-slate-500 flex items-center gap-1">
-                    <Users className="w-3.5 h-3.5 text-emerald-400" />
+                <div className="p-3.5 rounded-lg bg-[#FAF9F5] border border-[#E4E3DC] space-y-1.5">
+                  <div className="text-[10px] uppercase text-[#777D77] font-semibold flex items-center gap-1">
+                    <Users className="w-3.5 h-3.5 text-[#315C46]" />
                     <span>Assigned Response Force</span>
                   </div>
-                  <div className="text-slate-200 font-medium">
+                  <div className="text-[#171B19] font-semibold">
                     {activeIncident.assignedTeamName || 'No Team Dispatched Yet'}
                   </div>
-                  <div className="text-slate-400 text-[11px]">
+                  <div className="text-[#777D77] text-[11px]">
                     Reported by: {activeIncident.reportedBy}
                   </div>
-                  <div className="text-slate-500 text-[11px] font-mono tabular-nums pt-1">
+                  <div className="text-[#777D77] text-[11px] font-mono tabular-nums pt-1">
                     Reported: {new Date(activeIncident.reportedTime).toLocaleString()}
                   </div>
                 </div>
@@ -503,28 +520,28 @@ export const IncidentsPage: React.FC<IncidentsPageProps> = ({
 
               {/* Casualties / Rescued Status */}
               {activeIncident.casualties && (
-                <div className="p-3 rounded bg-slate-900 border border-slate-850">
-                  <div className="font-mono text-[10px] uppercase text-slate-500 mb-2">
+                <div className="p-3.5 rounded-lg bg-[#FAF9F5] border border-[#E4E3DC]">
+                  <div className="text-[10px] uppercase font-semibold text-[#777D77] mb-2">
                     Human Life Impact & Rescue Progress
                   </div>
-                  <div className="grid grid-cols-3 gap-2 font-mono text-center">
-                    <div className="p-2 rounded bg-slate-850">
-                      <div className="text-xs text-emerald-400 font-bold tabular-nums">
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div className="p-2.5 rounded-lg bg-white border border-[#E4E3DC]">
+                      <div className="text-xs text-[#315C46] font-bold font-mono tabular-nums">
                         {activeIncident.casualties.rescued}
                       </div>
-                      <div className="text-[10px] text-slate-400">Rescued / Safe</div>
+                      <div className="text-[10px] text-[#777D77]">Rescued / Safe</div>
                     </div>
-                    <div className="p-2 rounded bg-slate-850">
-                      <div className="text-xs text-amber-400 font-bold tabular-nums">
+                    <div className="p-2.5 rounded-lg bg-white border border-[#E4E3DC]">
+                      <div className="text-xs text-[#C18A32] font-bold font-mono tabular-nums">
                         {activeIncident.casualties.injured}
                       </div>
-                      <div className="text-[10px] text-slate-400">Medical Aid Needed</div>
+                      <div className="text-[10px] text-[#777D77]">Medical Aid Needed</div>
                     </div>
-                    <div className="p-2 rounded bg-slate-850">
-                      <div className="text-xs text-rose-400 font-bold tabular-nums">
+                    <div className="p-2.5 rounded-lg bg-white border border-[#E4E3DC]">
+                      <div className="text-xs text-[#B9433D] font-bold font-mono tabular-nums">
                         {activeIncident.casualties.deceased}
                       </div>
-                      <div className="text-[10px] text-slate-400">Fatalities</div>
+                      <div className="text-[10px] text-[#777D77]">Fatalities</div>
                     </div>
                   </div>
                 </div>
@@ -532,9 +549,9 @@ export const IncidentsPage: React.FC<IncidentsPageProps> = ({
 
               {/* Status Update Quick Buttons */}
               {permissions.canEditIncident && (
-                <div className="pt-2 border-t border-slate-850">
-                  <div className="font-mono text-[10px] uppercase text-slate-500 mb-2">
-                    Fast Operational Status Transition
+                <div className="pt-3 border-t border-[#E4E3DC]">
+                  <div className="text-[10px] uppercase font-semibold text-[#777D77] mb-2">
+                    Operational Status Transition
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     {(['active', 'investigating', 'contained', 'resolved'] as IncidentStatus[]).map((st) => (
@@ -545,10 +562,10 @@ export const IncidentsPage: React.FC<IncidentsPageProps> = ({
                           onUpdateIncident(activeIncident.id, { status: st });
                           setActiveIncident({ ...activeIncident, status: st });
                         }}
-                        className={`px-3 py-1 text-xs font-mono rounded transition-colors uppercase ${
+                        className={`px-3 py-1.5 text-xs rounded-lg transition-colors uppercase font-mono ${
                           activeIncident.status === st
-                            ? 'bg-amber-500 text-slate-950 font-bold'
-                            : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200'
+                            ? 'bg-[#E5EDE6] text-[#315C46] font-bold border border-[#C8DACB]'
+                            : 'bg-[#FAF9F5] border border-[#E4E3DC] text-[#777D77] hover:text-[#171B19]'
                         }`}
                       >
                         {st}
@@ -560,13 +577,13 @@ export const IncidentsPage: React.FC<IncidentsPageProps> = ({
             </div>
 
             {/* Footer Actions */}
-            <div className="p-3 bg-[#12171e] border-t border-slate-800 flex items-center justify-between shrink-0">
+            <div className="p-4 bg-[#FAF9F5] border-t border-[#E4E3DC] flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2">
                 {permissions.canDeleteIncident && (
                   <button
                     type="button"
                     onClick={() => setDeleteTargetId(activeIncident.id)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-mono text-rose-400 hover:bg-rose-950/40 transition-colors"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-[#B9433D] hover:bg-[#F9EBEA] transition-colors"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     <span>Delete Record</span>
@@ -579,7 +596,7 @@ export const IncidentsPage: React.FC<IncidentsPageProps> = ({
                   <button
                     type="button"
                     onClick={() => openEditModal(activeIncident)}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs font-mono border border-slate-700 transition-colors"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-white hover:bg-[#F5F4EF] text-[#171B19] text-xs border border-[#E4E3DC] transition-colors shadow-2xs font-medium"
                   >
                     <Edit2 className="w-3.5 h-3.5" />
                     <span>Edit Incident</span>
@@ -588,7 +605,7 @@ export const IncidentsPage: React.FC<IncidentsPageProps> = ({
                 <button
                   type="button"
                   onClick={() => setActiveIncident(null)}
-                  className="px-4 py-1.5 rounded bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs font-mono transition-colors"
+                  className="px-4 py-1.5 rounded-lg bg-[#315C46] hover:bg-[#264937] text-white font-semibold text-xs transition-colors shadow-xs"
                 >
                   Dismiss
                 </button>
@@ -601,22 +618,22 @@ export const IncidentsPage: React.FC<IncidentsPageProps> = ({
       {/* Create / Edit Incident Modal Form */}
       {isCreateModalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-xs"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs"
           role="dialog"
           aria-modal="true"
         >
-          <div className="w-full max-w-xl bg-[#161c24] border border-slate-750 rounded-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col">
-            <div className="p-4 bg-[#12171e] border-b border-slate-800 flex items-center justify-between shrink-0">
+          <div className="w-full max-w-xl bg-white border border-[#E4E3DC] rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col">
+            <div className="p-4 sm:p-5 bg-[#FAF9F5] border-b border-[#E4E3DC] flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-amber-500" />
-                <h3 className="text-sm font-mono font-bold uppercase tracking-wider text-slate-100">
-                  {isEditing ? 'Modify Incident Ledger Record' : 'Log New Emergency Incident'}
+                <AlertTriangle className="w-4 h-4 text-[#315C46]" />
+                <h3 className="text-sm font-bold uppercase tracking-wider text-[#171B19]">
+                  {isEditing ? 'Modify Incident Record' : 'Log New Emergency Incident'}
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setIsCreateModalOpen(false)}
-                className="p-1 rounded text-slate-400 hover:text-slate-100"
+                className="p-1 rounded-md text-[#777D77] hover:text-[#171B19] hover:bg-[#F5F4EF]"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -629,8 +646,8 @@ export const IncidentsPage: React.FC<IncidentsPageProps> = ({
                   type="text"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="e.g. Flash Flood Breach at River Enbankment"
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded text-xs text-slate-100 focus:outline-none focus:border-amber-500/80"
+                  placeholder="e.g. Flash Flood Breach at River Embankment"
+                  className="w-full px-3 py-2 bg-white border border-[#E4E3DC] rounded-lg text-xs text-[#171B19] placeholder-[#999F99] focus:outline-none focus:border-[#315C46]"
                 />
               </FormField>
 
@@ -640,7 +657,7 @@ export const IncidentsPage: React.FC<IncidentsPageProps> = ({
                     id="inc-disaster"
                     value={formData.disasterType}
                     onChange={(e) => setFormData({ ...formData, disasterType: e.target.value as DisasterType })}
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded text-xs font-mono text-slate-100 focus:outline-none focus:border-amber-500/80 uppercase"
+                    className="w-full px-3 py-2 bg-white border border-[#E4E3DC] rounded-lg text-xs font-mono text-[#171B19] focus:outline-none focus:border-[#315C46] uppercase"
                   >
                     <option value="flood">Flood</option>
                     <option value="cyclone">Cyclone</option>
@@ -658,7 +675,7 @@ export const IncidentsPage: React.FC<IncidentsPageProps> = ({
                     id="inc-severity"
                     value={formData.severity}
                     onChange={(e) => setFormData({ ...formData, severity: e.target.value as SeverityLevel })}
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded text-xs font-mono text-slate-100 focus:outline-none focus:border-amber-500/80 uppercase"
+                    className="w-full px-3 py-2 bg-white border border-[#E4E3DC] rounded-lg text-xs font-mono text-[#171B19] focus:outline-none focus:border-[#315C46] uppercase"
                   >
                     <option value="critical">Critical (Life Threatening)</option>
                     <option value="high">High (Severe Impact)</option>
@@ -676,7 +693,7 @@ export const IncidentsPage: React.FC<IncidentsPageProps> = ({
                     value={formData.location}
                     onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                     placeholder="e.g. Sector 4 Bridge, Cuttack"
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded text-xs text-slate-100 focus:outline-none focus:border-amber-500/80"
+                    className="w-full px-3 py-2 bg-white border border-[#E4E3DC] rounded-lg text-xs text-[#171B19] placeholder-[#999F99] focus:outline-none focus:border-[#315C46]"
                   />
                 </FormField>
 
@@ -687,7 +704,7 @@ export const IncidentsPage: React.FC<IncidentsPageProps> = ({
                     value={formData.region}
                     onChange={(e) => setFormData({ ...formData, region: e.target.value })}
                     placeholder="Odisha Coastal Belt"
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded text-xs text-slate-100 focus:outline-none focus:border-amber-500/80"
+                    className="w-full px-3 py-2 bg-white border border-[#E4E3DC] rounded-lg text-xs text-[#171B19] placeholder-[#999F99] focus:outline-none focus:border-[#315C46]"
                   />
                 </FormField>
               </div>
@@ -700,7 +717,7 @@ export const IncidentsPage: React.FC<IncidentsPageProps> = ({
                     value={formData.lat}
                     onChange={(e) => setFormData({ ...formData, lat: e.target.value })}
                     placeholder="20.4625"
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded text-xs font-mono text-slate-100 focus:outline-none focus:border-amber-500/80"
+                    className="w-full px-3 py-2 bg-white border border-[#E4E3DC] rounded-lg text-xs font-mono text-[#171B19] focus:outline-none focus:border-[#315C46]"
                   />
                 </FormField>
 
@@ -711,7 +728,7 @@ export const IncidentsPage: React.FC<IncidentsPageProps> = ({
                     value={formData.lng}
                     onChange={(e) => setFormData({ ...formData, lng: e.target.value })}
                     placeholder="85.8828"
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded text-xs font-mono text-slate-100 focus:outline-none focus:border-amber-500/80"
+                    className="w-full px-3 py-2 bg-white border border-[#E4E3DC] rounded-lg text-xs font-mono text-[#171B19] focus:outline-none focus:border-[#315C46]"
                   />
                 </FormField>
               </div>
@@ -723,7 +740,7 @@ export const IncidentsPage: React.FC<IncidentsPageProps> = ({
                     type="number"
                     value={formData.affectedPopulation}
                     onChange={(e) => setFormData({ ...formData, affectedPopulation: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded text-xs font-mono text-slate-100 focus:outline-none focus:border-amber-500/80"
+                    className="w-full px-3 py-2 bg-white border border-[#E4E3DC] rounded-lg text-xs font-mono text-[#171B19] focus:outline-none focus:border-[#315C46]"
                   />
                 </FormField>
 
@@ -732,7 +749,7 @@ export const IncidentsPage: React.FC<IncidentsPageProps> = ({
                     id="inc-team"
                     value={formData.assignedTeamId}
                     onChange={(e) => setFormData({ ...formData, assignedTeamId: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded text-xs text-slate-100 focus:outline-none focus:border-amber-500/80"
+                    className="w-full px-3 py-2 bg-white border border-[#E4E3DC] rounded-lg text-xs text-[#171B19] focus:outline-none focus:border-[#315C46]"
                   >
                     <option value="">No Team Assigned</option>
                     {teams.map((t) => (
@@ -751,7 +768,7 @@ export const IncidentsPage: React.FC<IncidentsPageProps> = ({
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder="Detail the on-ground situation, immediate risk, hazards, and requested resources..."
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded text-xs text-slate-100 focus:outline-none focus:border-amber-500/80 resize-none"
+                  className="w-full px-3 py-2 bg-white border border-[#E4E3DC] rounded-lg text-xs text-[#171B19] placeholder-[#999F99] focus:outline-none focus:border-[#315C46] resize-none"
                 />
               </FormField>
 
@@ -762,21 +779,21 @@ export const IncidentsPage: React.FC<IncidentsPageProps> = ({
                   value={formData.tags}
                   onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
                   placeholder="Boats Needed, Power Cut, Medical Emergency"
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded text-xs text-slate-100 focus:outline-none focus:border-amber-500/80"
+                  className="w-full px-3 py-2 bg-white border border-[#E4E3DC] rounded-lg text-xs text-[#171B19] placeholder-[#999F99] focus:outline-none focus:border-[#315C46]"
                 />
               </FormField>
 
-              <div className="pt-3 border-t border-slate-800 flex items-center justify-end gap-2 shrink-0">
+              <div className="pt-4 border-t border-[#E4E3DC] flex items-center justify-end gap-2.5 shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsCreateModalOpen(false)}
-                  className="px-3.5 py-1.5 text-xs font-mono text-slate-400 hover:text-slate-200"
+                  className="px-3.5 py-1.5 text-xs text-[#777D77] hover:text-[#171B19]"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-xs font-mono font-bold rounded bg-amber-500 hover:bg-amber-400 text-slate-950 transition-colors shadow-sm"
+                  className="px-4 py-2 text-xs font-semibold rounded-lg bg-[#315C46] hover:bg-[#264937] text-white transition-colors shadow-xs"
                 >
                   {isEditing ? 'Commit Changes' : 'Record Emergency Incident'}
                 </button>

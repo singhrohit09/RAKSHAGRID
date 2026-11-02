@@ -17,10 +17,9 @@ import {
   Settings,
   History,
   Shield,
+  Brain,
   X,
-  ExternalLink,
 } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
 
 interface MobileDrawerProps {
   isOpen: boolean;
@@ -30,6 +29,16 @@ interface MobileDrawerProps {
   activeAlertCount: number;
 }
 
+interface NavGroup {
+  name: string;
+  items: {
+    id: string;
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+    badgeCount?: number;
+  }[];
+}
+
 export const MobileDrawer: React.FC<MobileDrawerProps> = ({
   isOpen,
   onClose,
@@ -37,22 +46,46 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
   onNavigate,
   activeAlertCount,
 }) => {
-  const { role } = useAuth();
-
   if (!isOpen) return null;
 
-  const navItems = [
-    { id: '/dashboard', label: 'Command Dashboard', icon: LayoutDashboard },
-    { id: '/incidents', label: 'Incident Registry', icon: AlertOctagon },
-    { id: '/map', label: 'Situational Map', icon: MapPin },
-    { id: '/teams', label: 'Response Teams', icon: Users },
-    { id: '/shelters', label: 'Evacuation Shelters', icon: Home },
-    { id: '/resources', label: 'Resource Inventory', icon: Box },
-    { id: '/tasks', label: 'Tactical Tasks', icon: CheckSquare },
-    { id: '/analytics', label: 'Operations Analytics', icon: BarChart3 },
-    { id: '/alerts', label: 'Alerts & Broadcast', icon: Bell, badgeCount: activeAlertCount },
-    { id: '/settings', label: 'Agency Settings', icon: Settings },
-    { id: '/audit-log', label: 'Operational Audit', icon: History },
+  const navGroups: NavGroup[] = [
+    {
+      name: 'OVERVIEW',
+      items: [
+        { id: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      ],
+    },
+    {
+      name: 'OPERATIONS',
+      items: [
+        { id: '/incidents', label: 'Incidents', icon: AlertOctagon },
+        { id: '/map', label: 'Live Map', icon: MapPin },
+        { id: '/teams', label: 'Response Teams', icon: Users },
+        { id: '/tasks', label: 'Tasks', icon: CheckSquare },
+      ],
+    },
+    {
+      name: 'RESOURCES',
+      items: [
+        { id: '/shelters', label: 'Shelters', icon: Home },
+        { id: '/resources', label: 'Resources', icon: Box },
+      ],
+    },
+    {
+      name: 'INTELLIGENCE',
+      items: [
+        { id: '/analytics', label: 'Analytics', icon: BarChart3 },
+        { id: '/alerts', label: 'Alerts', icon: Bell, badgeCount: activeAlertCount },
+        { id: '/ai-intelligence', label: 'AI Intelligence', icon: Brain },
+      ],
+    },
+    {
+      name: 'ADMINISTRATION',
+      items: [
+        { id: '/settings', label: 'Settings', icon: Settings },
+        { id: '/audit-log', label: 'Audit Log', icon: History },
+      ],
+    },
   ];
 
   const handleSelect = (route: string) => {
@@ -62,80 +95,82 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex bg-black/80 backdrop-blur-xs md:hidden"
+      className="fixed inset-0 z-50 flex bg-black/40 backdrop-blur-xs md:hidden"
       role="dialog"
       aria-modal="true"
     >
-      <div className="w-72 max-w-[85%] bg-[#0d1117] border-r border-slate-800 h-full flex flex-col p-4">
+      <div className="w-72 max-w-[85%] bg-white border-r border-[#E4E3DC] h-full flex flex-col p-4 shadow-xl">
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded bg-amber-500/10 border border-amber-500/40 flex items-center justify-center text-amber-500">
-              <Shield className="w-4 h-4 text-amber-400" />
+        <div className="flex items-center justify-between pb-3 border-b border-[#E4E3DC]">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-[#315C46] flex items-center justify-center text-white shadow-xs">
+              <Shield className="w-4 h-4 text-white" />
             </div>
             <div>
-              <div className="text-sm font-bold text-slate-100 font-mono">RakshaGrid</div>
-              <div className="text-[10px] text-amber-400 font-mono">DEV MODE v1.0</div>
+              <div className="text-sm font-bold text-[#171B19]">RakshaGrid</div>
+              <div className="text-[10px] text-[#777D77] font-medium">Disaster Intelligence</div>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close menu"
-            className="p-1 rounded text-slate-400 hover:text-slate-100 hover:bg-slate-800"
+            className="p-1 rounded-md text-[#777D77] hover:text-[#171B19] hover:bg-[#F5F4EF]"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Links */}
-        <nav className="flex-1 overflow-y-auto py-4 space-y-1">
-          {navItems.map((item) => {
-            const isActive = currentRoute === item.id;
-            const Icon = item.icon;
+        <nav className="flex-1 overflow-y-auto py-4 space-y-4">
+          {navGroups.map((group) => (
+            <div key={group.name} className="space-y-1">
+              <div className="px-3 pt-1 pb-1 text-[10px] font-semibold tracking-wider text-[#777D77] uppercase select-none">
+                {group.name}
+              </div>
+              {group.items.map((item) => {
+                const isActive = currentRoute === item.id;
+                const Icon = item.icon;
 
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => handleSelect(item.id)}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded text-xs font-medium transition-colors ${
-                  isActive
-                    ? 'bg-slate-800 text-amber-400 font-semibold'
-                    : 'text-slate-400 hover:text-slate-100 hover:bg-slate-850'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <Icon className="w-4 h-4" />
-                  <span>{item.label}</span>
-                </div>
-                {item.badgeCount && item.badgeCount > 0 && (
-                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-rose-950 text-rose-300 border border-rose-800">
-                    {item.badgeCount}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => handleSelect(item.id)}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                      isActive
+                        ? 'bg-[#E5EDE6] text-[#315C46] font-semibold'
+                        : 'text-[#575D56] hover:text-[#171B19] hover:bg-[#F5F4EF]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Icon className={`w-4 h-4 ${isActive ? 'text-[#315C46]' : 'text-[#777D77]'}`} />
+                      <span>{item.label}</span>
+                    </div>
+
+                    {item.badgeCount !== undefined && item.badgeCount > 0 && (
+                      <span className="px-1.5 py-0.5 text-[10px] font-semibold font-mono rounded-full bg-[#B9433D] text-white tabular-nums">
+                        {item.badgeCount}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
-        {/* Public portal link */}
-        <div className="pt-3 border-t border-slate-800">
+        {/* Public Portal Switcher */}
+        <div className="pt-3 border-t border-[#E4E3DC]">
           <button
             type="button"
-            onClick={() => handleSelect('/?view=public')}
-            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-400 hover:text-slate-200 rounded hover:bg-slate-850"
+            onClick={() => handleSelect('/')}
+            className="w-full py-2 px-3 rounded-lg border border-[#E4E3DC] bg-[#FAF9F5] text-xs font-medium text-[#171B19] hover:bg-[#F5F4EF] text-center"
           >
-            <ExternalLink className="w-4 h-4" />
-            <span>Public Emergency Portal</span>
+            Public Emergency Bulletin
           </button>
-          <div className="mt-2 text-[10px] font-mono text-slate-500 px-3">
-            Active: <span className="text-amber-400 capitalize">{role.replace(/_/g, ' ')}</span>
-          </div>
         </div>
       </div>
-
-      <div className="flex-1" onClick={onClose} />
     </div>
   );
 };

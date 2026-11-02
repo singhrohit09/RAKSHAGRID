@@ -82,10 +82,10 @@ export const AnalyticsPage: React.FC<AnalyticsPageProps> = ({
         kicker="Decision Support & Performance Analytics"
         description="Quantitative benchmarks on emergency dispatch latency, population displacement, relief burn rate, and life-safety efficacy."
         metadata={
-          <div className="flex items-center gap-2 font-mono text-[11px] text-slate-400">
-            <span>Model: Operational Metric Aggregator v1.0</span>
+          <div className="flex items-center gap-2 text-xs text-[#777D77]">
+            <span>Model: Operational Metric Aggregator</span>
             <span>·</span>
-            <span className="text-amber-400 font-semibold">[DEMO BENCHMARKS]</span>
+            <span className="text-[#315C46] font-semibold">Active Situational Reporting</span>
           </div>
         }
       />
@@ -95,7 +95,7 @@ export const AnalyticsPage: React.FC<AnalyticsPageProps> = ({
         <MetricCard
           label="Mean Response Latency"
           value="22.6m"
-          subtext="Target standard: <30m"
+          subtext="Standard benchmark: <30m"
           trend={{ direction: 'down', text: '4.2m faster' }}
           icon={Clock}
           variant="success"
@@ -127,134 +127,129 @@ export const AnalyticsPage: React.FC<AnalyticsPageProps> = ({
       {/* 2-Column Analytics Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Response Time Benchmarks */}
-        <div className="p-4 bg-[#12171e] border border-slate-800 rounded flex flex-col">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
-            <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-200">
-              Response Latency vs Mandated Target (Minutes)
-            </h3>
-            <span className="text-[10px] font-mono text-emerald-400">All below SLA</span>
+        <div className="p-5 bg-white border border-[#E4E3DC] rounded-2xl flex flex-col shadow-xs">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-sm font-bold text-[#171B19]">Response Latency Benchmarks</h3>
+              <p className="text-xs text-[#777D77]">Minutes from alert broadcast to first team deployment</p>
+            </div>
+            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-[#E5EDE6] text-[#315C46]">
+              Target: &lt;30m
+            </span>
           </div>
-
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={responseTimesData} margin={{ top: 10, right: 10, left: -10, bottom: 10 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" vertical={false} />
-                <XAxis dataKey="type" tick={{ fill: '#94a3b8', fontSize: 11, fontFamily: 'monospace' }} />
-                <YAxis tick={{ fill: '#94a3b8', fontSize: 11, fontFamily: 'monospace' }} unit="m" />
+              <BarChart data={responseTimesData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E4E3DC" vertical={false} />
+                <XAxis dataKey="type" stroke="#777D77" fontSize={11} tickLine={false} />
+                <YAxis stroke="#777D77" fontSize={11} tickLine={false} unit="m" />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#161c24',
-                    borderColor: '#334155',
-                    borderRadius: '4px',
-                    fontSize: '12px',
-                    fontFamily: 'monospace',
+                    backgroundColor: '#FFFFFF',
+                    borderColor: '#E4E3DC',
+                    borderRadius: '8px',
+                    color: '#171B19',
+                    fontSize: '11px',
+                    boxShadow: '0 4px 12px rgba(23, 27, 25, 0.08)',
                   }}
                 />
-                <Legend wrapperStyle={{ fontSize: '11px', fontFamily: 'monospace' }} />
-                <Bar dataKey="achieved" name="Achieved Time (min)" fill="#10b981" radius={[3, 3, 0, 0]} />
-                <Bar dataKey="target" name="Target SLA (min)" fill="#475569" radius={[3, 3, 0, 0]} />
+                <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                <Bar dataKey="achieved" name="Achieved Time" fill="#315C46" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="target" name="Target Ceiling" fill="#C18A32" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Regional Population Impact */}
-        <div className="p-4 bg-[#12171e] border border-slate-800 rounded flex flex-col">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
-            <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-200">
-              Vulnerable Population In Impact Radius
-            </h3>
-            <span className="text-[10px] font-mono text-slate-400">Census Grounded</span>
+        {/* Population Impact by Region */}
+        <div className="p-5 bg-white border border-[#E4E3DC] rounded-2xl flex flex-col shadow-xs">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-sm font-bold text-[#171B19]">Population Displacement by Theater</h3>
+              <p className="text-xs text-[#777D77]">Aggregated civilian headcount in active hazard zones</p>
+            </div>
           </div>
-
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={regionalImpactData}
-                layout="vertical"
-                margin={{ top: 10, right: 20, left: 40, bottom: 10 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" horizontal={false} />
-                <XAxis type="number" tick={{ fill: '#94a3b8', fontSize: 10, fontFamily: 'monospace' }} />
-                <YAxis
-                  dataKey="region"
-                  type="category"
-                  tick={{ fill: '#94a3b8', fontSize: 10, fontFamily: 'monospace' }}
-                />
+              <BarChart data={regionalImpactData} layout="vertical" margin={{ top: 10, right: 20, left: 20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E4E3DC" horizontal={false} />
+                <XAxis type="number" stroke="#777D77" fontSize={11} tickLine={false} />
+                <YAxis dataKey="region" type="category" stroke="#171B19" fontSize={11} tickLine={false} width={110} />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#161c24',
-                    borderColor: '#334155',
-                    borderRadius: '4px',
-                    fontSize: '12px',
-                    fontFamily: 'monospace',
+                    backgroundColor: '#FFFFFF',
+                    borderColor: '#E4E3DC',
+                    borderRadius: '8px',
+                    color: '#171B19',
+                    fontSize: '11px',
+                    boxShadow: '0 4px 12px rgba(23, 27, 25, 0.08)',
                   }}
                 />
-                <Bar dataKey="count" name="People In Hazard Zone" fill="#f59e0b" radius={[0, 3, 3, 0]} />
+                <Bar dataKey="count" name="Civilians Affected" fill="#B9433D" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Shelter Capacity vs Occupancy */}
-        <div className="p-4 bg-[#12171e] border border-slate-800 rounded flex flex-col">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
-            <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-200">
-              Evacuation Center Utilization
-            </h3>
-            <span className="text-[10px] font-mono text-slate-400">Real-Time Headcount</span>
+        {/* Shelter Utilization */}
+        <div className="p-5 bg-white border border-[#E4E3DC] rounded-2xl flex flex-col shadow-xs">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-sm font-bold text-[#171B19]">Shelter Capacity vs Occupancy</h3>
+              <p className="text-xs text-[#777D77]">Real-time bed utilization across verified relief shelters</p>
+            </div>
           </div>
-
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={shelterUtilizationData} margin={{ top: 10, right: 10, left: -10, bottom: 10 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" vertical={false} />
-                <XAxis dataKey="name" tick={{ fill: '#94a3b8', fontSize: 11, fontFamily: 'monospace' }} />
-                <YAxis tick={{ fill: '#94a3b8', fontSize: 11, fontFamily: 'monospace' }} />
+              <BarChart data={shelterUtilizationData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E4E3DC" vertical={false} />
+                <XAxis dataKey="name" stroke="#777D77" fontSize={11} tickLine={false} />
+                <YAxis stroke="#777D77" fontSize={11} tickLine={false} />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#161c24',
-                    borderColor: '#334155',
-                    borderRadius: '4px',
-                    fontSize: '12px',
-                    fontFamily: 'monospace',
+                    backgroundColor: '#FFFFFF',
+                    borderColor: '#E4E3DC',
+                    borderRadius: '8px',
+                    color: '#171B19',
+                    fontSize: '11px',
+                    boxShadow: '0 4px 12px rgba(23, 27, 25, 0.08)',
                   }}
                 />
-                <Legend wrapperStyle={{ fontSize: '11px', fontFamily: 'monospace' }} />
-                <Bar dataKey="occupancy" name="Current Occupants" fill="#38bdf8" radius={[3, 3, 0, 0]} />
-                <Bar dataKey="capacity" name="Total Bed Capacity" fill="#334155" radius={[3, 3, 0, 0]} />
+                <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                <Bar dataKey="occupancy" name="Current Occupants" fill="#315C46" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="capacity" name="Max Capacity" fill="#E4E3DC" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Resource Burn Rate */}
-        <div className="p-4 bg-[#12171e] border border-slate-800 rounded flex flex-col">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
-            <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-200">
-              Tactical Stock Deployment Ratio
-            </h3>
-            <span className="text-[10px] font-mono text-slate-400">Available vs Deployed</span>
+        {/* Critical Supplies Deployed vs Reserve */}
+        <div className="p-5 bg-white border border-[#E4E3DC] rounded-2xl flex flex-col shadow-xs">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-sm font-bold text-[#171B19]">Critical Resource Deployment</h3>
+              <p className="text-xs text-[#777D77]">Stock allocation between deployed units and hub depots</p>
+            </div>
           </div>
-
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={resourceData} margin={{ top: 10, right: 10, left: -10, bottom: 10 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" vertical={false} />
-                <XAxis dataKey="name" tick={{ fill: '#94a3b8', fontSize: 10, fontFamily: 'monospace' }} />
-                <YAxis tick={{ fill: '#94a3b8', fontSize: 10, fontFamily: 'monospace' }} />
+              <BarChart data={resourceData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E4E3DC" vertical={false} />
+                <XAxis dataKey="name" stroke="#777D77" fontSize={11} tickLine={false} />
+                <YAxis stroke="#777D77" fontSize={11} tickLine={false} />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#161c24',
-                    borderColor: '#334155',
-                    borderRadius: '4px',
-                    fontSize: '12px',
-                    fontFamily: 'monospace',
+                    backgroundColor: '#FFFFFF',
+                    borderColor: '#E4E3DC',
+                    borderRadius: '8px',
+                    color: '#171B19',
+                    fontSize: '11px',
+                    boxShadow: '0 4px 12px rgba(23, 27, 25, 0.08)',
                   }}
                 />
-                <Legend wrapperStyle={{ fontSize: '11px', fontFamily: 'monospace' }} />
-                <Bar dataKey="available" name="Available in Stock" fill="#10b981" stackId="a" />
-                <Bar dataKey="deployed" name="Deployed in Field" fill="#e11d48" stackId="a" />
+                <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                <Bar dataKey="deployed" name="Deployed Stock" fill="#C18A32" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="available" name="Hub Depot Reserves" fill="#315C46" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

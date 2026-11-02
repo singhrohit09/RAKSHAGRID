@@ -42,25 +42,25 @@ export const PublicPortal: React.FC<PublicPortalProps> = ({
   ];
 
   return (
-    <div className="min-h-screen bg-[#0d1117] text-[#e6edf3]">
-      {/* Top Banner */}
-      <div className="bg-amber-950/60 border-b border-amber-800/60 px-4 py-2.5 text-center text-xs font-mono text-amber-300 flex items-center justify-center gap-2">
-        <Radio className="w-3.5 h-3.5 text-amber-400 animate-pulse shrink-0" />
+    <div className="min-h-screen bg-[#F5F4EF] text-[#171B19]">
+      {/* Top Advisory Strip */}
+      <div className="bg-[#FAF2E6] border-b border-[#EED7B8] px-4 py-2.5 text-center text-xs text-[#C18A32] flex items-center justify-center gap-2">
+        <Radio className="w-3.5 h-3.5 text-[#C18A32] animate-pulse shrink-0" />
         <span>
-          <strong>PUBLIC EMERGENCY BULLETIN</strong> — Live updates from Disaster Response Coordination Node
+          <strong>PUBLIC EMERGENCY ADVISORY</strong> — Live synchronized bulletins from Disaster Coordination Center
         </span>
       </div>
 
       {/* Navigation */}
-      <header className="border-b border-slate-800 bg-[#0d1117]/90 sticky top-0 z-30 backdrop-blur-xs">
+      <header className="border-b border-[#E4E3DC] bg-white/95 sticky top-0 z-30 backdrop-blur-xs">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded bg-amber-500/10 border border-amber-500/50 flex items-center justify-center text-amber-400">
-              <Shield className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-xl bg-[#315C46] flex items-center justify-center text-white shadow-xs">
+              <Shield className="w-5 h-5 text-white" />
             </div>
             <div>
-              <div className="text-base font-bold font-mono text-slate-100 tracking-tight">RakshaGrid</div>
-              <div className="text-[11px] text-slate-400 font-mono">Disaster Intelligence & Coordinated Response</div>
+              <div className="text-base font-bold text-[#171B19] tracking-tight">RakshaGrid</div>
+              <div className="text-xs text-[#777D77]">Disaster Intelligence & Coordinated Response</div>
             </div>
           </div>
 
@@ -68,14 +68,14 @@ export const PublicPortal: React.FC<PublicPortalProps> = ({
             <button
               type="button"
               onClick={onNavigateToLogin}
-              className="text-xs font-mono text-slate-300 hover:text-slate-100 px-3 py-1.5 rounded hover:bg-slate-800 transition-colors"
+              className="text-xs font-medium text-[#777D77] hover:text-[#171B19] px-3 py-1.5 rounded-lg hover:bg-[#F5F4EF] transition-colors"
             >
               Personnel Sign In
             </button>
             <button
               type="button"
               onClick={onEnterCommand}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-mono font-semibold rounded bg-amber-500 hover:bg-amber-400 text-slate-950 transition-colors shadow-sm"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-[#315C46] hover:bg-[#264937] text-white transition-colors shadow-xs"
             >
               <span>Command Center</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -88,20 +88,20 @@ export const PublicPortal: React.FC<PublicPortalProps> = ({
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-8">
         {/* Hero Alert Strip */}
         {criticalAlerts.length > 0 && (
-          <div className="p-4 sm:p-5 rounded border border-rose-800/80 bg-rose-950/30 text-rose-200">
+          <div className="p-5 rounded-xl border border-[#E8C2BF] bg-[#F9EBEA] text-[#171B19] shadow-xs">
             <div className="flex items-center gap-2 mb-2">
-              <AlertTriangle className="w-4 h-4 text-rose-400 animate-pulse" />
-              <span className="text-xs font-mono font-bold tracking-wider uppercase text-rose-300">
-                ACTIVE CIVIL EMERGENCY WARNING
+              <AlertTriangle className="w-4 h-4 text-[#B9433D] animate-pulse" />
+              <span className="text-xs font-bold tracking-wider uppercase text-[#B9433D]">
+                CIVIL EMERGENCY ADVISORY
               </span>
             </div>
-            <h2 className="text-base sm:text-lg font-bold text-slate-100 leading-snug">
+            <h2 className="text-base sm:text-lg font-bold text-[#171B19] leading-snug">
               {criticalAlerts[0].title}
             </h2>
-            <p className="mt-1.5 text-xs sm:text-sm text-slate-300 leading-relaxed max-w-4xl">
+            <p className="mt-1.5 text-xs sm:text-sm text-[#575D56] leading-relaxed max-w-4xl">
               {criticalAlerts[0].message}
             </p>
-            <div className="mt-3 flex items-center gap-3 text-xs font-mono text-rose-300/80">
+            <div className="mt-3 flex items-center gap-3 text-xs text-[#777D77]">
               <span>Target Region: {criticalAlerts[0].targetRegion}</span>
               <span>·</span>
               <span>Channels: {criticalAlerts[0].broadcastChannels.join(', ')}</span>
@@ -113,15 +113,15 @@ export const PublicPortal: React.FC<PublicPortalProps> = ({
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Active Incidents Feed */}
           <div className="lg:col-span-2 space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+            <div className="flex items-center justify-between pb-2 border-b border-[#E4E3DC]">
               <div className="flex items-center gap-2">
-                <Activity className="w-4 h-4 text-amber-500" />
-                <h3 className="text-sm font-mono font-bold uppercase tracking-wider text-slate-200">
+                <Activity className="w-4 h-4 text-[#315C46]" />
+                <h3 className="text-sm font-bold uppercase tracking-wider text-[#171B19]">
                   Current Hazard Situation
                 </h3>
               </div>
-              <span className="text-xs font-mono text-slate-400">
-                {activeIncidents.length} active emergency records
+              <span className="text-xs text-[#777D77]">
+                {activeIncidents.length} active emergency incidents
               </span>
             </div>
 
@@ -129,33 +129,33 @@ export const PublicPortal: React.FC<PublicPortalProps> = ({
               {activeIncidents.slice(0, 4).map((inc) => (
                 <div
                   key={inc.id}
-                  className="p-4 rounded border border-slate-800 bg-[#12171e] hover:border-slate-700 transition-colors"
+                  className="p-5 rounded-xl border border-[#E4E3DC] bg-white hover:border-[#D0CFC5] transition-colors shadow-xs"
                 >
                   <div className="flex items-center justify-between gap-2 mb-1.5">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-mono font-bold text-amber-400">{inc.id}</span>
+                      <span className="text-xs font-mono font-bold text-[#315C46]">{inc.id}</span>
                       <SeverityBadge severity={inc.severity} size="sm" />
                     </div>
-                    <span className="text-xs font-mono text-slate-400 flex items-center gap-1">
-                      <Clock className="w-3 h-3 text-slate-500" />
+                    <span className="text-xs text-[#777D77] flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-[#777D77]" />
                       {new Date(inc.reportedTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
 
-                  <h4 className="text-sm font-semibold text-slate-100 mb-1">
+                  <h4 className="text-sm font-semibold text-[#171B19] mb-1">
                     {inc.title}
                   </h4>
-                  <p className="text-xs text-slate-400 leading-relaxed line-clamp-2">
+                  <p className="text-xs text-[#777D77] leading-relaxed line-clamp-2">
                     {inc.description}
                   </p>
 
-                  <div className="mt-3 pt-2.5 border-t border-slate-850 flex items-center justify-between text-xs font-mono text-slate-400">
+                  <div className="mt-3 pt-2.5 border-t border-[#E4E3DC] flex items-center justify-between text-xs text-[#777D77]">
                     <span className="flex items-center gap-1 truncate max-w-[280px]">
-                      <MapPin className="w-3 h-3 text-slate-500 shrink-0" />
+                      <MapPin className="w-3 h-3 text-[#777D77] shrink-0" />
                       {inc.location} ({inc.region})
                     </span>
-                    <span className="text-amber-400/90 font-medium shrink-0">
-                      ~{inc.affectedPopulation.toLocaleString()} affected
+                    <span className="text-[#315C46] font-semibold shrink-0">
+                      ~{inc.affectedPopulation.toLocaleString()} citizens in zone
                     </span>
                   </div>
                 </div>
@@ -166,57 +166,57 @@ export const PublicPortal: React.FC<PublicPortalProps> = ({
           {/* Emergency Helplines & Safety Protocols */}
           <div className="space-y-6">
             {/* Helplines Card */}
-            <div className="p-4 rounded border border-slate-800 bg-[#12171e]">
-              <div className="flex items-center gap-2 mb-3 text-amber-400">
+            <div className="p-5 rounded-xl border border-[#E4E3DC] bg-white shadow-xs">
+              <div className="flex items-center gap-2 mb-3 text-[#315C46]">
                 <PhoneCall className="w-4 h-4" />
-                <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-200">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-[#171B19]">
                   Emergency Helplines (24x7)
                 </h3>
               </div>
 
               <div className="space-y-3">
                 {emergencyHelplines.map((line, idx) => (
-                  <div key={idx} className="p-2.5 rounded bg-slate-900 border border-slate-850">
+                  <div key={idx} className="p-3 rounded-lg bg-[#FAF9F5] border border-[#E4E3DC]">
                     <div className="flex items-baseline justify-between">
-                      <span className="text-xs font-medium text-slate-200">{line.label}</span>
-                      <span className="text-sm font-bold font-mono text-amber-400 tabular-nums">
+                      <span className="text-xs font-medium text-[#171B19]">{line.label}</span>
+                      <span className="text-sm font-bold font-mono text-[#315C46] tabular-nums">
                         {line.number}
                       </span>
                     </div>
-                    <div className="text-[11px] text-slate-500 mt-0.5">{line.desc}</div>
+                    <div className="text-[11px] text-[#777D77] mt-0.5">{line.desc}</div>
                   </div>
                 ))}
               </div>
             </div>
 
             {/* Quick Safety Protocols */}
-            <div className="p-4 rounded border border-slate-800 bg-[#12171e]">
-              <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-200 mb-2.5">
+            <div className="p-5 rounded-xl border border-[#E4E3DC] bg-white shadow-xs">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#171B19] mb-2.5">
                 Immediate Citizen Guidelines
               </h3>
-              <ul className="text-xs text-slate-400 space-y-2 list-disc list-inside leading-relaxed">
-                <li>Move to designated concrete cyclone / flood shelter before wind speeds exceed 60 km/h.</li>
+              <ul className="text-xs text-[#575D56] space-y-2 list-disc list-inside leading-relaxed">
+                <li>Move to designated concrete cyclone or flood shelters before wind speeds exceed 60 km/h.</li>
                 <li>Keep battery-powered transistor radios tuned to All India Radio disaster bulletins.</li>
-                <li>Do not wade or drive across submerged causeways or culverts.</li>
-                <li>Disconnect main circuit breaker if flood waters enter residential plinth.</li>
+                <li>Do not attempt to cross submerged causeways or culverts.</li>
+                <li>Disconnect main circuit breaker if flood waters enter residential plinths.</li>
               </ul>
             </div>
 
             {/* Responder CTA */}
-            <div className="p-4 rounded border border-slate-750 bg-slate-900/90 text-center">
-              <Lock className="w-5 h-5 text-amber-400 mx-auto mb-2" />
-              <div className="text-xs font-bold text-slate-200 font-mono uppercase">
-                Emergency Responder Terminal
+            <div className="p-5 rounded-xl border border-[#E4E3DC] bg-[#FAF9F5] text-center shadow-xs">
+              <Lock className="w-5 h-5 text-[#315C46] mx-auto mb-2" />
+              <div className="text-xs font-bold text-[#171B19] uppercase tracking-wide">
+                Emergency Response Command
               </div>
-              <p className="text-[11px] text-slate-400 mt-1 mb-3">
+              <p className="text-xs text-[#777D77] mt-1 mb-3 leading-relaxed">
                 Restricted operational access for commanders, relief teams, logistics officers, and analysts.
               </p>
               <button
                 type="button"
                 onClick={onEnterCommand}
-                className="w-full py-2 text-xs font-mono font-semibold rounded bg-amber-500 hover:bg-amber-400 text-slate-950 transition-colors"
+                className="w-full py-2.5 text-xs font-semibold rounded-lg bg-[#315C46] hover:bg-[#264937] text-white transition-colors shadow-xs"
               >
-                Launch Tactical Dashboard
+                Launch Command Center
               </button>
             </div>
           </div>
@@ -224,9 +224,9 @@ export const PublicPortal: React.FC<PublicPortalProps> = ({
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-800 py-6 px-4 text-center text-xs font-mono text-slate-500">
+      <footer className="border-t border-[#E4E3DC] py-6 px-4 text-center text-xs text-[#777D77] bg-white">
         <div>RakshaGrid Operations Node · National Emergency Communication Architecture</div>
-        <div className="mt-1 text-[11px] text-slate-600">Challenge: AGENTCRAFT 2026 · Phase 1 Application Foundation</div>
+        <div className="mt-1 text-[11px] text-[#999F99]">Disaster Intelligence. Coordinated Response. Safer Communities.</div>
       </footer>
     </div>
   );

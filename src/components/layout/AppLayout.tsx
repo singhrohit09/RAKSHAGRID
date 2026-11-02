@@ -67,7 +67,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   const activeAlertCount = alerts.filter((a) => !a.acknowledgedByCommander).length;
 
   return (
-    <div className="min-h-screen bg-[#0d1117] text-[#e6edf3] flex">
+    <div className="min-h-screen bg-[#F5F4EF] text-[#171B19] flex">
       {/* Desktop Sidebar */}
       <div className="hidden md:block shrink-0">
         <Sidebar
@@ -106,21 +106,21 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
 
         {/* Tactical Network Status Notification */}
         {!isOnline && (
-          <div className="bg-[#b35900]/25 border-b border-[#d29922]/50 px-4 py-2 flex items-center justify-between text-xs text-[#d29922] font-mono mt-14 z-20">
+          <div className="bg-[#FAF2E6] border-b border-[#EED7B8] px-4 py-2 flex items-center justify-between text-xs text-[#C18A32] mt-14 z-20">
             <div className="flex items-center space-x-2">
-              <WifiOff className="w-4 h-4 text-[#d29922] animate-pulse shrink-0" />
-              <span>DISCONNECTED — Operating in resilient offline cache mode. Telemetry buffered locally.</span>
+              <WifiOff className="w-4 h-4 text-[#C18A32] animate-pulse shrink-0" />
+              <span>Operating in resilient offline cache mode. Telemetry buffered locally.</span>
             </div>
-            <span className="hidden sm:inline bg-[#d29922]/20 px-2 py-0.5 rounded text-[10px] uppercase font-bold">LOCAL CACHE ACTIVE</span>
+            <span className="hidden sm:inline bg-white px-2 py-0.5 rounded text-[10px] uppercase font-bold border border-[#EED7B8]">OFFLINE CACHE</span>
           </div>
         )}
         {isOnline && showReconnected && (
-          <div className="bg-[#238636]/20 border-b border-[#238636]/50 px-4 py-2 flex items-center justify-between text-xs text-[#3fb950] font-mono mt-14 z-20">
+          <div className="bg-[#E5EDE6] border-b border-[#C8DACB] px-4 py-2 flex items-center justify-between text-xs text-[#315C46] mt-14 z-20">
             <div className="flex items-center space-x-2">
-              <Wifi className="w-4 h-4 text-[#3fb950] shrink-0" />
-              <span>NETWORK RESTORED — Emergency telemetry and incident streams synchronized with command grid.</span>
+              <Wifi className="w-4 h-4 text-[#315C46] shrink-0" />
+              <span>Connection restored. Emergency telemetry synchronized with operational grid.</span>
             </div>
-            <span className="hidden sm:inline bg-[#238636]/20 px-2 py-0.5 rounded text-[10px] uppercase font-bold">GRID ONLINE</span>
+            <span className="hidden sm:inline bg-white px-2 py-0.5 rounded text-[10px] uppercase font-bold border border-[#C8DACB]">ONLINE</span>
           </div>
         )}
 

@@ -91,25 +91,25 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-24 p-4 bg-black/80 backdrop-blur-xs"
+      className="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-24 p-4 bg-black/40 backdrop-blur-xs"
       role="dialog"
       aria-modal="true"
     >
-      <div className="w-full max-w-2xl bg-[#161c24] border border-slate-750 rounded-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-100">
-        <div className="flex items-center px-4 border-b border-slate-800 bg-[#12171e]">
-          <Search className="w-4 h-4 text-slate-400 shrink-0" />
+      <div className="w-full max-w-2xl bg-white border border-[#E4E3DC] rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+        <div className="flex items-center px-4 border-b border-[#E4E3DC] bg-[#FAF9F5]">
+          <Search className="w-4 h-4 text-[#777D77] shrink-0" />
           <input
             ref={inputRef}
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search incidents, teams, shelters, resources, coordinates... (Esc to exit)"
-            className="w-full px-3 py-3.5 bg-transparent text-slate-100 placeholder-slate-500 text-sm font-mono focus:outline-none"
+            className="w-full px-3 py-3.5 bg-transparent text-[#171B19] placeholder-[#777D77] text-sm focus:outline-none"
           />
           {query && (
             <button
               onClick={() => setQuery('')}
-              className="text-slate-500 hover:text-slate-300 p-1"
+              className="text-[#777D77] hover:text-[#171B19] p-1"
             >
               <X className="w-4 h-4" />
             </button>
@@ -119,45 +119,45 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
         <div className="max-h-96 overflow-y-auto p-3 space-y-4">
           {/* Quick command actions */}
           <div>
-            <div className="px-2 text-[10px] font-mono uppercase tracking-wider text-slate-500 mb-1.5">
-              Command Actions
+            <div className="px-2 text-[10px] font-semibold uppercase tracking-wider text-[#777D77] mb-1.5">
+              Quick Operations
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
               {permissions.canCreateIncident && (
                 <button
                   type="button"
                   onClick={() => handleSelect('/incidents?action=create')}
-                  className="flex items-center gap-2 p-2 rounded bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs text-left border border-slate-800/80 transition-colors"
+                  className="flex items-center gap-2 p-2.5 rounded-lg bg-[#FAF9F5] hover:bg-[#F5F4EF] text-[#171B19] text-xs text-left border border-[#E4E3DC] transition-colors"
                 >
-                  <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                  <span className="truncate">Report Incident</span>
+                  <Zap className="w-3.5 h-3.5 text-[#315C46] shrink-0" />
+                  <span className="truncate font-medium">Report Incident</span>
                 </button>
               )}
               {permissions.canBroadcastAlert && (
                 <button
                   type="button"
                   onClick={() => handleSelect('/alerts?action=broadcast')}
-                  className="flex items-center gap-2 p-2 rounded bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs text-left border border-slate-800/80 transition-colors"
+                  className="flex items-center gap-2 p-2.5 rounded-lg bg-[#FAF9F5] hover:bg-[#F5F4EF] text-[#171B19] text-xs text-left border border-[#E4E3DC] transition-colors"
                 >
-                  <AlertCircle className="w-3.5 h-3.5 text-rose-400 shrink-0" />
-                  <span className="truncate">Broadcast Alert</span>
+                  <AlertCircle className="w-3.5 h-3.5 text-[#B9433D] shrink-0" />
+                  <span className="truncate font-medium">Broadcast Alert</span>
                 </button>
               )}
               <button
                 type="button"
                 onClick={() => handleSelect('/map')}
-                className="flex items-center gap-2 p-2 rounded bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs text-left border border-slate-800/80 transition-colors"
+                className="flex items-center gap-2 p-2.5 rounded-lg bg-[#FAF9F5] hover:bg-[#F5F4EF] text-[#171B19] text-xs text-left border border-[#E4E3DC] transition-colors"
               >
-                <MapPin className="w-3.5 h-3.5 text-sky-400 shrink-0" />
-                <span className="truncate">Open Situational Map</span>
+                <MapPin className="w-3.5 h-3.5 text-[#315C46] shrink-0" />
+                <span className="truncate font-medium">Situational Map</span>
               </button>
               <button
                 type="button"
                 onClick={() => handleSelect('/teams')}
-                className="flex items-center gap-2 p-2 rounded bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs text-left border border-slate-800/80 transition-colors"
+                className="flex items-center gap-2 p-2.5 rounded-lg bg-[#FAF9F5] hover:bg-[#F5F4EF] text-[#171B19] text-xs text-left border border-[#E4E3DC] transition-colors"
               >
-                <Users className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                <span className="truncate">Dispatch Teams</span>
+                <Users className="w-3.5 h-3.5 text-[#315C46] shrink-0" />
+                <span className="truncate font-medium">Dispatch Teams</span>
               </button>
             </div>
           </div>
@@ -165,27 +165,27 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
           {/* Incidents matching */}
           {matchingIncidents.length > 0 && (
             <div>
-              <div className="px-2 text-[10px] font-mono uppercase tracking-wider text-slate-500 mb-1.5 flex items-center justify-between">
+              <div className="px-2 text-[10px] font-semibold uppercase tracking-wider text-[#777D77] mb-1.5 flex items-center justify-between">
                 <span>Incidents ({matchingIncidents.length})</span>
-                <span className="text-slate-600">Select to inspect</span>
+                <span className="text-[#999F99]">Select to open</span>
               </div>
               <div className="space-y-1">
                 {matchingIncidents.map((inc) => (
                   <button
                     key={inc.id}
                     onClick={() => handleSelect(`/incidents?id=${inc.id}`)}
-                    className="w-full flex items-center justify-between p-2 rounded hover:bg-slate-800/80 text-left transition-colors border border-transparent hover:border-slate-700/50"
+                    className="w-full flex items-center justify-between p-2.5 rounded-lg hover:bg-[#FAF9F5] text-left transition-colors border border-transparent hover:border-[#E4E3DC]"
                   >
                     <div className="min-w-0 pr-3">
                       <div className="flex items-center gap-2">
-                        <span className="text-[11px] font-mono text-amber-400 font-semibold">{inc.id}</span>
-                        <span className="text-xs font-medium text-slate-200 truncate">{inc.title}</span>
+                        <span className="text-[11px] font-mono text-[#315C46] font-semibold">{inc.id}</span>
+                        <span className="text-xs font-semibold text-[#171B19] truncate">{inc.title}</span>
                       </div>
-                      <div className="text-[11px] text-slate-400 truncate mt-0.5">
+                      <div className="text-[11px] text-[#777D77] truncate mt-0.5">
                         {inc.location} · {inc.region}
                       </div>
                     </div>
-                    <span className="text-[10px] font-mono uppercase tracking-wide px-1.5 py-0.5 rounded border border-slate-750 bg-slate-900 text-slate-300 shrink-0">
+                    <span className="text-[10px] font-mono uppercase tracking-wide px-2 py-0.5 rounded-md border border-[#E4E3DC] bg-white text-[#171B19] shrink-0">
                       {inc.severity}
                     </span>
                   </button>
@@ -197,7 +197,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
           {/* Teams matching */}
           {matchingTeams.length > 0 && (
             <div>
-              <div className="px-2 text-[10px] font-mono uppercase tracking-wider text-slate-500 mb-1.5">
+              <div className="px-2 text-[10px] font-semibold uppercase tracking-wider text-[#777D77] mb-1.5">
                 Response Teams ({matchingTeams.length})
               </div>
               <div className="space-y-1">
@@ -205,15 +205,15 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
                   <button
                     key={team.id}
                     onClick={() => handleSelect(`/teams?id=${team.id}`)}
-                    className="w-full flex items-center justify-between p-2 rounded hover:bg-slate-800/80 text-left transition-colors"
+                    className="w-full flex items-center justify-between p-2.5 rounded-lg hover:bg-[#FAF9F5] text-left transition-colors"
                   >
                     <div className="min-w-0">
-                      <div className="text-xs font-medium text-slate-200 truncate">{team.name}</div>
-                      <div className="text-[11px] text-slate-400 truncate">
+                      <div className="text-xs font-semibold text-[#171B19] truncate">{team.name}</div>
+                      <div className="text-[11px] text-[#777D77] truncate">
                         {team.specialization} · {team.assignedZone}
                       </div>
                     </div>
-                    <span className="text-[10px] font-mono text-emerald-400 shrink-0">
+                    <span className="text-[10px] font-mono text-[#315C46] shrink-0 font-medium">
                       {team.status.toUpperCase()}
                     </span>
                   </button>
@@ -225,7 +225,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
           {/* Shelters matching */}
           {matchingShelters.length > 0 && (
             <div>
-              <div className="px-2 text-[10px] font-mono uppercase tracking-wider text-slate-500 mb-1.5">
+              <div className="px-2 text-[10px] font-semibold uppercase tracking-wider text-[#777D77] mb-1.5">
                 Shelters ({matchingShelters.length})
               </div>
               <div className="space-y-1">
@@ -233,15 +233,15 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
                   <button
                     key={shelter.id}
                     onClick={() => handleSelect(`/shelters?id=${shelter.id}`)}
-                    className="w-full flex items-center justify-between p-2 rounded hover:bg-slate-800/80 text-left transition-colors"
+                    className="w-full flex items-center justify-between p-2.5 rounded-lg hover:bg-[#FAF9F5] text-left transition-colors"
                   >
                     <div className="min-w-0">
-                      <div className="text-xs font-medium text-slate-200 truncate">{shelter.name}</div>
-                      <div className="text-[11px] text-slate-400 truncate">
+                      <div className="text-xs font-semibold text-[#171B19] truncate">{shelter.name}</div>
+                      <div className="text-[11px] text-[#777D77] truncate">
                         {shelter.location} ({shelter.currentOccupancy}/{shelter.capacity} capacity)
                       </div>
                     </div>
-                    <span className="text-[10px] font-mono text-sky-400 shrink-0">
+                    <span className="text-[10px] font-mono text-[#315C46] shrink-0 font-medium">
                       {shelter.status.toUpperCase()}
                     </span>
                   </button>
@@ -251,7 +251,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
           )}
         </div>
 
-        <div className="p-2.5 border-t border-slate-800 bg-[#10141a] text-slate-500 text-[11px] font-mono flex items-center justify-between">
+        <div className="p-2.5 border-t border-[#E4E3DC] bg-[#FAF9F5] text-[#777D77] text-[11px] flex items-center justify-between">
           <span>Navigate with click or arrow keys</span>
           <span>Press ESC to dismiss</span>
         </div>

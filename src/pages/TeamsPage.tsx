@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { Users, Phone, MapPin, Wrench, AlertCircle, CheckCircle, ShieldCheck } from 'lucide-react';
+import { Users, Phone, MapPin, Wrench, AlertCircle, CheckCircle, ShieldCheck, X } from 'lucide-react';
 import { Team, TeamStatus, Incident } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { ResponsivePageHeader } from '../components/common/ResponsivePageHeader';
@@ -72,14 +72,14 @@ export const TeamsPage: React.FC<TeamsPageProps> = ({
         kicker="Emergency Force Allocation"
         description="Deployment readiness, skill proficiencies, operational commanders, and equipment rosters across all disaster response units."
         metadata={
-          <div className="flex items-center gap-2 font-mono text-[11px] text-slate-400">
-            <span>Total Units: {teams.length}</span>
+          <div className="flex items-center gap-2 text-xs text-[#777D77]">
+            <span>Total Units: <strong className="text-[#171B19]">{teams.length}</strong></span>
             <span>·</span>
-            <span className="text-emerald-400 font-semibold">
+            <span className="text-[#315C46] font-semibold">
               Available: {teams.filter((t) => t.status === 'available').length}
             </span>
             <span>·</span>
-            <span className="text-amber-400 font-semibold">
+            <span className="text-[#C18A32] font-semibold">
               Deployed: {teams.filter((t) => t.status === 'deployed').length}
             </span>
           </div>
@@ -87,7 +87,7 @@ export const TeamsPage: React.FC<TeamsPageProps> = ({
       />
 
       {/* Filter and Search */}
-      <div className="p-3.5 bg-[#12171e] border border-slate-800 rounded flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+      <div className="p-4 bg-white border border-[#E4E3DC] rounded-xl shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <SearchBar
           value={search}
           onChange={setSearch}
@@ -113,58 +113,58 @@ export const TeamsPage: React.FC<TeamsPageProps> = ({
         {filteredTeams.map((team) => (
           <div
             key={team.id}
-            className="p-4 bg-[#12171e] border border-slate-800 rounded flex flex-col justify-between hover:border-slate-700 transition-colors"
+            className="p-5 bg-white border border-[#E4E3DC] rounded-xl shadow-xs flex flex-col justify-between hover:border-[#D0CFC5] transition-colors"
           >
             <div>
               <div className="flex items-center justify-between gap-2 mb-2">
-                <span className="font-mono text-xs font-bold text-amber-400">{team.id}</span>
+                <span className="font-mono text-xs font-bold text-[#315C46]">{team.id}</span>
                 <StatusBadge status={team.status} size="sm" />
               </div>
 
-              <h3 className="text-sm font-bold text-slate-100 font-sans mb-1">
+              <h3 className="text-sm font-bold text-[#171B19] mb-1">
                 {team.name}
               </h3>
 
-              <div className="text-xs font-mono text-amber-500/90 font-medium mb-3">
+              <div className="text-xs font-medium text-[#315C46] mb-3">
                 {team.specialization}
               </div>
 
-              <div className="space-y-1.5 text-xs text-slate-400 pt-2 border-t border-slate-850">
+              <div className="space-y-2 text-xs text-[#777D77] pt-2.5 border-t border-[#E4E3DC]">
                 <div className="flex items-center gap-2">
-                  <Users className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                  <Users className="w-3.5 h-3.5 text-[#777D77] shrink-0" />
                   <span>
-                    Leader: <strong className="text-slate-200">{team.leader}</strong> ({team.memberCount} personnel)
+                    Leader: <strong className="text-[#171B19]">{team.leader}</strong> ({team.memberCount} personnel)
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <MapPin className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                  <MapPin className="w-3.5 h-3.5 text-[#777D77] shrink-0" />
                   <span className="truncate">{team.assignedZone}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Phone className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                  <span className="font-mono">{team.contactNumber}</span>
+                  <Phone className="w-3.5 h-3.5 text-[#777D77] shrink-0" />
+                  <span className="font-mono text-[#171B19] font-medium">{team.contactNumber}</span>
                 </div>
               </div>
 
               {/* Active Incident Assignment */}
               {team.activeIncidentTitle && (
-                <div className="mt-3 p-2 rounded bg-amber-950/20 border border-amber-900/40 text-[11px]">
-                  <div className="text-[10px] font-mono uppercase text-amber-400 font-bold mb-0.5">
+                <div className="mt-3 p-3 rounded-lg bg-[#FAF9F5] border border-[#E4E3DC] text-xs">
+                  <div className="text-[10px] uppercase text-[#315C46] font-bold mb-0.5">
                     Currently Operating At:
                   </div>
-                  <div className="text-slate-200 font-medium truncate">
+                  <div className="text-[#171B19] font-medium truncate">
                     {team.activeIncidentTitle}
                   </div>
                 </div>
               )}
 
               {/* Equipment summary */}
-              <div className="mt-3 pt-2.5 border-t border-slate-850">
-                <div className="text-[10px] font-mono uppercase text-slate-500 mb-1 flex items-center gap-1">
-                  <Wrench className="w-3 h-3" />
-                  <span>Gear & Heavy Assets</span>
+              <div className="mt-3 pt-2.5 border-t border-[#E4E3DC]">
+                <div className="text-[10px] uppercase font-semibold text-[#777D77] mb-1 flex items-center gap-1">
+                  <Wrench className="w-3 h-3 text-[#777D77]" />
+                  <span>Equipment & Gear</span>
                 </div>
-                <div className="text-[11px] text-slate-400 leading-snug">
+                <div className="text-[11px] text-[#575D56] leading-snug">
                   {team.equipment.join(' · ')}
                 </div>
               </div>
@@ -172,12 +172,12 @@ export const TeamsPage: React.FC<TeamsPageProps> = ({
 
             {/* Actions */}
             {permissions.canDispatchTeam && (
-              <div className="mt-4 pt-3 border-t border-slate-850 flex items-center gap-2">
+              <div className="mt-4 pt-3 border-t border-[#E4E3DC] flex items-center gap-2">
                 {team.status === 'available' ? (
                   <button
                     type="button"
                     onClick={() => setDispatchTargetTeam(team)}
-                    className="w-full py-1.5 text-xs font-mono font-bold rounded bg-amber-500 hover:bg-amber-400 text-slate-950 transition-colors"
+                    className="w-full py-2 text-xs font-semibold rounded-lg bg-[#315C46] hover:bg-[#264937] text-white transition-colors shadow-xs"
                   >
                     Deploy to Incident
                   </button>
@@ -185,7 +185,7 @@ export const TeamsPage: React.FC<TeamsPageProps> = ({
                   <button
                     type="button"
                     onClick={() => onUpdateTeamStatus(team.id, 'available')}
-                    className="w-full py-1.5 text-xs font-mono rounded bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 transition-colors"
+                    className="w-full py-2 text-xs font-semibold rounded-lg bg-[#FAF9F5] hover:bg-[#F5F4EF] text-[#171B19] border border-[#E4E3DC] transition-colors shadow-2xs"
                   >
                     Stand Down to Base
                   </button>
@@ -199,51 +199,58 @@ export const TeamsPage: React.FC<TeamsPageProps> = ({
       {/* Dispatch Modal */}
       {dispatchTargetTeam && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs"
           role="dialog"
           aria-modal="true"
         >
-          <div className="w-full max-w-md bg-[#161c24] border border-slate-750 rounded shadow-2xl p-5 text-slate-200">
-            <h3 className="text-sm font-mono font-bold uppercase tracking-wider text-slate-100 mb-1">
-              Dispatch Force: {dispatchTargetTeam.name}
-            </h3>
-            <p className="text-xs text-slate-400 mb-4">
-              Select the active disaster incident requiring mobilization of this {dispatchTargetTeam.specialization} unit.
-            </p>
+          <div className="w-full max-w-md bg-white border border-[#E4E3DC] rounded-xl shadow-xl p-5 text-[#171B19]">
+            <div className="flex items-center justify-between pb-3 border-b border-[#E4E3DC] mb-3">
+              <div>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-[#171B19]">
+                  Deploy Unit: {dispatchTargetTeam.name}
+                </h3>
+                <p className="text-xs text-[#777D77] mt-0.5">{dispatchTargetTeam.specialization}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDispatchTargetTeam(null)}
+                className="p-1 rounded-md text-[#777D77] hover:text-[#171B19] hover:bg-[#F5F4EF]"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
 
             <form onSubmit={handleDispatchSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-mono uppercase text-slate-300 mb-1">
-                  Target Incident Operation:
+                <label className="block text-xs font-semibold uppercase text-[#171B19] tracking-wider mb-1.5">
+                  Target Emergency Incident:
                 </label>
                 <select
                   value={selectedIncidentId}
                   onChange={(e) => setSelectedIncidentId(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded text-xs text-slate-100 font-mono focus:outline-none focus:border-amber-500/80"
+                  className="w-full px-3 py-2 bg-white border border-[#E4E3DC] rounded-lg text-xs text-[#171B19] focus:outline-none focus:border-[#315C46]"
                 >
-                  {incidents
-                    .filter((i) => i.status !== 'resolved')
-                    .map((inc) => (
-                      <option key={inc.id} value={inc.id}>
-                        [{inc.id}] {inc.title} ({inc.severity.toUpperCase()})
-                      </option>
-                    ))}
+                  {incidents.map((inc) => (
+                    <option key={inc.id} value={inc.id}>
+                      [{inc.severity.toUpperCase()}] {inc.id}: {inc.title}
+                    </option>
+                  ))}
                 </select>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-[#E4E3DC]">
                 <button
                   type="button"
                   onClick={() => setDispatchTargetTeam(null)}
-                  className="px-3.5 py-1.5 text-xs font-mono text-slate-400 hover:text-slate-200"
+                  className="px-3.5 py-1.5 text-xs text-[#777D77] hover:text-[#171B19]"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 text-xs font-mono font-bold rounded bg-amber-500 hover:bg-amber-400 text-slate-950 transition-colors"
+                  className="px-4 py-2 text-xs font-semibold rounded-lg bg-[#315C46] hover:bg-[#264937] text-white transition-colors shadow-xs"
                 >
-                  Authorize Dispatch
+                  Confirm Field Dispatch
                 </button>
               </div>
             </form>
